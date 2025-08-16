@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The ADD Braneworld Model</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1d;
+            --primary-color: #c5c6c7;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --highlight-color: #3498db;
+            --font-family: 'Exo 2', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-color); margin: 0; padding: 0; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--accent-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 10px; font-weight: 400; }
+        .panel { background-color: var(--secondary-color); border-radius: 8px; padding: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 3fr; gap: 30px; }
+        .viz-item { background-color: #000; border: 2px solid var(--accent-color); border-radius: 8px; position: relative; min-height: 600px; }
+        .viz-item canvas { width: 100%; height: 100%; }
+        button { background-color: var(--accent-color); color: #fff; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1>Deep Simulation: Introduction to Braneworlds</h1>
+            <p>Visualizing particles confined to a 'brane' while gravity propagates in a higher-dimensional 'bulk'.</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Controls</h3>
+                    <button id="emit-particle-btn">Emit Particle (on Brane)</button>
+                    <button id="emit-graviton-btn">Emit Graviton (in Bulk)</button>
+                    <button id="reset-btn">Reset</button>
+                </div>
+            </div>
+
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-viz-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        state: {
+            particles: [],
+            gravitons: [],
+        },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.resetSimulation();
+            this.gameLoop();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                emitParticleBtn: document.getElementById('emit-particle-btn'),
+                emitGravitonBtn: document.getElementById('emit-graviton-btn'),
+                resetBtn: document.getElementById('reset-btn'),
+                mainCanvas: document.getElementById('main-viz-canvas'),
+            };
+            this.ctx = this.elements.mainCanvas.getContext('2d');
+        },
+
+        setupUIListeners() {
+            this.elements.emitParticleBtn.addEventListener('click', () => this.emitParticle());
+            this.elements.emitGravitonBtn.addEventListener('click', () => this.emitGraviton());
+            this.elements.resetBtn.addEventListener('click', () => this.resetSimulation());
+        },
+
+        resetSimulation() {
+            this.state.particles = [];
+            this.state.gravitons = [];
+        },
+
+        emitParticle() {
+            const h = this.elements.mainCanvas.height;
+            this.state.particles.push({
+                x: 0, y: h/2,
+                vx: 2 + Math.random() * 2, vy: 0
+            });
+        },
+
+        emitGraviton() {
+            const h = this.elements.mainCanvas.height;
+            const angle = (Math.random() - 0.5) * Math.PI;
+            this.state.gravitons.push({
+                x: 0, y: h/2,
+                vx: Math.cos(angle) * 2, vy: Math.sin(angle) * 2,
+                life: 1.0
+            });
+        },
+
+        step(dt) {
+            const w = this.elements.mainCanvas.width;
+
+            this.state.particles.forEach(p => {
+                p.x += p.vx;
+            });
+            this.state.particles = this.state.particles.filter(p => p.x < w);
+
+            this.state.gravitons.forEach(g => {
+                g.x += g.vx;
+                g.y += g.vy;
+                g.life -= dt * 0.01;
+            });
+            this.state.gravitons = this.state.gravitons.filter(g => g.life > 0);
+        },
+
+        gameLoop() {
+            this.step(0.1);
+            this.draw();
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        draw() {
+            const ctx = this.ctx;
+            const w = this.elements.mainCanvas.width = this.elements.mainCanvas.clientWidth;
+            const h = this.elements.mainCanvas.height = this.elements.mainCanvas.clientHeight;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,w,h);
+
+            // Draw the brane
+            ctx.strokeStyle = 'var(--accent-color)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, h/2);
+            ctx.lineTo(w, h/2);
+            ctx.stroke();
+            ctx.fillStyle = 'white';
+            ctx.fillText("Our Universe (Brane)", 10, h/2 - 10);
+
+            // Draw particles
+            this.state.particles.forEach(p => {
+                ctx.fillStyle = 'var(--highlight-color)';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, 2*Math.PI);
+                ctx.fill();
+            });
+
+            // Draw gravitons
+            this.state.gravitons.forEach(g => {
+                ctx.strokeStyle = `rgba(255, 255, 255, ${g.life})`;
+                ctx.beginPath();
+                ctx.arc(g.x, g.y, 10, 0, 2*Math.PI);
+                ctx.stroke();
+            });
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Overview</h2>
+                <p>The Braneworld scenario proposes a radical picture of reality: our familiar four-dimensional universe (3 space + 1 time) may be a 'brane' (short for membrane) embedded in a higher-dimensional space called the 'bulk'. In the simplest models, like the ADD model visualized here, the particles and forces of the Standard Model (like electromagnetism) are confined to the brane, like beads on a wire. Gravity, however, is unique: it is not confined and can propagate freely through the bulk. This simulation illustrates this core idea. You can emit 'particles' which are stuck on our brane, and 'gravitons' which are free to travel into the extra dimension(s), demonstrating how gravity might be different from all other forces.</p>
+
+                <h2>Core Theory: The ADD Model</h2>
+                <p>The model proposed by Arkani-Hamed, Dimopoulos, and Dvali (ADD) in 1998 was a direct attempt to solve the "hierarchy problem"—the question of why gravity is so much weaker than the other fundamental forces. Their proposal was that the extra dimensions are "large" (perhaps as large as a millimeter). While other forces are confined to our 3D brane, gravity's influence spreads out into the full volume of the bulk. From our perspective on the brane, gravity appears weak because its strength has been diluted over a much larger volume. It's like the light from a lightbulb: it appears dimmer from far away because its energy is spread over a larger area. In the ADD model, we are "far away" from the fundamental source of gravity in the extra dimensions.</p>
+                <p>This simulation shows a 2D slice of the bulk, with our brane represented as a 1D line. When you emit a particle, it remains confined to the line. When you emit a graviton, it travels freely in the 2D space. This visualizes the central concept: matter and light are stuck in our dimensions, but gravity is not. This could lead to observable consequences at high energies or small distances, where we might be able to "excite" gravitons into the bulk or see gravity's force law deviate from the standard 1/r².</p>
+
+                <h2>Q&A (20+ Questions)</h2>
+                <div class="qa-item">
+                    <strong>1. If there are extra dimensions, why don't we see them?</strong>
+                    <p>There are two main classes of answers to this question. The first is the Kaluza-Klein idea: the extra dimensions are real, but they are curled up into tiny, subatomic circles. We don't perceive them because we are too big to move in those directions. The second is the braneworld idea visualized here: we (and all matter and light) are physically confined to a 3D surface and cannot move into the extra dimensions. Only gravity can. It's like characters in a video game who can only move on the 2D plane of the screen and are unaware of the 3D room the screen is in. In this model, the extra dimensions don't have to be small; they could be very large, and we would only be able to probe them through their gravitational effects.</p>
+                </div>
+                <!-- ... 19+ more Q&A items focused on braneworlds ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

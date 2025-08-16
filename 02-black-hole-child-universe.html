@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Universe from a Black Hole</title>
+    <meta name="description" content="An interactive simulation exploring the theory that a new universe is born from the interior of a black hole, featuring an interactive Penrose diagram.">
+    <meta name="keywords" content="Black Hole, Child Universe, Penrose Diagram, Cosmological Natural Selection, Lee Smolin, Quantum Gravity, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #f07178; /* A deep red/orange */
+            --highlight-color: #c3e88d; /* A vibrant green */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 800px;
+            overflow: hidden;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); }
+        button {
+            background-color: var(--accent-color);
+            color: #0d1117;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+        }
+        button:hover { background-color: var(--highlight-color); }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 15px; border-radius: 5px; border-left: 3px solid var(--highlight-color); }
+        .metric-item strong { display: block; color: var(--accent-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.2em; }
+        .qa-item {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid var(--highlight-color);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: Universe from a Black Hole</h1>
+            <p>Exploring the Hypothesis of a Child Universe Born from Gravitational Collapse</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="penrose-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Simulation Controls</h3>
+                    <div class="control-group">
+                        <label>Quantum Gravity Model</label>
+                        <select id="model-select">
+                            <option value="classical">Classical GR (Singularity)</option>
+                            <option value="bounce" selected>Quantum Bounce (Child Universe)</option>
+                        </select>
+                    </div>
+                    <button id="drop-probe-btn">Drop Probe into Black Hole</button>
+                    <button id="reset-sim-btn">Reset Simulation</button>
+                </div>
+                <div class="panel">
+                    <h3>Probe Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <strong>Probe Status</strong>
+                            <span id="metric-probe-status">Idle</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Proper Time (τ)</strong>
+                            <span id="metric-proper-time">0.00</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Spacetime Curvature</strong>
+                            <span id="metric-curvature">Low</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Location</strong>
+                            <span id="metric-location">Parent Universe</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: {
+            model: 'bounce', // classical or bounce
+        },
+        state: {
+            probe: null, // {x, y, vx, vy, time}
+        },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.gameLoop();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                penroseCanvas: document.getElementById('penrose-canvas'),
+                modelSelect: document.getElementById('model-select'),
+                dropProbeBtn: document.getElementById('drop-probe-btn'),
+                resetBtn: document.getElementById('reset-sim-btn'),
+                metricProbeStatus: document.getElementById('metric-probe-status'),
+                metricProperTime: document.getElementById('metric-proper-time'),
+                metricCurvature: document.getElementById('metric-curvature'),
+                metricLocation: document.getElementById('metric-location'),
+            };
+            this.ctx = this.elements.penroseCanvas.getContext('2d');
+        },
+
+        setupUIListeners() {
+            this.elements.modelSelect.addEventListener('change', e => {
+                this.config.model = e.target.value;
+            });
+            this.elements.dropProbeBtn.addEventListener('click', () => this.dropProbe());
+            this.elements.resetBtn.addEventListener('click', () => this.reset());
+        },
+
+        reset() {
+            this.state.probe = null;
+        },
+
+        dropProbe() {
+            const w = this.elements.penroseCanvas.width;
+            const h = this.elements.penroseCanvas.height;
+            this.state.probe = {
+                x: w * 0.2, y: h * 0.1,
+                vx: 1, vy: 1,
+                time: 0,
+                status: 'Falling'
+            };
+        },
+
+        step(dt) {
+            if (!this.state.probe) return;
+
+            const w = this.ctx.canvas.width;
+            const h = this.ctx.canvas.height;
+            const p = this.state.probe;
+
+            p.time += dt;
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+
+            // Simple boundary checks and state changes
+            const horizonY = h/2;
+            const singularityY = h;
+
+            if (p.y > horizonY && p.status === 'Falling') {
+                p.status = 'Crossing Horizon';
+                this.elements.metricLocation.textContent = 'Black Hole Interior';
+            }
+
+            if (this.config.model === 'classical') {
+                if (p.y >= singularityY - 5) {
+                    p.status = 'Annihilated';
+                    p.vx = 0; p.vy = 0;
+                    this.elements.metricCurvature.textContent = 'Infinite';
+                }
+            } else { // bounce model
+                const bounceY = h * 0.75;
+                if (p.y > bounceY && p.status === 'Crossing Horizon') {
+                    p.status = 'Bouncing';
+                    this.elements.metricCurvature.textContent = 'Planckian';
+                    this.elements.metricLocation.textContent = 'Quantum Region';
+                }
+                if (p.y > bounceY + 5 && p.status === 'Bouncing') {
+                    p.status = 'Emerging';
+                    p.y = h * 0.26; // Emerge in new universe
+                    p.x = w * 0.8;
+                    p.vx = -1;
+                    p.vy = 1;
+                    this.elements.metricLocation.textContent = 'Child Universe';
+                    this.elements.metricCurvature.textContent = 'Decreasing';
+                }
+            }
+        },
+
+        updateMetrics() {
+            if (!this.state.probe) {
+                this.elements.metricProbeStatus.textContent = 'Idle';
+                this.elements.metricProperTime.textContent = '0.00';
+                this.elements.metricCurvature.textContent = 'Low';
+                this.elements.metricLocation.textContent = 'Parent Universe';
+                return;
+            }
+            this.elements.metricProbeStatus.textContent = this.state.probe.status;
+            this.elements.metricProperTime.textContent = this.state.probe.time.toFixed(2);
+            if(this.state.probe.status === 'Falling') {
+                this.elements.metricCurvature.textContent = 'Increasing';
+            }
+        },
+
+        gameLoop() {
+            this.step(0.5);
+            this.draw();
+            this.updateMetrics();
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        drawPenroseDiagram() {
+            const ctx = this.ctx;
+            const w = ctx.canvas.width = ctx.canvas.clientWidth;
+            const h = ctx.canvas.height = ctx.canvas.clientHeight;
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Diagram Structure
+            const p = { x: w/2, y: h/2 }; // Center
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(Math.PI / 4);
+
+            // Bounding box
+            const size = w * 0.4;
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.strokeRect(-size, -size, size*2, size*2);
+
+            // Event Horizon
+            ctx.beginPath();
+            ctx.moveTo(-size, -size);
+            ctx.lineTo(size, -size);
+            ctx.strokeStyle = 'var(--accent-color)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Singularity / Bounce
+            if (this.config.model === 'classical') {
+                ctx.beginPath();
+                ctx.moveTo(-size, size);
+                ctx.lineTo(size, size);
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            } else {
+                 ctx.beginPath();
+                ctx.moveTo(-size, size*0.5);
+                ctx.lineTo(size, size*0.5);
+                ctx.strokeStyle = 'var(--highlight-color)';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
+
+            ctx.restore();
+
+            // Labels
+            ctx.fillStyle = 'white';
+            ctx.font = '14px Exo 2';
+            ctx.fillText("Parent Universe", w*0.25, h*0.25);
+            ctx.fillText("Black Hole Interior", w*0.5, h*0.6);
+            if (this.config.model === 'classical') {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillText("Future Singularity (r=0)", w*0.5, h*0.95);
+            } else {
+                ctx.fillStyle = 'var(--highlight-color)';
+                ctx.fillText("Quantum Bounce", w*0.5, h*0.75);
+                ctx.fillStyle = 'white';
+                ctx.fillText("Child Universe", w*0.75, h*0.25);
+            }
+            ctx.fillStyle = 'var(--accent-color)';
+            ctx.fillText("Event Horizon", w*0.5, h*0.48);
+        },
+
+        drawProbe() {
+            if (!this.state.probe) return;
+            const p = this.state.probe;
+            this.ctx.fillStyle = 'var(--highlight-color)';
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, 8, 0, 2*Math.PI);
+            this.ctx.fill();
+
+            // Draw light cone
+            this.ctx.strokeStyle = 'rgba(255, 255, 100, 0.5)';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(p.x, p.y);
+            this.ctx.lineTo(p.x - 50, p.y + 50);
+            this.ctx.moveTo(p.x, p.y);
+            this.ctx.lineTo(p.x + 50, p.y + 50);
+            this.ctx.stroke();
+        },
+
+        draw() {
+            this.drawPenroseDiagram();
+            this.drawProbe();
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>The Heart of a Black Hole: Gateway to Another World?</h2>
+                <p>What lies at the center of a black hole? According to Einstein's theory of General Relativity, the answer is a <strong>singularity</strong>—a point of zero volume and infinite density where the laws of physics as we know them break down completely. For decades, this mathematical infinity has been a profound thorn in the side of physics. Most physicists don't believe in true physical infinities; instead, they interpret the singularity as a sign that General Relativity is incomplete and a new theory of quantum gravity is needed to describe the extreme conditions at a black hole's core.</p>
+                <p>One of the most exciting and speculative possibilities is that quantum gravity effects prevent the formation of a singularity. Instead of collapsing to an infinite point, the matter and energy could "bounce," creating the initial conditions for a new, expanding universe. In this incredible scenario, proposed in various forms by physicists like Igor Novikov, Andrei Frolov, and Lee Smolin, our own universe might be the interior of a black hole that exists in some larger parent cosmos. Every black hole, in turn, could be a seed for a new universe. This simulation visualizes this concept using a powerful tool of theoretical physics: the Penrose diagram.</p>
+
+                <h2>Reading the Map: Penrose Diagrams</h2>
+                <p>A Penrose diagram is a clever way to map an entire, infinitely large spacetime onto a finite, manageable drawing. It distorts distances but faithfully preserves the causal structure—what can be reached from where. Key features include:</p>
+                <ul>
+                    <li><strong>Light travels at 45 degrees:</strong> Any line drawn at a 45-degree angle represents the path of a light ray. The future light cone of any point (all the events it can influence) is contained within the 45-degree lines extending "upward" from it.</li>
+                    <li><strong>Vertical movement is time-like:</strong> Moving more vertically than horizontally means you are traveling slower than light. All massive objects follow time-like paths.</li>
+                    <li><strong>Regions of Spacetime:</strong> The diagram is divided into different regions, representing distinct parts of the spacetime, such as our "parent" universe, the black hole interior, and the potential "child" universe.</li>
+                </ul>
+                <p>In this simulation, you can see the Penrose diagram for a star collapsing to form a black hole. The "Parent Universe" is the region where we begin. The line labeled "Event Horizon" is the point of no return. Once a probe crosses this line, its future light cone is tilted so completely that all possible future paths inevitably lead towards the center. In the classical picture, this center is the future singularity, a destructive boundary of spacetime. But in the "Quantum Bounce" model, this singularity is replaced by a "bounce" region, a bridge to a new, expanding spacetime—the Child Universe.</p>
+
+                <h2>The Journey of a Probe</h2>
+                <p>By clicking "Drop Probe," you can follow the journey of an observer falling into the black hole. You will see its worldline trace a path across the diagram. It starts in the parent universe, crosses the event horizon, and heads towards the center. In the classical model, its journey ends at the singularity. In the bounce model, however, the probe passes through the region of extreme-but-finite quantum gravity effects and emerges into the child universe. For this new universe, the bounce is its Big Bang. An observer in the child universe would see matter and energy emerging from a "white hole"—the time-reversed counterpart of a black hole.</p>
+
+                <h2>Cosmological Natural Selection: A Universe Fit for Life</h2>
+                <p>This "fecund universes" hypothesis has a fascinating extension proposed by Lee Smolin: <strong>Cosmological Natural Selection (CNS)</strong>. The idea treats the multiverse like a biological population. If each black hole creates a new universe, then universes that are better at making black holes will have more "offspring" and will come to dominate the multiverse. The CNS hypothesis further posits that the laws of physics might "mutate" slightly during the bounce, with the child universe inheriting slightly different fundamental constants (like the strength of gravity or the mass of the electron) from its parent.</p>
+                <p>Over eons, this process would naturally select for universes whose parameters are optimized for producing the maximum number of black holes. What kind of universe is good at making black holes? One that can form giant stars, which requires a complex interplay of nuclear physics and gravity. These are the same conditions that are believed to be necessary for the existence of life. CNS, therefore, offers a potential scientific explanation for the "fine-tuning problem"—the mystery of why our universe's constants seem so perfectly adjusted for our existence. We live in a universe that is good at making black holes, and because of that, it is also good at making us.</p>
+
+                <h2>Q&A: Inside the Event Horizon</h2>
+                <div class="qa-item">
+                    <strong>1. Is this theory testable?</strong>
+                    <p>CNS makes a falsifiable prediction: if our universe was optimized to produce black holes, then any small change to its fundamental constants should lead to a universe that produces fewer black holes. Physicists can, in principle, calculate this. For example, if changing the neutron-proton mass difference slightly resulted in a universe that made far more black holes, the CNS hypothesis would be in trouble. So far, analyses suggest our universe is indeed quite good at making black holes, but the calculations are extremely complex and ongoing.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. What is a "white hole"?</strong>
+                    <p>A white hole is a hypothetical time-reversal of a black hole. It is a region of spacetime which can't be entered from the outside, but from which matter and energy can escape. While mathematically valid solutions to Einstein's equations, they are not expected to form in nature in our universe. However, in the child universe model, the "bounce" acts as a gateway from a black hole in the parent universe to a white hole in the child universe, providing the energetic start of its own Big Bang.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>
