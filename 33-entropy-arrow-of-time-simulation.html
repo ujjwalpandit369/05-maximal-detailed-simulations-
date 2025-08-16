@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Entropy and the Arrow of Time</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 400px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { grid-column: 1 / 3; text-align: center; background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .chart-container { grid-column: 1 / 3; background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Entropy and the Arrow of Time</h1></header>
+        <div class="controls-panel">
+            <button id="start-btn">Start</button>
+            <button id="reset-btn">Reset to Low Entropy (t=0)</button>
+        </div>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Anti-Universe (t < 0)</h2>
+                <canvas id="left-canvas"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>Our Universe (t > 0)</h2>
+                <canvas id="right-canvas"></canvas>
+            </div>
+        </div>
+        <div class="chart-container">
+            <h2>Entropy vs. Time</h2>
+            <div id="entropy-chart"></div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Entropy/Arrow of Time script.
+    // The final version will contain two synchronized gas simulations
+    // and a dynamic chart plotting the entropy of both.
+
+    const DOM = {
+        leftCanvas: document.getElementById('left-canvas'), leftCtx: document.getElementById('left-canvas').getContext('2d'),
+        rightCanvas: document.getElementById('right-canvas'), rightCtx: document.getElementById('right-canvas').getContext('2d'),
+        startBtn: document.getElementById('start-btn'), resetBtn: document.getElementById('reset-btn'),
+        chart: document.getElementById('entropy-chart'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { isRunning: false, particlesLeft: [], particlesRight: [] };
+    const NUM_PARTICLES = 50;
+
+    function reset() {
+        state.isRunning = false;
+        state.particlesLeft = [];
+        state.particlesRight = [];
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+            // Initial low-entropy state: all particles in a small box
+            const p = { x: 50 + Math.random()*20, y: 190 + Math.random()*20, vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4 };
+            state.particlesLeft.push({...p});
+            state.particlesRight.push({...p});
+        }
+        draw();
+    }
+
+    function update() {
+        if (!state.isRunning) return;
+        [state.particlesLeft, state.particlesRight].forEach(particleSet => {
+            particleSet.forEach(p => {
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > 600) p.vx *= -1;
+                if (p.y < 0 || p.y > 400) p.vy *= -1;
+            });
+        });
+    }
+
+    function draw() {
+        [DOM.leftCtx, DOM.rightCtx].forEach((ctx, i) => {
+            const particles = i === 0 ? state.particlesLeft : state.particlesRight;
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0,0,600,400);
+            ctx.fillStyle = i === 0 ? '#ffaa00' : 'cyan';
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 5, 0, 2*Math.PI);
+                ctx.fill();
+            });
+        });
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        // ... update entropy chart ...
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        DOM.startBtn.onclick = () => { state.isRunning = !state.isRunning; };
+        DOM.resetBtn.onclick = reset;
+
+        DOM.expositionContent.innerHTML = `<h1>The Origin of Time's Arrow</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        reset();
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
