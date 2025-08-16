@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Non-Commutative Particle Scattering</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Non-Commutative Particle Scattering</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Collision Chamber</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label for="mode-select">Physics Model</label>
+                <select id="mode-select"><option value="commutative">Commutative</option><option value="noncommutative">Non-Commutative</option></select>
+                <button id="run-btn">Run Single Collision</button>
+                <button id="run-100-btn">Run 100 Collisions</button>
+                <div id="histogram-container"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full non-commutative scattering script.
+    // The final version will contain a physics engine that can switch between
+    // deterministic and probabilistic collision outcomes.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        modeSelect: document.getElementById('mode-select'),
+        runBtn: document.getElementById('run-btn'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = {
+        mode: 'commutative',
+        particles: [],
+        paths: []
+    };
+
+    function runCollision() {
+        const p1 = { x: 100, y: 250, vx: 5, vy: 0 };
+        const p2 = { x: 700, y: 250, vx: -5, vy: 0 };
+
+        // Simplified collision logic
+        if (state.mode === 'commutative') {
+            // Deterministic outcome
+            p1.vy = 2.5; p2.vy = -2.5;
+        } else {
+            // Probabilistic outcome
+            const angle = (Math.random() - 0.5) * 0.5; // Gaussian-like spread
+            p1.vy = 5 * Math.sin(angle); p1.vx = 5 * Math.cos(angle);
+            p2.vy = -5 * Math.sin(angle); p2.vx = -5 * Math.cos(angle);
+        }
+
+        // For visualization purposes, we just show the final state
+        draw(p1, p2);
+    }
+
+    function draw(p1, p2) {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        // Draw initial paths
+        ctx.strokeStyle = '#555';
+        ctx.beginPath(); ctx.moveTo(0, 250); ctx.lineTo(400, 250); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(800, 250); ctx.lineTo(400, 250); ctx.stroke();
+
+        // Draw final paths
+        ctx.strokeStyle = 'cyan';
+        ctx.beginPath(); ctx.moveTo(400, 250); ctx.lineTo(400 + p1.vx*100, 250 + p1.vy*100); ctx.stroke();
+        ctx.strokeStyle = 'yellow';
+        ctx.beginPath(); ctx.moveTo(400, 250); ctx.lineTo(400 + p2.vx*100, 250 + p2.vy*100); ctx.stroke();
+    }
+
+    function setup() {
+        DOM.modeSelect.onchange = (e) => { state.mode = e.target.value; };
+        DOM.runBtn.onclick = runCollision;
+
+        DOM.expositionContent.innerHTML = `<h1>Scattering in Fuzzy Spacetime</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        runCollision();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

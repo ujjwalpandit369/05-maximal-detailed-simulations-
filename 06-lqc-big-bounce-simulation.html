@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The LQC Big Bounce</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --accent-color: #00ffaa; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 350px 1fr; grid-template-areas: "header header" "controls main" "exposition exposition" "qa qa" "footer footer"; gap: 20px; }
+        @media (max-width: 1200px) { .container { grid-template-columns: 1fr; grid-template-areas: "header" "controls" "main" "exposition" "qa" "footer"; } }
+        header { grid-area: header; text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
+        h1 { font-size: 2.5em; margin: 0; }
+        main { grid-area: main; display: flex; flex-direction: column; gap: 20px; }
+        .chart-container { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; }
+        h2 { color: var(--header-color); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; }
+        aside { grid-area: controls; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; position: sticky; top: 20px; }
+        .control-group { margin-bottom: 25px; }
+        h3 { color: var(--secondary-color); }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 1em; width: 100%; margin-top: 10px;}
+        .exposition, .qa-section { grid-area: exposition; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Big Bounce: A Loop Quantum Cosmology Simulation</h1></header>
+        <aside>
+            <h2>Controls</h2>
+            <div class="control-group">
+                <label for="model-type">Cosmological Model</label>
+                <select id="model-type"><option value="lqc">LQC (Big Bounce)</option><option value="classical">Classical (Singularity)</option></select>
+            </div>
+            <div class="control-group">
+                <label for="initial-size">Initial Scale Factor (a<sub>max</sub>): <span id="initial-size-value">10</span></label>
+                <input type="range" id="initial-size" min="5" max="50" step="1" value="10">
+            </div>
+            <button id="start-sim">Run Simulation</button>
+        </aside>
+        <main>
+            <div class="chart-container"><h2>Scale Factor a(t) vs. Time</h2><div id="scale-factor-chart"></div></div>
+            <div class="chart-container"><h2>Phase Space: Expansion Rate H vs. Density ρ</h2><div id="phase-space-chart"></div></div>
+        </main>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full LQC simulation script.
+    // The final version will contain a numerical solver for the LQC-modified
+    // Friedmann equation and dynamic SVG charts.
+    const DOM = {
+        scaleChart: document.getElementById('scale-factor-chart'),
+        phaseChart: document.getElementById('phase-space-chart'),
+        runBtn: document.getElementById('start-sim'),
+        modelSelect: document.getElementById('model-type'),
+        initialSizeSlider: document.getElementById('initial-size'),
+        initialSizeValue: document.getElementById('initial-size-value'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    function runSimulation() {
+        const model = DOM.modelSelect.value;
+        const a_max = parseFloat(DOM.initialSizeSlider.value);
+
+        // --- Physics Constants (normalized) ---
+        const G = 1;
+        const RHO_CRIT = 100; // Planck density
+
+        let a = a_max;
+        let a_dot = -0.1; // Start with a contracting universe
+        let t = -50;
+        const dt = 0.1;
+
+        const history = [];
+
+        while (t < 50) {
+            const rho = 1 / (a*a*a); // Simplified matter density
+
+            let a_dot_dot;
+            if (model === 'lqc') {
+                // LQC modified equation
+                const term1 = -4 * Math.PI * G * rho * (1 - 3 * rho / RHO_CRIT) * a;
+                const term2 = 8 * Math.PI * G * a_dot * a_dot * (rho / RHO_CRIT);
+                a_dot_dot = term1 + term2;
+            } else {
+                // Classical equation
+                a_dot_dot = -4 * Math.PI * G * rho * a;
+            }
+
+            a_dot += a_dot_dot * dt;
+            a += a_dot * dt;
+            t += dt;
+
+            if (a <= 0.01 && model === 'classical') {
+                history.push({t, a: 0});
+                break; // Hit singularity
+            }
+            if (history.length > 2000) break; // Safety break
+
+            history.push({t, a, rho, H: a_dot/a});
+        }
+
+        drawCharts(history);
+    }
+
+    function drawCharts(data) {
+        // Placeholder for dynamic SVG chart drawing logic
+        DOM.scaleChart.innerHTML = `<p>Chart will show a(t). Min 'a' was ~${Math.min(...data.map(d=>d.a)).toFixed(2)}</p>`;
+        DOM.phaseChart.innerHTML = `<p>Chart will show H vs rho.</p>`;
+    }
+
+    DOM.runBtn.addEventListener('click', runSimulation);
+    DOM.initialSizeSlider.oninput = () => { DOM.initialSizeValue.textContent = DOM.initialSizeSlider.value; };
+
+    DOM.expositionContent.innerHTML = "<h1>The Big Bounce</h1><p>...Full 5000+ word text...</p>";
+    DOM.qaContent.innerHTML = "<h2>Questions & Answers</h2>" + "<div>...20+ Q&A items...</div>";
+
+    runSimulation();
+});
+</script>
+</body>
+</html>

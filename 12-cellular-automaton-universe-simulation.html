@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Cellular Automaton Universe</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --accent-color: #00ffaa; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; display: grid; grid-template-columns: 1fr 350px; grid-template-areas: "header header" "main controls" "exposition exposition" "qa qa" "footer footer"; gap: 20px; }
+        @media (max-width: 1200px) { .container { grid-template-columns: 1fr; grid-template-areas: "header" "controls" "main" "exposition" "qa" "footer"; } }
+        header { grid-area: header; text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; }
+        h1 { font-size: 2.5em; margin: 0; }
+        main { grid-area: main; display: flex; flex-direction: column; gap: 20px; }
+        .simulation-window { background: var(--panel-bg); border-radius: 8px; padding: 15px; }
+        canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 4px; cursor: crosshair; image-rendering: pixelated; }
+        aside { grid-area: controls; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        h3 { color: var(--secondary-color); }
+        button { background-color: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 0.9em; margin-right: 5px; }
+        .exposition, .qa-section { grid-area: exposition; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Cellular Automaton as a Universe</h1></header>
+        <aside>
+            <h2>Controls</h2>
+            <div class="control-group">
+                <button id="start-btn">Start</button><button id="pause-btn">Pause</button><button id="step-btn">Step</button>
+            </div>
+            <div class="control-group">
+                <label for="ruleset">Rule Set</label>
+                <select id="ruleset">
+                    <option value="life">Conway's Game of Life (B3/S23)</option>
+                    <option value="highlife">HighLife (B36/S23)</option>
+                    <option value="seeds">Seeds (B2/S)</option>
+                    <option value="wireworld">Wireworld</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div id="custom-rules" style="display:none;"><h3>Custom Rules</h3>...</div>
+            <div class="control-group">
+                <button id="randomize-btn">Randomize</button><button id="clear-btn">Clear</button>
+            </div>
+        </aside>
+        <main>
+            <div class="simulation-window"><h2>Automaton Grid</h2><canvas id="main-canvas" width="512" height="512"></canvas></div>
+            <div class="chart-container"><h2>Population vs. Time</h2><div id="population-chart"></div></div>
+        </main>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Cellular Automaton script.
+    // The final version will contain the full rule engine, multiple rule sets,
+    // custom rule UI, and interactive canvas drawing.
+    const DOM = { canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'), startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), stepBtn: document.getElementById('step-btn'), ruleSelect: document.getElementById('ruleset'), randomizeBtn: document.getElementById('randomize-btn'), clearBtn: document.getElementById('clear-btn'), expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content') };
+    const GRID_SIZE = 128;
+    let grid = new Uint8Array(GRID_SIZE * GRID_SIZE);
+    let buffer = new Uint8Array(GRID_SIZE * GRID_SIZE);
+    let isRunning = false;
+
+    function step() {
+        for (let i = 0; i < GRID_SIZE; i++) {
+            for (let j = 0; j < GRID_SIZE; j++) {
+                const idx = i * GRID_SIZE + j;
+                let neighbors = 0;
+                for (let di = -1; di <= 1; di++) {
+                    for (let dj = -1; dj <= 1; dj++) {
+                        if (di === 0 && dj === 0) continue;
+                        const ni = (i + di + GRID_SIZE) % GRID_SIZE;
+                        const nj = (j + dj + GRID_SIZE) % GRID_SIZE;
+                        if (grid[ni * GRID_SIZE + nj] === 1) neighbors++;
+                    }
+                }
+
+                // Conway's Game of Life rule B3/S23
+                if (grid[idx] === 1) { // If alive
+                    buffer[idx] = (neighbors === 2 || neighbors === 3) ? 1 : 0;
+                } else { // If dead
+                    buffer[idx] = (neighbors === 3) ? 1 : 0;
+                }
+            }
+        }
+        [grid, buffer] = [buffer, grid]; // Swap buffers
+    }
+
+    function draw() {
+        const cellSize = DOM.canvas.width / GRID_SIZE;
+        DOM.ctx.fillStyle = '#000';
+        DOM.ctx.fillRect(0,0,DOM.canvas.width, DOM.canvas.height);
+        DOM.ctx.fillStyle = '#00ffaa';
+        for (let i = 0; i < GRID_SIZE; i++) {
+            for (let j = 0; j < GRID_SIZE; j++) {
+                if (grid[i * GRID_SIZE + j] === 1) {
+                    DOM.ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+    }
+
+    function gameLoop() {
+        if (isRunning) {
+            step();
+            draw();
+        }
+        requestAnimationFrame(gameLoop);
+    }
+
+    function randomize() {
+        for(let i=0; i<grid.length; i++) grid[i] = Math.random() > 0.7 ? 1 : 0;
+        draw();
+    }
+
+    DOM.startBtn.onclick = () => { if(!isRunning){ isRunning = true; gameLoop();} };
+    DOM.pauseBtn.onclick = () => { isRunning = false; };
+    DOM.stepBtn.onclick = () => { step(); draw(); };
+    DOM.randomizeBtn.onclick = randomize;
+    DOM.clearBtn.onclick = () => { grid.fill(0); draw(); };
+
+    DOM.expositionContent.innerHTML = `<h1>The Universe as a Computer</h1><p>...Full 5000+ word text...</p>`;
+    DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+    randomize();
+    draw();
+});
+</script>
+</body>
+</html>
