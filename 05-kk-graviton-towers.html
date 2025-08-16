@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Kaluza-Klein Graviton Towers</title>
+    <meta name="description" content="An interactive explorer for Kaluza-Klein (KK) graviton modes, visualizing how compactified extra dimensions give rise to a tower of massive particles.">
+    <meta name="keywords" content="Kaluza-Klein, Extra Dimensions, Compactification, Graviton Tower, ADD Model, RS Model, String Theory, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #8957e5; /* A deep purple */
+            --highlight-color: #1f6feb; /* A bright blue */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 600px;
+            overflow: hidden;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); }
+        input[type="range"] { width: 100%; }
+        select { width: 100%; padding: 8px; background-color: var(--bg-color); color: var(--primary-color); border: 1px solid var(--border-color); border-radius: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 15px; border-radius: 5px; border-left: 3px solid var(--highlight-color); }
+        .metric-item strong { display: block; color: var(--accent-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: Kaluza-Klein Graviton Towers</h1>
+            <p>Visualizing the Spectrum of Massive Gravitons from Compactified Extra Dimensions</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-container">
+                        <div class="viz-item" id="energy-level-viz">
+                             <canvas id="energy-canvas"></canvas>
+                        </div>
+                        <div class="viz-item" id="wavefunction-viz">
+                            <canvas id="wavefunction-canvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Extra Dimension Controls</h3>
+                    <div class="control-group">
+                        <label for="dim-radius">Radius of Extra Dimension (R)</label>
+                        <input type="range" id="dim-radius" min="0.5" max="10" step="0.1" value="2">
+                        <span id="dim-radius-value">2.0</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="kk-mode">Excited KK Mode (n)</label>
+                        <input type="range" id="kk-mode" min="0" max="10" step="1" value="1">
+                        <span id="kk-mode-value">1</span>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Live Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <strong>Mass Formula</strong>
+                            <span id="metric-formula">mₙ ≈ n/R</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Mass of Mode n=<span id="metric-n-val">1</span></strong>
+                            <span id="metric-mass">0.50</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Mass Spacing (Δm)</strong>
+                            <span id="metric-spacing">0.50</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Effective Force Range</strong>
+                            <span id="metric-range">~ R</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: {
+            R: 2.0, // Radius of extra dimension
+            n: 1,   // Excited KK mode
+        },
+        elements: {},
+        ctx: { energy: null, wavefunction: null },
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.gameLoop();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                energyCanvas: document.getElementById('energy-canvas'),
+                wavefunctionCanvas: document.getElementById('wavefunction-canvas'),
+                radiusSlider: document.getElementById('dim-radius'),
+                radiusValue: document.getElementById('dim-radius-value'),
+                modeSlider: document.getElementById('kk-mode'),
+                modeValue: document.getElementById('kk-mode-value'),
+                metricFormula: document.getElementById('metric-formula'),
+                metricNVal: document.getElementById('metric-n-val'),
+                metricMass: document.getElementById('metric-mass'),
+                metricSpacing: document.getElementById('metric-spacing'),
+                metricRange: document.getElementById('metric-range'),
+            };
+            this.ctx.energy = this.elements.energyCanvas.getContext('2d');
+            this.ctx.wavefunction = this.elements.wavefunctionCanvas.getContext('2d');
+        },
+
+        setupUIListeners() {
+            this.elements.radiusSlider.addEventListener('input', e => {
+                this.config.R = parseFloat(e.target.value);
+                this.elements.radiusValue.textContent = this.config.R.toFixed(1);
+            });
+            this.elements.modeSlider.addEventListener('input', e => {
+                this.config.n = parseInt(e.target.value);
+                this.elements.modeValue.textContent = this.config.n;
+            });
+        },
+
+        updateMetrics() {
+            const mass_n = this.config.n / this.config.R;
+            const spacing = 1 / this.config.R;
+            this.elements.metricNVal.textContent = this.config.n;
+            this.elements.metricMass.textContent = mass_n.toFixed(2);
+            this.elements.metricSpacing.textContent = spacing.toFixed(2);
+            this.elements.metricRange.textContent = `~ ${this.config.R.toFixed(1)}`;
+        },
+
+        gameLoop() {
+            this.draw();
+            this.updateMetrics();
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        drawEnergyLevels() {
+            const ctx = this.ctx.energy;
+            const w = this.elements.energyCanvas.width = this.elements.energyCanvas.clientWidth;
+            const h = this.elements.energyCanvas.height = this.elements.energyCanvas.clientHeight;
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.font = '16px Exo 2';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText("Energy / Mass", w/2, 20);
+
+            const max_mass = 12 / this.config.R;
+
+            for(let i=0; i<=10; i++) {
+                const mass = i / this.config.R;
+                const y = h - (mass / max_mass) * (h-40) - 30;
+
+                if(i === this.config.n) {
+                    ctx.strokeStyle = 'var(--highlight-color)';
+                    ctx.lineWidth = 4;
+                } else {
+                    ctx.strokeStyle = 'var(--accent-color)';
+                    ctx.lineWidth = 2;
+                }
+                ctx.beginPath();
+                ctx.moveTo(w*0.2, y);
+                ctx.lineTo(w*0.8, y);
+                ctx.stroke();
+
+                ctx.fillStyle = (i === this.config.n) ? 'var(--highlight-color)' : 'white';
+                ctx.textAlign = 'left';
+                ctx.fillText(`n=${i}`, 10, y+5);
+                ctx.textAlign = 'right';
+                ctx.fillText(`m=${mass.toFixed(2)}`, w-10, y+5);
+            }
+        },
+
+        drawWavefunction() {
+            const ctx = this.ctx.wavefunction;
+            const w = this.elements.wavefunctionCanvas.width = this.elements.wavefunctionCanvas.clientWidth;
+            const h = this.elements.wavefunctionCanvas.height = this.elements.wavefunctionCanvas.clientHeight;
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.font = '16px Exo 2';
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'center';
+            ctx.fillText("Wavefunction in Extra Dimension", w/2, 20);
+
+            const n = this.config.n;
+            if (n === 0) { // Zero mode
+                ctx.strokeStyle = 'var(--highlight-color)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, h/2);
+                ctx.lineTo(w, h/2);
+                ctx.stroke();
+                ctx.fillText("Constant (Zero Mode)", w/2, h - 20);
+            } else { // KK modes
+                ctx.strokeStyle = 'var(--highlight-color)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, h/2);
+                for(let x=0; x<w; x++) {
+                    const angle = (x/w) * 2 * Math.PI * n;
+                    const y = h/2 - (h/3) * Math.cos(angle);
+                    ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.fillText(`Mode n=${n}`, w/2, h - 20);
+            }
+
+            // Draw the compact dimension circle
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, w*0.1, 0, 2*Math.PI);
+            ctx.stroke();
+            ctx.fillText("<- 2πR ->", w/2, h/2 + w*0.1 + 20);
+        },
+
+        draw() {
+            this.drawEnergyLevels();
+            this.drawWavefunction();
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>The Garden Hose Analogy: Seeing Extra Dimensions</h2>
+                <p>How could extra spatial dimensions exist without us noticing them? The idea of <strong>compactification</strong>, dating back to the 1920s with Theodor Kaluza and Oskar Klein, provides the answer. Imagine looking at a garden hose from a great distance. It appears to be a one-dimensional line. You can only see objects move forward and backward along it. However, upon closer inspection, you realize it has a second dimension: a tiny, circular direction wrapped around its surface. An ant living on the hose can not only move along its length but also crawl around its circumference.</p>
+                <p>Compactification proposes that any extra dimensions beyond our familiar three are curled up into incredibly small, subatomic shapes. We don't perceive them because we, and the atoms we're made of, are far too large to move in these directions. However, fundamental particles can. A particle moving in a compactified extra dimension gains momentum in that direction. From our 4D perspective, Einstein's E=mc² tells us that this momentum in a hidden dimension is indistinguishable from mass. This is the central concept of Kaluza-Klein (KK) theory: a single type of massless particle in a higher-dimensional spacetime can appear to us as an infinite series—a "tower"—of particles with different masses. The lowest mass particle is the one with zero momentum in the extra dimension. The heavier particles are the "Kaluza-Klein modes," each corresponding to a quantized unit of momentum the particle carries in the compact direction.</p>
+
+                <h2>The Kaluza-Klein Tower</h2>
+                <p>The simulation on the left visualizes this "KK Tower." For a simple extra dimension compactified into a circle of radius <code>R</code>, the allowed momentum values are quantized, like notes on a guitar string. A particle's wavefunction must be single-valued, so it must fit an integer number of wavelengths (<code>n</code>) around the circumference. This quantization of momentum leads directly to a quantization of mass from our perspective.</p>
+                <p style="text-align:center; font-family: var(--font-mono);">mₙ² = m₀² + (n / R)²</p>
+                <p>Here, <code>m₀</code> is the particle's intrinsic mass (which is zero for a graviton), <code>n</code> is an integer (0, 1, 2, ...), and <code>R</code> is the radius of the compact dimension. The result is a ladder of massive particles.</p>
+                <ul>
+                    <li><strong>The n=0 Mode:</strong> This is the "zero mode," with no momentum in the extra dimension. For a graviton, this is the familiar massless graviton of General Relativity that mediates the force of gravity we experience.</li>
+                    <li><strong>The n>0 Modes:</strong> These are the massive Kaluza-Klein gravitons. They are copies of the graviton that are distinguished only by their mass. The mass of the first mode (n=1) is <code>m₁ ≈ 1/R</code>, and all subsequent modes are integer multiples of this mass.</li>
+                </ul>
+                <p>This simulation allows you to explore the relationship between the size of the extra dimension (<code>R</code>) and the structure of the KK tower. Notice how as you <strong>decrease R</strong>, the mass spacing (<code>Δm = 1/R</code>) between the energy levels grows larger. The extra dimension becomes harder to probe. As you <strong>increase R</strong>, the mass levels become more and more finely spaced, approaching a continuum. This is the key difference in phenomenology between RS-type models (small R, large spacing, distinct massive particles) and ADD-type models (large R, tiny spacing, a quasi-continuum of states).</p>
+
+                <h2>Wavefunctions in the Bulk</h2>
+                <p>The right-hand visualization shows the wavefunction of the selected KK mode in the extra dimension. The zero mode (n=0) has a constant, flat wavefunction—it is spread uniformly through the extra dimension. The higher modes (n>0) are standing waves, with <code>n</code> full wavelengths fitting around the circumference. These massive gravitons, unlike the massless one, have a non-trivial profile in the bulk. This difference in their wavefunction profile also affects how strongly they couple to matter on our brane.</p>
+
+                <h2>Searching for the Tower</h2>
+                <p>The existence of a KK tower of gravitons is a universal prediction of extra-dimensional theories and a primary target for experimental searches. How could we find them?</p>
+                <ul>
+                    <li><strong>Direct Production at Colliders:</strong> If the mass of the first KK gravitons is in the TeV range (as predicted by models like Randall-Sundrum), they could be produced directly at the LHC. A typical process would be the collision of two gluons or quarks, producing a massive KK graviton (<code>G_KK</code>), which would then almost instantly decay into a pair of highly energetic particles, like an electron-positron pair or a di-photon signal. Experimenters would see this as a "bump" or "resonance" in the energy distribution of these decay products.</li>
+                    <li><strong>Missing Energy Signatures:</strong> In models with large extra dimensions (like ADD), the KK gravitons are very light and weakly coupled. When produced in a collider, they may not decay within the detector. Instead, they would fly off into the bulk, carrying energy and momentum with them. This would be detected as an event with a large amount of "missing transverse energy," a signature that something invisible was produced and escaped.</li>
+                    <li><strong>Virtual Effects and Astrophysics:</strong> Even if we cannot produce KK gravitons directly, their existence as "virtual particles" can modify the predictions for Standard Model processes at high energies. Furthermore, in some models, stars could cool faster than expected by emitting KK gravitons into the bulk, placing strong constraints on the size and number of extra dimensions.</li>
+                </ul>
+
+                <h2>Q&A: Probing the Bulk</h2>
+                <div class="qa-item">
+                    <strong>1. Why is the graviton special?</strong>
+                    <p>In many braneworld models, Standard Model particles (like electrons and photons) are confined to our 3-brane and cannot enter the bulk. Gravity, being the curvature of spacetime itself, is the one force that must exist everywhere, including the bulk. Therefore, only the graviton is expected to have a Kaluza-Klein tower that is accessible in this way.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. What shape are the extra dimensions?</strong>
+                    <p>Nobody knows. The simplest assumption is a circle (S¹) or a torus (T² = S¹ x S¹), but in string theory, they are expected to be complex six-dimensional shapes known as Calabi-Yau manifolds. The geometry of the compact space is critical, as it determines the precise pattern of the KK mass spectrum. Measuring the masses of multiple KK modes could, in principle, allow us to perform "dimensional spectroscopy" and figure out the shape of the hidden dimensions.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

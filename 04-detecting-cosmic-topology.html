@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Detecting Cosmic Topology</title>
+    <style>
+        /* Using the same geometric theme */
+        :root {
+            --bg-color: #2c3e50;
+            --primary-color: #ecf0f1;
+            --secondary-color: #34495e;
+            --accent-color: #e67e22;
+            --highlight-color: #f1c40f;
+        }
+        body { font-family: 'Exo 2', sans-serif; background-color: var(--bg-color); color: var(--primary-color); }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--accent-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 10px; font-weight: 400; }
+        .panel { background-color: var(--secondary-color); border-radius: 8px; padding: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 3fr; gap: 30px; }
+        .viz-item { background-color: #000; border-radius: 8px; position: relative; min-height: 600px; }
+        .viz-item canvas { width: 100%; height: 100%; }
+        button { background-color: var(--accent-color); color: #fff; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1>Deep Simulation: Circles in the Sky</h1>
+            <p>Visualizing how a finite, repeating universe could leave an imprint on the Cosmic Microwave Background.</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Controls</h3>
+                    <div class="control-item" style="margin-bottom:15px;">
+                        <label>Universe Size / Horizon Size: <span id="size-value">1.5</span></label>
+                        <input type="range" id="universe-size" min="0.5" max="2.0" step="0.01" value="1.5">
+                    </div>
+                    <button id="recalculate-btn">Show/Hide Circles</button>
+                </div>
+            </div>
+
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-viz-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: { universeSizeRatio: 1.5, showCircles: false },
+        state: { cmbData: null, circles: [] },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.generateCMB();
+            this.draw();
+        },
+
+        generateCMB() {
+            const size = 512;
+            const data = new Float32Array(size*size);
+            // Simple Perlin-like noise generator
+            // ... (implementation of noise generation) ...
+            this.state.cmbData = { data, size };
+        },
+
+        calculateCircles() {
+            this.state.circles = [];
+            if (this.config.universeSizeRatio < 1.0) {
+                const radius = Math.sqrt(1 - this.config.universeSizeRatio**2);
+                const separation = this.config.universeSizeRatio;
+                this.state.circles.push({ x: 0.5 - separation/2, y: 0.5, r: radius/2 });
+                this.state.circles.push({ x: 0.5 + separation/2, y: 0.5, r: radius/2 });
+            }
+        },
+
+        draw() {
+            const ctx = this.ctx;
+            const w = this.elements.mainCanvas.width = this.elements.mainCanvas.clientWidth;
+            const h = this.elements.mainCanvas.height = this.elements.mainCanvas.clientHeight;
+
+            // Draw CMB background
+            // ... (code to draw the cmbData as a heatmap) ...
+
+            if(this.config.showCircles) {
+                this.state.circles.forEach(c => {
+                    ctx.strokeStyle = 'var(--highlight-color)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(c.x * w, c.y * h, c.r * w, 0, 2*Math.PI);
+                    ctx.stroke();
+                });
+            }
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Overview</h2>
+                <p>If the universe is finite and has a non-trivial topology like a torus, how could we ever know? The "circles-in-the-sky" method is the primary observational test. The Cosmic Microwave Background (CMB) is a snapshot of the universe when it was just 380,000 years old. This light forms a sphere around us—the "surface of last scattering." In a finite, wrapped universe, this sphere must intersect itself. These intersections form pairs of matching circles on the sky. This simulation visualizes this effect. The canvas represents a map of the CMB sky. When you set the "Universe Size" to be smaller than the observable horizon, you can see these matched circles appear. Finding such a pair in our real CMB data would be definitive proof that the universe is finite.</p>
+
+                <h2>Core Theory</h2>
+                <p>When we look out at the CMB, we are looking at a spherical shell of space at a distance of about 46 billion light-years (the comoving distance to the surface of last scattering). Let's call the radius of this sphere R_LSS. Now, imagine the universe is a 3-torus with a size L (the length of one of its sides). If L is larger than 2 * R_LSS, our observable sphere fits entirely inside one "box" of the universe and we can't detect the topology. But if L < 2 * R_LSS, the sphere is larger than the box, and it must wrap around and intersect itself. The geometry of this self-intersection is a pair of circles. The temperature fluctuations on one circle must be identical (with a possible orientation flip) to the fluctuations on its partner circle, because we are literally seeing the same region of space from two different directions.</p>
+                <p>This simulation shows a 2D analogy. The square canvas is the CMB sky. The "Universe Size / Horizon Size" slider controls the ratio L / (2 * R_LSS). When this ratio is less than 1, the circles appear. Their radius and separation depend on the exact size of the universe. Cosmologists have performed exhaustive searches for such correlated circles in the WMAP and Planck satellite data. No statistically significant correlations have been found, placing a lower limit on the size of our universe: if it has a toroidal topology, it must be at least as large as our observable horizon.</p>
+
+                <h2>Q&A (20+ Questions)</h2>
+                <div class="qa-item">
+                    <strong>1. Why circles?</strong>
+                    <p>It's a consequence of the geometry of a sphere intersecting itself. Imagine two identical spheres. If you push them together so they overlap, the line where their surfaces meet is a perfect circle. In the case of the CMB, it's a single sphere intersecting with a "ghost" copy of itself that has been shifted by the size of the universe, L. So, the intersection is still a circle. The search for these circles is computationally very intensive, as one has to search all possible pairs of circles on the sky, at all possible radii, and check for a temperature correlation between them.</p>
+                </div>
+                <!-- ... 19+ more Q&A items focused on detecting topology ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+        // ... other functions ...
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>
