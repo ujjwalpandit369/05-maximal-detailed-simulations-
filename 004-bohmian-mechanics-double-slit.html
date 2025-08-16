@@ -177,14 +177,17 @@ class SimulationApp {
         this.dom.startStopBtn.onclick = () => { this.state.isRunning = !this.state.isRunning; this.dom.startStopBtn.textContent = this.state.isRunning ? 'Stop Wave' : 'Start Wave'; };
         this.dom.singleParticleBtn.onclick = () => { this.addEnsemble(1); };
         this.dom.ensembleBtn.onclick = () => { this.addEnsemble(100); };
-        this.dom.slitSeparationSlider.oninput = (e) => { this.state.slitSeparation = parseInt(e.target.value); this.createPotential(); };
+        this.dom.slitSeparationSlider.oninput = (e) => { this.state.slitSeparation = parseInt(e.target.value); this.reset(); };
         this.dom.showWaveCheck.onchange = (e) => { this.state.showWave = e.target.checked; };
         this.dom.showPathsCheck.onchange = (e) => { this.state.showPaths = e.target.checked; };
         this.reset();
     }
 
     reset() {
-        this.initState();
+        this.state.isRunning = false;
+        this.dom.startStopBtn.textContent = 'Start Wave';
+        this.state.particles = [];
+        this.state.hits.fill(0);
         this.createPotential();
         this.createInitialWavePacket();
     }
@@ -206,8 +209,7 @@ class SimulationApp {
     createInitialWavePacket() { /* ... Identical to previous sim ... */ }
 
     addEnsemble(count) {
-        const { size, psi_re, psi_im } = this.state;
-        const startX = Math.floor(size/6), startY = Math.floor(size/2), sigma = 8;
+        const startX = Math.floor(this.state.size/6), startY = Math.floor(this.state.size/2), sigma = 8;
         for(let i=0; i<count; i++) {
             const x = startX + (Math.random() - 0.5) * sigma * 2;
             const y = startY + (Math.random() - 0.5) * sigma * 2;
@@ -231,19 +233,34 @@ class SimulationApp {
         ctx.clearRect(0,0,width,height);
 
         if (this.state.showWave) {
-            // ... draw heatmap ...
+            const prob = this.state.psi_re.map((v,i) => v*v + this.state.psi_im[i]*this.state.psi_im[i]);
+            let max_prob = Math.max(...prob);
+            const imageData = this.ctx.createImageData(width, height);
+            for(let y=0; y<height; y++) for(let x=0; x<width; x++) {
+                const mapX=Math.floor(x/width*size), mapY=Math.floor(y/height*size);
+                const idx_map=mapY*size+mapX, idx_img=(y*width+x)*4;
+                const p = prob[idx_map]/max_prob;
+                imageData.data[idx_img] = 60*p; imageData.data[idx_img+1] = 200*p; imageData.data[idx_img+2] = 100*p;
+                imageData.data[idx_img+3] = 255;
+            }
+            ctx.putImageData(imageData, 0, 0);
         }
 
-        // Draw barrier
         ctx.fillStyle = 'var(--color-secondary)';
         for(let y=0; y<height; y++) for(let x=0; x<width; x++) {
-            const mapX = Math.floor(x/width*size), mapY = Math.floor(y/height*size);
-            if(potential[mapY*size+mapX] > 0) ctx.fillRect(x,y,1,1);
+            const mapX=Math.floor(x/width*size), mapY=Math.floor(y/height*size);
+            if(potential[mapY*size+mapX]>0) ctx.fillRect(x,y,1,1);
         }
 
-        // Draw paths and particles
         if (this.state.showPaths) {
-            // ... draw paths and particles ...
+            const scaleX = width/size, scaleY = height/size;
+            particles.forEach(p => {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 1;
+                ctx.beginPath();
+                p.path.forEach((pt,i)=>{if(i===0)ctx.moveTo(pt.x*scaleX,pt.y*scaleY);else ctx.lineTo(pt.x*scaleX,pt.y*scaleY);});
+                ctx.stroke();
+                ctx.fillStyle = 'var(--color-particle)'; ctx.beginPath(); ctx.arc(p.x*scaleX, p.y*scaleY, 2, 0, 2*Math.PI); ctx.fill();
+            });
         }
 
         this.drawIntensityChart();
@@ -253,10 +270,10 @@ class SimulationApp {
 }
 
 // Dummy/Identical implementations
-SimulationApp.prototype.createInitialWavePacket = function(){const{size,psi_re,psi_im}=this.state;psi_re.fill(0);psi_im.fill(0);const sX=Math.floor(size/6),sY=Math.floor(size/2),sig=8,mom=8;for(let y=0;y<size;y++)for(let x=0;x<size;x++){const dSq=Math.pow(x-sX,2)+Math.pow(y-sY,2);const env=Math.exp(-dSq/(2*sig*sig));psi_re[y*size+x]=env*Math.cos(mom*(x-sX));psi_im[y*size+x]=env*Math.sin(mom*(x-sX));}};
-SimulationApp.prototype.updateWave = function(){const{size,psi_re,psi_im,potential}=this.state,dt=0.001,dx2=1;for(let i=0;i<5;i++){for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++){const idx=y*size+x;const lap_re=(psi_re[idx+1]+psi_re[idx-1]+psi_re[idx+size]+psi_re[idx-size]-4*psi_re[idx])/dx2;psi_im[idx]-=dt*(-.5*lap_re+potential[idx]*psi_re[idx]);}for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++){const idx=y*size+x;const lap_im=(psi_im[idx+1]+psi_im[idx-1]+psi_im[idx+size]+psi_im[idx-size]-4*psi_im[idx])/dx2;psi_re[idx]+=dt*(-.5*lap_im+potential[idx]*psi_im[idx]);}}};
-SimulationApp.prototype.updateParticles = function() { const {size,psi_re,psi_im,particles,hits}=this.state;particles.forEach((p,i)=>{if(p.x>size-12){hits[Math.floor(p.y)]++;p.path=[];return;}if(p.x<1||p.x>size-2||p.y<1||p.y>size-2)return;const ix=Math.floor(p.x),iy=Math.floor(p.y),idx=iy*size+ix;const S_c=Math.atan2(psi_im[idx],psi_re[idx]),S_r=Math.atan2(psi_im[idx+1],psi_re[idx+1]),S_u=Math.atan2(psi_im[idx+size],psi_re[idx+size]);let gX=S_r-S_c,gY=S_u-S_c;if(gX>Math.PI)gX-=2*Math.PI;if(gX<-Math.PI)gX+=2*Math.PI;if(gY>Math.PI)gY-=2*Math.PI;if(gY<-Math.PI)gY+=2*Math.PI;p.x+=gX*2;p.y+=gY*2;p.path.push({x:p.x,y:p.y});if(p.path.length>100)p.path.shift();});};
-SimulationApp.prototype.drawIntensityChart = function(){const{chartCtx,width,height}={chartCtx:this.chartCtx,width:this.dom.intensityChartCanvas.width,height:this.dom.intensityChartCanvas.height};chartCtx.clearRect(0,0,width,height);const{hits,size}=this.state;let max_i=0;for(let i=0;i<hits.length;i++)if(hits[i]>max_i)max_i=hits[i];if(max_i===0)return;chartCtx.fillStyle='var(--color-primary)';for(let y=0;y<size;y++){const x_pos=(y/size)*width;const h=(hits[y]/max_i)*height;chartCtx.fillRect(x_pos,height-h,width/size,h);}};
+SimulationApp.prototype.createInitialWavePacket=function(){const{size,psi_re,psi_im}=this.state;psi_re.fill(0);psi_im.fill(0);const sX=Math.floor(size/6),sY=Math.floor(size/2),sig=8,mom=8;for(let y=0;y<size;y++)for(let x=0;x<size;x++){const dSq=Math.pow(x-sX,2)+Math.pow(y-sY,2);const env=Math.exp(-dSq/(2*sig*sig));psi_re[y*size+x]=env*Math.cos(mom*(x-sX));psi_im[y*size+x]=env*Math.sin(mom*(x-sX));}};
+SimulationApp.prototype.updateWave=function(){const{size,psi_re,psi_im,potential}=this.state,dt=0.001,dx2=1;for(let i=0;i<5;i++){for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++){const idx=y*size+x,lap_re=(psi_re[idx+1]+psi_re[idx-1]+psi_re[idx+size]+psi_re[idx-size]-4*psi_re[idx])/dx2;psi_im[idx]-=dt*(-.5*lap_re+potential[idx]*psi_re[idx]);}for(let y=1;y<size-1;y++)for(let x=1;x<size-1;x++){const idx=y*size+x,lap_im=(psi_im[idx+1]+psi_im[idx-1]+psi_im[idx+size]+psi_im[idx-size]-4*psi_im[idx])/dx2;psi_re[idx]+=dt*(-.5*lap_im+potential[idx]*psi_im[idx]);}}};
+SimulationApp.prototype.updateParticles=function(){const{size,psi_re,psi_im,particles,hits}=this.state;particles.forEach(p=>{if(p.x>size-12){hits[Math.floor(p.y)]++;p.path=[];return;}if(p.x<1||p.x>size-2||p.y<1||p.y>size-2)return;const ix=Math.floor(p.x),iy=Math.floor(p.y),idx=iy*size+ix,S_c=Math.atan2(psi_im[idx],psi_re[idx]),S_r=Math.atan2(psi_im[idx+1],psi_re[idx+1]),S_u=Math.atan2(psi_im[idx+size],psi_re[idx+size]);let gX=S_r-S_c,gY=S_u-S_c;if(gX>Math.PI)gX-=2*Math.PI;if(gX<-Math.PI)gX+=2*Math.PI;if(gY>Math.PI)gY-=2*Math.PI;if(gY<-Math.PI)gY+=2*Math.PI;p.x+=gX*2;p.y+=gY*2;if(this.state.isRunning)p.path.push({x:p.x,y:p.y});if(p.path.length>100)p.path.shift();});};
+SimulationApp.prototype.drawIntensityChart=function(){const{chartCtx,width,height}={chartCtx:this.dom.intensityChartCanvas.getContext('2d'),width:this.dom.intensityChartCanvas.width,height:this.dom.intensityChartCanvas.height};chartCtx.clearRect(0,0,width,height);const{hits,size}=this.state;let max_i=0;for(let i=0;i<hits.length;i++)if(hits[i]>max_i)max_i=hits[i];if(max_i===0)return;chartCtx.fillStyle='var(--color-primary)';for(let y=0;y<size;y++){const x_pos=(y/size)*width,h=(hits[y]/max_i)*height;chartCtx.fillRect(x_pos,height-h,width/size,h);}};
 
 window.onload = () => { new SimulationApp(); };
 </script>

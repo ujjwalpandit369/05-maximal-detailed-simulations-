@@ -196,7 +196,7 @@ class SimulationApp {
         } else if (type === 'double_slit') {
             const slitSep = 20, slitWidth = 5, barrierX = Math.floor(size/3);
             for(let y=0; y<size; y++) for(let x=0; x<size; x++) {
-                if (x === barrierX) {
+                if (x > barrierX-2 && x < barrierX+2) {
                     const fromCenter = Math.abs(y - size/2);
                     if(fromCenter > slitSep/2 + slitWidth/2 || fromCenter < slitSep/2 - slitWidth/2) {
                        potential[y*size+x] = 1e6;
@@ -232,7 +232,6 @@ class SimulationApp {
         for(let i=0; i<50; i++) {
             const x = Math.random() * this.state.size;
             const y = Math.random() * this.state.size;
-            // Rejection sampling to place according to |psi|^2
             if (Math.random() < prob[Math.floor(y)*this.state.size + Math.floor(x)] * 100) {
                  this.state.particles.push({ x, y, path: [{x,y}] });
             }
@@ -242,8 +241,8 @@ class SimulationApp {
     mainLoop() {
         if(this.state.isRunning) {
             this.updateWave();
-            this.updateParticles();
         }
+        this.updateParticles();
         this.draw();
         requestAnimationFrame(() => this.mainLoop());
     }
@@ -256,17 +255,17 @@ class SimulationApp {
             const ix = Math.floor(p.x), iy = Math.floor(p.y);
             if(ix<1 || ix>size-2 || iy<1 || iy>size-2) return;
 
-            // Calculate phase S = atan2(im, re)
             const idx = iy*size+ix;
             const S_center = Math.atan2(psi_im[idx], psi_re[idx]);
             const S_right = Math.atan2(psi_im[idx+1], psi_re[idx+1]);
             const S_up = Math.atan2(psi_im[idx+size], psi_re[idx+size]);
 
-            // Calculate gradient of phase (nabla S)
-            const gradX = S_right - S_center;
-            const gradY = S_up - S_center;
+            let gradX = S_right - S_center;
+            let gradY = S_up - S_center;
+            if(gradX > Math.PI) gradX -= 2*Math.PI; if(gradX < -Math.PI) gradX += 2*Math.PI;
+            if(gradY > Math.PI) gradY -= 2*Math.PI; if(gradY < -Math.PI) gradY += 2*Math.PI;
 
-            p.x += gradX * 5; // Velocity is proportional to gradS
+            p.x += gradX * 5;
             p.y += gradY * 5;
             p.path.push({x: p.x, y: p.y});
             if(p.path.length > 200) p.path.shift();
@@ -294,7 +293,6 @@ class SimulationApp {
         }
         ctx.putImageData(imageData, 0, 0);
 
-        // Draw particles and trajectories
         const scaleX = width/size, scaleY = height/size;
         particles.forEach(p => {
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';

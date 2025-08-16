@@ -226,7 +226,6 @@ class SimulationApp {
         const { size, potential, particles } = this.state;
         ctx.clearRect(0,0,width,height);
 
-        // Draw heatmap (pilot wave)
         const prob = this.state.psi_re.map((v,i) => v*v + this.state.psi_im[i]*this.state.psi_im[i]);
         let max_prob = Math.max(...prob);
         const imageData = ctx.createImageData(width, height);
@@ -242,14 +241,12 @@ class SimulationApp {
         }
         ctx.putImageData(imageData, 0, 0);
 
-        // Draw barrier
         ctx.fillStyle = 'var(--color-secondary)';
         for(let y=0; y<height; y++) for(let x=0; x<width; x++) {
             const mapX=Math.floor(x/width*size), mapY=Math.floor(y/height*size);
             if(potential[mapY*size+mapX]>0) ctx.fillRect(x,y,1,1);
         }
 
-        // Draw interpretation-specific elements
         const scaleX = width/size, scaleY = height/size;
         if(type === 'mwi') {
             particles.forEach(p => {

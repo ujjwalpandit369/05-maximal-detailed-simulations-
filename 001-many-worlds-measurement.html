@@ -216,9 +216,6 @@ class SimulationApp {
                 { weight: p1, state: [0,0,1,0], outcome: '|1⟩' },
             ];
         } else { // X-basis
-             // |+> = 1/sqrt(2) (|0> + |1>) , |-> = 1/sqrt(2) (|0> - |1>)
-            // c+ = <+|psi> = 1/sqrt(2) (a+b)
-            // c- = <-|psi> = 1/sqrt(2) (a-b)
             const S2 = Math.sqrt(0.5);
             const c_plus_re = S2 * (a_re + b_re);
             const c_plus_im = S2 * (a_im + b_im);
@@ -282,7 +279,6 @@ class SimulationApp {
         const { ctx, width, height } = this.dom.mainCanvas;
         ctx.clearRect(0,0,width,height);
 
-        // Use a simple tree layout algorithm
         const levels = {};
         this.state.worlds.forEach(w => {
             const level = w.parentId ? this.state.worlds.find(p=>p.id===w.parentId).level + 1 : 0;
@@ -303,7 +299,6 @@ class SimulationApp {
             w.pos = { x, y, r: 20 };
         });
 
-        // Draw lines
         this.state.worlds.forEach(w => {
             if(w.parentId) {
                 const parent = this.state.worlds.find(p => p.id === w.parentId);
@@ -316,7 +311,6 @@ class SimulationApp {
             }
         });
 
-        // Draw nodes
         this.state.worlds.forEach(w => {
             ctx.beginPath();
             ctx.arc(w.pos.x, w.pos.y, w.pos.r, 0, 2*Math.PI);
