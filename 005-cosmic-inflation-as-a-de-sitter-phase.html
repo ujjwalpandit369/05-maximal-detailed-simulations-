@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Cosmic Inflation as a de Sitter Phase</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #3a86ff;
+            --accent-hover: #2b63bc; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; }
+        .container { display: grid; grid-template-columns: 350px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "controls main"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; text-align:center; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .controls-panel { grid-area: controls; overflow-y: auto; }
+        .main-panel { grid-area: main; display: grid; grid-template-rows: 1fr 1fr; gap: 1rem; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; }
+        header h1 { color: var(--accent-color); margin:0; font-size: 2.5rem; }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; margin:0; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; font-size: 1.2rem; }
+        .control { margin-bottom: 1rem; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control button, .control select { width: 100%; padding: 10px; border-radius: 4px; background-color: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); font-size: 1rem;}
+        .control button { background-color: var(--accent-color); color:white; font-weight:bold; cursor:pointer; transition: background-color 0.2s;}
+        .control button:hover { background-color: var(--accent-hover); }
+        .sim-view { position: relative; width: 100%; height: 100%; background: #000; border-radius: 4px; overflow:hidden; }
+        .metrics-overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; color: white; font-family: var(--code-font); font-size: 1rem; z-index: 10;}
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1200px; border-radius: 8px; }
+        .modal-close { position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-body { max-height: 80vh; overflow-y: auto; padding-right: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cosmic Inflation as a de Sitter Phase</h1>
+            <h2>Watch a quantum field drive the exponential expansion of the early universe.</h2>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div class="control">
+                    <button id="start-stop-sim">Start/Stop</button>
+                    <button id="reset-sim" style="margin-top:5px;">Reset</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Inflaton Potential V(φ)</h3>
+                <div class="control">
+                    <label for="potential-type">Potential Type</label>
+                    <select id="potential-type">
+                        <option value="m2phi2" selected>Chaotic (m²φ²)</option>
+                        <option value="lambda_phi4">Quartic (λφ⁴)</option>
+                        <option value="plateau">Starobinsky-like (Plateau)</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label for="potential-m">Mass/Coupling (m or √λ): <span class="value-display" id="potential-m-value">0.1</span></label>
+                    <input type="range" id="potential-m" min="0.01" max="0.5" step="0.01" value="0.1">
+                </div>
+                <div class="control">
+                    <label for="initial-phi">Initial Field Value (φ₀): <span class="value-display" id="initial-phi-value">15</span></label>
+                    <input type="range" id="initial-phi" min="1" max="25" step="1" value="15">
+                </div>
+            </div>
+             <div class="control-group">
+                <h3>Content & Learning</h3>
+                <button onclick="openModal('exposition-modal')">Read Full Exposition</button>
+                <button onclick="openModal('qna-modal')" style="margin-top:5px;">Explore Q&A</button>
+                <button onclick="openModal('microlabs-modal')" style="margin-top:5px;">View Micro-Labs</button>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <div class="sim-view" id="potential-view">
+                <canvas id="potential-canvas"></canvas>
+                <div class="metrics-overlay" id="potential-metrics"></div>
+            </div>
+            <div class="sim-view" id="expansion-view">
+                <canvas id="expansion-canvas"></canvas>
+                <div class="metrics-overlay" id="expansion-metrics"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('exposition-modal')">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('qna-modal')">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+    <div id="microlabs-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('microlabs-modal')">&times;</span><div class="modal-body" id="microlabs-content"></div></div></div>
+
+    <script>
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const Sim = {
+            config: { simSpeed: 1, potentialType: 'm2phi2', m: 0.1, initialPhi: 15 },
+            state: { isRunning: true, time: 0, phi: 15, phi_dot: 0, scale_factor: 1, hubble: 0, efolds: 0, lastFrameTime: 0, grid_points: [] },
+            elements: {},
+
+            init() {
+                this.cacheDOMElements();
+                this.setupControls();
+                this.setupContent();
+                this.reset();
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'sim-speed', 'start-stop-sim', 'reset-sim', 'potential-type', 'potential-m', 'potential-m-value',
+                    'initial-phi', 'initial-phi-value', 'potential-canvas', 'expansion-canvas',
+                    'potential-metrics', 'expansion-metrics', 'exposition-content', 'qna-content', 'microlabs-content'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.potential_ctx = this.elements.potentialCanvas.getContext('2d');
+                this.elements.expansion_ctx = this.elements.expansionCanvas.getContext('2d');
+            },
+
+            setupControls() {
+                this.elements.simSpeed.addEventListener('input', e => this.config.simSpeed = parseFloat(e.target.value));
+                this.elements.startStopSim.addEventListener('click', () => this.state.isRunning = !this.state.isRunning);
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.potentialType.addEventListener('change', () => this.reset());
+                this.elements.potentialM.addEventListener('input', e => {
+                    this.config.m = parseFloat(e.target.value);
+                    this.elements.potentialMValue.textContent = this.config.m.toFixed(2);
+                });
+                this.elements.initialPhi.addEventListener('input', e => {
+                    this.config.initialPhi = parseFloat(e.target.value);
+                    this.elements.initialPhiValue.textContent = this.config.initialPhi.toFixed(1);
+                });
+            },
+
+            reset() {
+                this.state.time = 0;
+                this.config.potentialType = this.elements.potentialType.value;
+                this.state.phi = this.config.initialPhi;
+                this.state.phi_dot = 0;
+                this.state.scale_factor = 1;
+                this.state.efolds = 0;
+                this.state.isRunning = true;
+                this.state.grid_points = [];
+                const canvas = this.elements.expansionCanvas;
+                for(let i=0; i<200; i++) {
+                    this.state.grid_points.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, val: Math.random() });
+                }
+            },
+
+            getPotential(phi) {
+                const m = this.config.m;
+                switch (this.config.potentialType) {
+                    case 'm2phi2': return 0.5 * m * m * phi * phi;
+                    case 'lambda_phi4': return 0.25 * m * m * m * m * phi * phi * phi * phi;
+                    case 'plateau':
+                        const M_p = 1; // Planck mass
+                        return (3/4) * M_p**4 * (1 - Math.exp(-Math.sqrt(2/3) * Math.abs(phi) / M_p))**2;
+                }
+            },
+
+            getPotentialDerivative(phi) {
+                const m = this.config.m;
+                 switch (this.config.potentialType) {
+                    case 'm2phi2': return m * m * phi;
+                    case 'lambda_phi4': return m * m * m * m * phi * phi * phi;
+                    case 'plateau':
+                        const M_p = 1;
+                        const arg = -Math.sqrt(2/3) * Math.abs(phi) / M_p;
+                        const common = Math.sqrt(6)/2 * M_p**3 * (1 - Math.exp(arg)) * Math.exp(arg) * Math.sign(phi);
+                        return common;
+                }
+            },
+
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) { this.state.lastFrameTime = currentTime; requestAnimationFrame(this.gameLoop.bind(this)); return; };
+                const dt = Math.min(0.01, ((currentTime - this.state.lastFrameTime) / 1000) * this.config.simSpeed);
+                if (dt > 0) { this.update(dt); this.draw(); }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                this.state.time += dt;
+                const V = this.getPotential(this.state.phi);
+                const V_prime = this.getPotentialDerivative(this.state.phi);
+                const kinetic_energy = 0.5 * this.state.phi_dot * this.state.phi_dot;
+
+                // Friedmann equation: H^2 = (8piG/3) * rho. Here rho = V + KE. We use simplified units where 8piG/3 = 1.
+                this.state.hubble = Math.sqrt((V + kinetic_energy) / 3);
+
+                // Klein-Gordon equation with Hubble friction
+                const phi_ddot = -3 * this.state.hubble * this.state.phi_dot - V_prime;
+                this.state.phi_dot += phi_ddot * dt;
+                this.state.phi += this.state.phi_dot * dt;
+
+                // Update scale factor and e-folds
+                if (this.state.hubble > 0) {
+                    const d_efolds = this.state.hubble * dt;
+                    this.state.efolds += d_efolds;
+                    this.state.scale_factor = Math.exp(this.state.efolds);
+                }
+
+                // End condition: when potential energy is no longer dominant (reheating begins)
+                if (kinetic_energy > V || this.state.phi < 0.1) {
+                    this.state.isRunning = false;
+                }
+            },
+
+            draw() {
+                this.drawPotentialView();
+                this.drawExpansionView();
+                this.updateMetrics();
+            },
+
+            drawPotentialView() {
+                const { potential_ctx: ctx, potentialCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = 'var(--accent-color)'; ctx.lineWidth = 3;
+                ctx.beginPath();
+                const max_phi = this.config.initialPhi * 1.1;
+                const V_max = this.getPotential(max_phi);
+
+                for (let i = 0; i <= width; i++) {
+                    const phi = (i / width) * max_phi;
+                    const V = this.getPotential(phi);
+                    const y = height - (V / V_max) * height * 0.9 - 10;
+                    if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+                }
+                ctx.stroke();
+
+                const ball_x = (this.state.phi / max_phi) * width;
+                const ball_y = height - (this.getPotential(this.state.phi) / V_max) * height * 0.9 - 10;
+                ctx.fillStyle = 'white'; ctx.beginPath();
+                ctx.arc(ball_x, ball_y, 8, 0, 2 * Math.PI); ctx.fill();
+            },
+
+            drawExpansionView() {
+                const { expansion_ctx: ctx, expansionCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.save();
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
+
+                // Center the coordinate system
+                ctx.translate(width / 2, height / 2);
+                // Scale the whole view
+                ctx.scale(this.state.scale_factor, this.state.scale_factor);
+
+                this.state.grid_points.forEach(p => {
+                    // Coordinates are now relative to the center
+                    const x = (p.x - 0.5) * width;
+                    const y = (p.y - 0.5) * height;
+                    const size = p.val * 3; // Keep original size, scaling is handled by ctx.scale
+                    const hue = p.val * 360;
+                    ctx.fillStyle = `hsla(${hue}, 80%, 60%, 0.9)`;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, 2*Math.PI);
+                    ctx.fill();
+                });
+                ctx.restore();
+            },
+
+            updateMetrics() {
+                const V = this.getPotential(this.state.phi);
+                const KE = 0.5 * this.state.phi_dot**2;
+                const slowRollParam_epsilon = (KE / V).toFixed(3);
+
+                this.elements.potentialMetrics.innerHTML = `Time: ${this.state.time.toFixed(2)}<br>φ: ${this.state.phi.toFixed(3)}<br>V(φ): ${V.toFixed(3)}<br>KE(φ): ${KE.toFixed(3)}<br>KE/V: <span style="color:${slowRollParam_epsilon < 1 ? 'var(--success-color)' : 'var(--error-color)'}">${slowRollParam_epsilon}</span> (Inflation requires < 1)`;
+                this.elements.expansionMetrics.innerHTML = `Scale Factor a(t): ${this.state.scale_factor.toExponential(2)}<br>e-folds (N): ${this.state.efolds.toFixed(1)}<br>Hubble H: ${this.state.hubble.toFixed(3)}`;
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+                this.elements.microlabsContent.innerHTML = this.getMicroLabsHTML();
+            },
+
+            getExpositionHTML() { return `
+                <h2>Inflation: The Universe's Primordial Growth Spurt</h2>
+                <p>The standard Hot Big Bang model, while incredibly successful, leaves several deep cosmological puzzles unanswered. Why is the universe so remarkably uniform on the largest scales (the "horizon problem")? Why is its geometry so close to being perfectly flat (the "flatness problem")? And where did the initial seeds of cosmic structure, like galaxies, come from? <strong>Cosmic Inflation</strong> is our leading theoretical paradigm to solve these mysteries. It postulates that in the first fraction of a second after the Big Bang (from roughly 10⁻³⁶s to 10⁻³²s), the universe underwent a period of violent, accelerated, exponential expansion—a <strong>de Sitter-like phase</strong>—driven by the potential energy of a hypothetical quantum field called the "inflaton."</p>
+
+                <h3>Section 1: The Inflaton Field and Slow-Roll Inflation</h3>
+                <p>Inflationary theory introduces a new quantum scalar field, the <strong>inflaton (φ)</strong>, which is presumed to have permeated all of space in the early universe. Like all fields, the inflaton has a potential energy curve, V(φ). The key idea of "slow-roll inflation" is that this potential had a very specific shape: a vast, nearly flat plateau. If the inflaton field found itself with a high value on this plateau, its potential energy V(φ) would have been enormous and nearly constant. According to the Friedmann equation of General Relativity, a constant, positive energy density drives exponential expansion, exactly like the de Sitter space driven by a cosmological constant Λ. The inflaton's potential energy, V(φ), effectively acts as a temporary, very large cosmological constant.</p>
+                <p>The top canvas in the simulation visualizes this process. The inflaton field is represented as a ball, and its potential V(φ) is the curve it rolls on. As long as the potential is flat, the ball rolls slowly. This is the "slow-roll" condition. During this phase, the Hubble parameter H is large and nearly constant, and the universe inflates exponentially. The crucial condition for inflation to occur is that the potential energy of the field must be much greater than its kinetic energy (<code>V(φ) >> ½φ̇²</code>). You can monitor this ratio (KE/V) in the metrics panel.</p>
+
+                <h3>Section 2: The Quantum Seeds of Cosmic Structure</h3>
+                <p>The bottom canvas visualizes the most profound and testable consequence of inflation. According to quantum mechanics, no field can be perfectly smooth; it must have tiny, unavoidable quantum fluctuations. The inflaton field was constantly jittering on a microscopic level. During the immense stretching of inflation, these tiny quantum fluctuations were stretched to astronomical sizes. A region where the inflaton field fluctuated to a slightly higher value would have slightly more energy density and would exit the inflationary phase a moment later than a region that fluctuated to a lower value. These tiny time differences resulted in minute variations in the density of the universe after inflation ended.</p>
+                <p>These primordial density fluctuations, born from quantum mechanics and stretched by General Relativity, became the gravitational seeds for all cosmic structure we see today. Denser regions attracted more matter, eventually collapsing to form galaxies, stars, and planets. Every galaxy in the sky is believed to be the macroscopic manifestation of a single quantum fluctuation in the inflaton field. The simulation shows this beautifully: a grid of tiny quantum dots (bottom canvas) is stretched by the exponential expansion (driven by the rolling inflaton in the top canvas) into a vast, large-scale structure.</p>
+
+                <h3>Section 3: The Graceful Exit and Reheating</h3>
+                <p>Inflation could not last forever. For the universe to become the hot, dense place described by the standard Big Bang model, there had to be a "graceful exit." In the slow-roll model, this happens when the inflaton field reaches the "waterfall" region of its potential—a steep slope leading to a minimum. Once it hits this slope, the field accelerates rapidly, and the slow-roll conditions are violated (kinetic energy becomes comparable to potential energy). Inflation ends abruptly.</p>
+                <p>The inflaton field then oscillates rapidly around the minimum of its potential well. Through quantum field theory processes, the enormous stored potential energy of the inflaton is converted into a thermal bath of all the Standard Model particles (quarks, leptons, photons, etc.). This explosive process is called <strong>reheating</strong>. It marks the end of the inflationary epoch and the true beginning of the hot Big Bang phase. The simulation stops when the slow-roll condition (KE/V < 1) is violated, signifying the onset of reheating.</p>
+            `; },
+            getQnaHTML() { return `
+                <h2>Q&A: Cosmic Inflation</h2>
+                <div class="qa-item"><p class="question">1. Is inflation a proven scientific fact?</p><p class="answer">Inflation is a theoretical framework, or paradigm, not a single, proven theory. It is the leading and most successful model for the physics of the very early universe. Its core predictions—a spatially flat universe and a nearly scale-invariant spectrum of primordial density fluctuations—have been confirmed with stunning precision by observations of the Cosmic Microwave Background (CMB). However, we have not yet directly detected the inflaton particle or the primordial gravitational waves that are a "smoking gun" prediction of many inflationary models.</p></div>
+                <div class="qa-item"><p class="question">2. What is the inflaton field?</p><p class="answer">The inflaton is a hypothetical quantum scalar field. A scalar field has a value at every point in space but no direction (unlike a magnetic field). The Higgs field is another example. The inflaton is not part of the Standard Model of Particle Physics. Its identity and its connection to other known physics remain a major mystery. It could be a fundamental field, or a composite one.</p></div>
+                <div class="qa-item"><p class="question">3. How does inflation solve the horizon problem?</p><p class="answer">The horizon problem asks why distant regions of the CMB, which appear to have never been in causal contact, have the same temperature. Inflation solves this by positing that our entire observable universe originated from a tiny, causally-connected patch of space before inflation began. Inflation then stretched this small, uniform region to be larger than our observable horizon, explaining the large-scale uniformity.</p></div>
+                <div class="qa-item"><p class="question">4. How does inflation solve the flatness problem?</p><p class="answer">The flatness problem asks why the geometry of the universe is so close to being perfectly flat. Any initial curvature in the early universe would have been magnified over time. Inflation solves this by stretching the universe to such an enormous size that any initial curvature is "ironed out," making the local geometry appear flat, just as the surface of a giant, inflated balloon appears flat to a tiny ant living on it.</p></div>
+                <div class="qa-item"><p class="question">5. What are e-folds?</p><p class="answer">"e-folds" (N) are a convenient way to measure the amount of exponential expansion during inflation. One e-fold means the universe has expanded by a factor of e (≈2.718). The number of e-folds is given by N = ∫ H dt. To solve the cosmological puzzles, we need at least 50-60 e-folds of inflation.</p></div>
+                <div class="qa-item"><p class="question">6. What are the "slow-roll parameters"?</p><p class="answer">They are dimensionless numbers that quantify how "flat" the potential is and thus how slowly the inflaton field is rolling. The most common one is epsilon (ε), which is proportional to (V'/V)², where V' is the slope of the potential. Inflation requires ε << 1. A second parameter, eta (η), is proportional to V''/V, and must also be small. The simulation tracks KE/V, which is directly related to epsilon.</p></div>
+                <div class="qa-item"><p class="question">7. What is the difference between the potential types (m²φ², λφ⁴, etc.)?</p><p class="answer">These are different mathematical models for the shape of the inflaton potential. m²φ² ("chaotic inflation") is a simple quadratic potential. λφ⁴ is a quartic potential. "Plateau" models, like the Starobinsky model, feature a potential that flattens out at high field values. Each model makes slightly different predictions for the properties of the CMB, and current data from the Planck satellite slightly favors the plateau-like models.</p></div>
+                <div class="qa-item"><p class="question">8. Where did the inflaton field come from?</p><p class="answer">This is unknown and part of the "initial conditions" problem for inflation. Some theories of quantum cosmology suggest that in a "multiverse" scenario, inflation could start spontaneously in different regions of spacetime, creating new universes. But within our own universe's history, we don't know what set the inflaton field to a high value on its potential.</p></div>
+                <div class="qa-item"><p class="question">9. Did inflation happen before or after the Big Bang?</p><p class="answer">Inflation is part of the Big Bang theory, but it revises the very earliest moments. It's more accurate to say that reheating, the end of inflation, *is* the start of the "hot" Big Bang phase. So, inflation happened in the first fraction of a second of the Big Bang event.</p></div>
+                <div class="qa-item"><p class="question">10. What is the Hubble parameter (H) during inflation?</p><p class="answer">H is a measure of the expansion rate. During inflation, H is determined by the potential energy of the inflaton: H² ≈ V/3 (in Planck units). Because V is nearly constant during the slow roll, H is also nearly constant, which leads to the exponential expansion a(t) ∝ e^(Ht).</p></div>
+                <div class="qa-item"><p class="question">11. What are primordial gravitational waves?</p><p class="answer">Just as the inflaton field had quantum fluctuations, the fabric of spacetime itself (the metric) also had quantum fluctuations. Inflation would have stretched these into macroscopic gravitational waves. Detecting the faint, characteristic signature of these primordial gravitational waves in the polarization of the CMB is the "smoking gun" that would confirm inflation occurred.</p></div>
+                <div class="qa-item"><p class="question">12. What is "reheating"?</p><p class="answer">Reheating is the process at the end of inflation where the inflaton field decays, converting its massive potential energy into the particles of the Standard Model and heating the universe to an extremely high temperature. This sets the stage for the hot, dense state from which the rest of cosmic history proceeds.</p></div>
+                <div class="qa-item"><p class="question">13. Does inflation predict a multiverse?</p><p class="answer">Many inflationary models lead to a scenario called "eternal inflation." In this picture, quantum fluctuations can sometimes push the inflaton field *up* its potential, restarting inflation in that region of space. This could lead to an endless process of creating new "bubble" universes, of which ours is just one. This is a speculative but fascinating consequence.</p></div>
+                <div class="qa-item"><p class="question">14. Why does the inflaton need to be a scalar field?</p><p class="answer">A scalar field is the simplest type of field that can have a non-zero, uniform energy density throughout space (a vacuum energy) that is consistent with the observed isotropy and homogeneity of the universe. Vector or tensor fields would introduce preferred directions, which we do not observe.</p></div>
+                <div class="qa-item"><p class="question">15. What are the units in this simulation?</p><p class="answer">The simulation uses "Planck units," a system of natural units where fundamental constants like the speed of light (c), the gravitational constant (G), and Planck's constant (ħ) are set to 1. This simplifies the equations of cosmology and particle physics significantly.</p></div>
+                <div class="qa-item"><p class="question">16. What does the "KE/V" metric mean?</p><p class="answer">This is the ratio of the inflaton's kinetic energy (how fast it's rolling) to its potential energy (how high it is on the hill). For inflation to happen, we need V >> KE, so this ratio must be much less than 1. When it approaches 1, the slow-roll condition is violated and inflation ends.</p></div>
+                <div class="qa-item"><p class="question">17. How long did inflation last?</p><p class="answer">Incredibly short in absolute terms, but long in its own timescale. It started around 10⁻³⁶ seconds and ended around 10⁻³² seconds after the Big Bang. But during this time, the universe expanded by a factor of at least 10²⁶, corresponding to about 60 e-folds.</p></div>
+                <div class="qa-item"><p class="question">18. Why does the expansion view get "grainy"?</p><p class="answer">The simulation starts with a fixed number of "quantum fluctuation" points. As the universe expands exponentially, these points are stretched farther and farther apart, so the view naturally becomes more sparse or "grainy." This visually represents how a smooth initial state becomes a structured universe.</p></div>
+                <div class="qa-item"><p class="question">19. Can we observe the universe from before inflation?</p><p class="answer">Almost certainly not directly. Inflation stretched the pre-inflationary universe so much that any information from that era has been diluted to oblivion, far beyond our cosmic horizon. Our observational window on the universe effectively begins with the final moments of inflation.</p></div>
+                <div class="qa-item"><p class="question">20. What is "Hubble friction"?</p><p class="answer">This is the `3Hφ̇` term in the inflaton's equation of motion. It acts like a damping or friction term. The expansion of the universe (represented by H) resists the motion of the inflaton field, slowing its roll down the potential. This "friction" is crucial for allowing a long period of slow-roll inflation.</p></div>
+                <div class="qa-item"><p class="question">21. Is dark energy related to the inflaton?</p><p class="answer">This is a tantalizing possibility. Both are forms of vacuum energy that drive cosmic acceleration. It's possible that the current dark energy is the residual, tiny potential energy of the inflaton field after it settled into its minimum. This idea is called "quintessence" in some models.</p></div>
+                <div class="qa-item"><p class="question">22. Why does the simulation stop?</p><p class="answer">The simulation stops when the slow-roll condition (KE/V < 1) is violated. This marks the end of the inflationary phase and the beginning of the reheating phase, where the physics becomes much more complex. It's the "graceful exit" from inflation.</p></div>
+                <div class="qa-item"><p class="question">23. How big was the universe before inflation?</p><p class="answer">Extremely small. The entire region that would become our observable universe today was likely much smaller than a proton before inflation began. Inflation took this subatomic region and blew it up to macroscopic scales in an instant.</p></div>
+                <div class="qa-item"><p class="question">24. What is the scale factor a(t)?</p><p class="answer">The scale factor a(t) is a dimensionless number that tracks the relative size of the universe. We set it to 1 at the beginning of inflation. During inflation, it grows exponentially. The total growth is often enormous, like e⁶⁰ or 10²⁶.</p></div>
+                <div class="qa-item"><p class="question">25. Are there alternatives to inflation?</p><p class="answer">Yes, though none are as widely accepted. Some alternative models include "cyclic universe" scenarios (where the universe undergoes cycles of expansion and contraction), "string gas cosmology," and "varying speed of light" theories. These models also aim to solve the horizon and flatness problems but often face their own theoretical challenges.</p></div>
+            `; },
+            getMicroLabsHTML() { return `
+                <h2>Micro-Labs: Inflation Experiments</h2>
+                <p>Run these guided experiments to understand the dynamics of inflation.</p>
+                <ol>
+                    <li><strong>Standard Inflation:</strong> Use the default settings (m²φ², m=0.1, φ₀=15). Run the simulation. Note the number of e-folds (~60) and that KE/V stays small for a long time.</li>
+                    <li><strong>Steeper Potential:</strong> Increase the mass/coupling 'm' to 0.3. Reset and run. Notice that inflation ends much more quickly and produces fewer e-folds. The hill is too steep for a long slow roll.</li>
+                    <li><strong>Flatter Potential:</strong> Decrease 'm' to 0.03. Reset and run. Inflation lasts for a very long time and produces a huge number of e-folds.</li>
+                    <li><strong>Lower Starting Point:</strong> Keep defaults, but set initial φ₀ to 8. Reset and run. Does it produce enough e-folds to solve the horizon problem (~50-60)? Probably not.</li>
+                    <li><strong>Quartic Potential:</strong> Change Potential Type to λφ⁴. Reset and run. Compare the number of e-folds to the m²φ² model. Is it more or less "efficient"?</li>
+                    <li><strong>Plateau Potential:</strong> Change to Starobinsky-like potential. Reset. Notice how the potential is very flat at high φ, leading to a long period of slow-roll, even for a high 'm'. This is why such models are favored by data.</li>
+                    <li><strong>The KE/V Ratio:</strong> Watch the "KE/V" metric. For any successful inflation model, it should start very small and only grow to ~1 at the very end.</li>
+                    <li><strong>Hubble Friction:</strong> The Hubble parameter H acts as a friction term. A larger V means a larger H, which means more friction, which *slows down* the inflaton, prolonging inflation. It's a self-regulating mechanism.</li>
+                    <li><strong>Expansion View:</strong> Focus on the bottom canvas. Watch how the points, initially close, are rapidly stretched apart as the scale factor increases exponentially.</li>
+                    <li><strong>e-folds vs. Scale Factor:</strong> The scale factor is e^N. So for N=1, a=2.7. For N=2, a=7.4. For N=10, a=22,000. For N=60, a=10²⁶. This shows the explosive power of exponential growth.</li>
+                    <li><strong>End of Inflation:</strong> Note the value of φ where the simulation stops for the default m²φ² model. This is roughly the "end-of-inflation" point where the universe would begin to reheat.</li>
+                    <li><strong>Varying Initial Velocity:</strong> (Conceptual) If the inflaton had a large initial velocity (KE), it would roll down the hill too fast for inflation to start. Slow-roll requires a low initial KE.</li>
+                    <li><strong>Role of φ₀:</strong> For chaotic (m²φ² or λφ⁴) models, a larger initial field value φ₀ is required to get enough e-folds.</li>
+                    <li><strong>Role of m:</strong> For chaotic models, a smaller mass/coupling 'm' is required to get enough e-folds. It makes the potential flatter.</li>
+                    <li><strong>The Graceful Exit Problem:</strong> A good inflationary model must have a clear exit ramp. If the potential were flat everywhere, inflation would never end. All the models here have a steep part to end inflation.</li>
+                    <li><strong>Speeding it Up:</strong> Set up a long-running inflation (e.g., low 'm'). Use the Simulation Speed slider to fast-forward to the end.</li>
+                    <li><strong>Quantum Fluctuation Origin:</strong> Imagine each dot in the expansion view is a tiny quantum fluctuation. Inflation stretches them until they become the seeds of galaxies.</li>
+                    <li><strong>From Potential to Expansion:</strong> This is the key link. The potential energy V(φ) of the top canvas determines the Hubble parameter H, which in turn determines the expansion rate a(t) in the bottom canvas.</li>
+                    <li><strong>Slow Roll Check:</strong> Pause the simulation midway through. Is KE/V << 1? Is φ̇² << V? These are the mathematical conditions for slow-roll inflation.</li>
+                    <li><strong>Predicting CMB properties:</strong> The slope and curvature of the potential at the time when our observable universe's scales were stretched out determine the properties of the CMB temperature fluctuations. Plateau models fit this data best.</li>
+                    <li><strong>The "Big" in Big Bang:</strong> Watch the scale factor. Inflation is what put the "big" in the Big Bang, taking a subatomic region and making it astronomically large.</li>
+                    <li><strong>Homogeneity:</strong> The expansion view shows that after inflation, the distribution of dots is roughly the same everywhere, solving the horizon problem.</li>
+                    <li><strong>Flatness:</strong> The exponential expansion also drives the geometry of space to be almost perfectly flat, solving the flatness problem.</li>
+                    <li><strong>Reheating Visualized:</strong> When the simulation stops, imagine the ball oscillating at the bottom of the potential, its energy being dumped into a hot soup of particles that fill the expansion view.</li>
+                    <li><strong>Freestyle Model Building:</strong> Choose your own combination of parameters. Can you design an inflation model that produces exactly 60 e-folds? What values of m and φ₀ does it require?</li>
+                </ol>
+            `; }
+        };
+
+        Sim.init();
+    });
+    </script>
+</body>
+</html>

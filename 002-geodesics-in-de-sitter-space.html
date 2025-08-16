@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Geodesics in a de Sitter Universe</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #4d9de0;
+            --accent-hover: #3b7bb4; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd; --accent-color: #0077b6;
+            --accent-hover: #005f8e;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+        .container { display: grid; grid-template-columns: 350px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "controls main"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; text-align:center; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .controls-panel { grid-area: controls; overflow-y: auto; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; }
+        header h1 { color: var(--accent-color); margin:0; font-size: 2.5rem; }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; margin:0; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; font-size: 1.2rem; }
+        .control { margin-bottom: 1rem; position: relative; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control button, .control select { width: 100%; padding: 10px; border-radius: 4px; background-color: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); font-size: 1rem;}
+        .control button { background-color: var(--accent-color); color:white; font-weight:bold; cursor:pointer; transition: background-color 0.2s;}
+        .control button:hover { background-color: var(--accent-hover); }
+        .sim-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height:100%; }
+        .sim-box { border: 2px solid var(--border-color); border-radius: 8px; padding: 1rem; text-align: center; display:flex; flex-direction:column; }
+        .sim-box canvas { width: 100%; height: 80%; background: #000; border-radius: 4px; cursor: crosshair; flex-grow: 1; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1200px; border-radius: 8px; position: relative; box-shadow: 0 5px 25px rgba(0,0,0,0.5); }
+        .modal-close { color: var(--secondary-text); position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-body { max-height: 80vh; overflow-y: auto; padding-right: 20px;}
+        .modal-body h2 { color: var(--accent-color); border-bottom: 2px solid var(--accent-color); padding-bottom: 10px; }
+        .modal-body h3 { color: var(--primary-text); }
+        .modal-body p, .modal-body li { font-size: 1.1rem; line-height: 1.7; }
+        .modal-body code { background-color: var(--bg-color); padding: 2px 6px; border-radius: 4px; font-family: var(--code-font); }
+        .qa-item { border-left: 4px solid var(--accent-color); padding-left: 15px; margin-bottom: 20px; }
+        .qa-item .question { font-weight: bold; color: var(--primary-text); }
+        .qa-item .answer { color: var(--secondary-text); }
+        #status-bar { margin-top: 0.5rem; color: var(--secondary-text); font-size: 0.9rem; height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Geodesics in a de Sitter Universe</h1>
+            <h2>Explore particle and light paths in a universe with a positive cosmological constant.</h2>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Simulation Controls</h3>
+                <div class="control">
+                    <button id="reset-sim">Reset Simulation</button>
+                </div>
+                 <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span id="sim-speed-value">1.0</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Physical Parameters</h3>
+                 <div class="control">
+                    <label for="cosmo-const">Cosmological Constant (Λ): <span id="cosmo-const-value">0.05</span></label>
+                    <input type="range" id="cosmo-const" min="0" max="0.2" step="0.01" value="0.05">
+                </div>
+                <div class="control">
+                    <label for="particle-type">Particle to Add</label>
+                    <select id="particle-type">
+                        <option value="massive_slow">Massive (Slow)</option>
+                        <option value="massive_fast">Massive (Fast)</option>
+                        <option value="massless">Massless (Photon)</option>
+                    </select>
+                </div>
+                <p style="font-size: 0.9rem;">Click on the canvas to add a particle with random initial velocity.</p>
+            </div>
+             <div class="control-group">
+                <h3>Visualization</h3>
+                <div class="control">
+                    <label for="view-mode">Coordinate System</label>
+                    <select id="view-mode">
+                        <option value="comoving" selected>Comoving Coordinates</option>
+                        <option value="proper">Proper Coordinates</option>
+                    </select>
+                </div>
+                <div class="control">
+                    <label>Show Cosmic Horizon: <input type="checkbox" id="show-horizon" checked></label>
+                </div>
+                 <div class="control">
+                    <label>Show Light Cones: <input type="checkbox" id="show-lightcones"></label>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Content & Learning</h3>
+                <button onclick="openModal('exposition-modal')">Read Full Exposition</button>
+                <button onclick="openModal('qna-modal')" style="margin-top:5px;">Explore Q&A</button>
+                <button onclick="openModal('microlabs-modal')" style="margin-top:5px;">View Micro-Labs</button>
+            </div>
+        </aside>
+
+        <main class="main-panel panel">
+            <div class="sim-container" style="grid-template-columns: 1fr;">
+                <div class="sim-box">
+                    <canvas id="sim-canvas"></canvas>
+                    <p id="status-bar">Time: 0.00s | Scale Factor a(t): 1.000</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('exposition-modal')">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('qna-modal')">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+    <div id="microlabs-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('microlabs-modal')">&times;</span><div class="modal-body" id="microlabs-content"></div></div></div>
+
+    <script>
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const Sim = {
+            config: { simSpeed: 1, lambda: 0.05, viewMode: 'comoving', showHorizon: true, showLightCones: false },
+            state: { time: 0, particles: [], scaleFactor: 1, hubbleParam: 0, horizonRadius: 0, lastFrameTime: 0 },
+            elements: {},
+
+            init() {
+                this.cacheDOMElements();
+                this.setupControls();
+                this.setupContent();
+                this.reset();
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'reset-sim', 'sim-speed', 'sim-speed-value', 'cosmo-const', 'cosmo-const-value',
+                    'particle-type', 'view-mode', 'show-horizon', 'show-lightcones',
+                    'sim-canvas', 'status-bar', 'exposition-content', 'qna-content', 'microlabs-content'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.ctx = this.elements.simCanvas.getContext('2d');
+            },
+
+            setupControls() {
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.simSpeed.addEventListener('input', e => {
+                    this.config.simSpeed = parseFloat(e.target.value);
+                    this.elements.simSpeedValue.textContent = this.config.simSpeed.toFixed(1);
+                });
+                this.elements.cosmoConst.addEventListener('input', e => {
+                    this.config.lambda = parseFloat(e.target.value);
+                    this.elements.cosmoConstValue.textContent = this.config.lambda.toFixed(2);
+                });
+                this.elements.viewMode.addEventListener('change', e => this.config.viewMode = e.target.value);
+                this.elements.showHorizon.addEventListener('change', e => this.config.showHorizon = e.target.checked);
+                this.elements.showLightCones.addEventListener('change', e => this.config.showLightCones = e.target.checked);
+
+                this.elements.simCanvas.addEventListener('click', e => {
+                    const rect = this.elements.simCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    this.addParticle(x, y);
+                });
+            },
+
+            addParticle(canvasX, canvasY) {
+                const { width, height } = this.elements.simCanvas;
+                const type = this.elements.particleType.value;
+
+                // Convert canvas click to comoving coordinates, accounting for current view
+                const currentGridScale = this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50;
+                const comovingX = (canvasX - width / 2) / currentGridScale;
+                const comovingY = (canvasY - height / 2) / currentGridScale;
+
+                const angle = Math.random() * 2 * Math.PI;
+                let speed = 0;
+                switch(type) {
+                    case 'massive_slow': speed = 0.3; break;
+                    case 'massive_fast': speed = 0.8; break;
+                    case 'massless': speed = 1; break; // Speed of light c=1 in these units
+                }
+
+                this.state.particles.push({
+                    x: comovingX, y: comovingY,
+                    vx: speed * Math.cos(angle), vy: speed * Math.sin(angle),
+                    type,
+                    path: [{x: comovingX, y: comovingY}],
+                    color: `hsl(${Math.random() * 360}, 90%, 60%)`
+                });
+            },
+
+            reset() {
+                this.state.time = 0;
+                this.state.particles = [];
+                this.state.scaleFactor = 1;
+                this.addParticle(this.elements.simCanvas.width / 2, this.elements.simCanvas.height / 2);
+            },
+
+            gameLoop(currentTime) {
+                const dt = ((currentTime - this.state.lastFrameTime) / 1000) * this.config.simSpeed;
+                if (dt > 0) { this.update(dt); this.draw(); }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                this.state.time += dt;
+                this.state.hubbleParam = Math.sqrt(this.config.lambda / 3);
+                if (this.state.hubbleParam > 0) {
+                    this.state.scaleFactor = Math.exp(this.state.hubbleParam * this.state.time);
+                    this.state.horizonRadius = 1 / this.state.hubbleParam;
+                } else {
+                    this.state.scaleFactor = 1;
+                    this.state.horizonRadius = Infinity;
+                }
+
+                this.state.particles.forEach(p => {
+                    // Geodesic motion in comoving coordinates is simple:
+                    // dx/dt = v_peculiar / a(t)
+                    // For simplicity here, we assume peculiar velocity v is constant,
+                    // which isn't quite right but captures the visual effect that
+                    // peculiar velocities "redshift away" and objects tend to come to rest in comoving coordinates.
+                    p.x += (p.vx / this.state.scaleFactor) * dt;
+                    p.y += (p.vy / this.state.scaleFactor) * dt;
+
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.path.length > 500) p.path.shift();
+                });
+            },
+
+            draw() {
+                const { ctx, simCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#050505';
+                ctx.fillRect(0, 0, width, height);
+
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const gridScale = this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50;
+
+                // Draw grid
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 1;
+                for (let x = centerX; x < width + gridScale; x += gridScale) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+                for (let x = centerX - gridScale; x > -gridScale; x -= gridScale) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+                for (let y = centerY; y < height + gridScale; y += gridScale) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+                for (let y = centerY - gridScale; y > -gridScale; y -= gridScale) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+
+                // Draw particles and paths
+                this.state.particles.forEach(p => {
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    p.path.forEach((pos, i) => {
+                        const canvasX = centerX + pos.x * gridScale;
+                        const canvasY = centerY + pos.y * gridScale;
+                        if (i === 0) ctx.moveTo(canvasX, canvasY);
+                        else ctx.lineTo(canvasX, canvasY);
+                    });
+                    ctx.stroke();
+
+                    const finalPos = p.path[p.path.length-1];
+                    const canvasX = centerX + finalPos.x * gridScale;
+                    const canvasY = centerY + finalPos.y * gridScale;
+
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, p.type === 'massless' ? 4 : 6, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    if (this.config.showLightCones && p.type === 'massless') {
+                        ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        const lightConeRadius = this.state.time * 50; // c=1, so radius is time * scale
+                        ctx.arc(centerX + p.path[0].x * gridScale, centerY + p.path[0].y * gridScale, lightConeRadius, 0, 2*Math.PI);
+                        ctx.stroke();
+                    }
+                });
+
+                // Draw Event Horizon (always in comoving coordinates)
+                if (this.config.showHorizon && isFinite(this.state.horizonRadius)) {
+                    ctx.strokeStyle = 'rgba(220, 50, 50, 0.7)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    const horizonPixelRadius = this.state.horizonRadius * (this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50);
+                    ctx.arc(centerX, centerY, horizonPixelRadius, 0, 2*Math.PI);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                this.elements.statusBar.textContent = `Time: ${this.state.time.toFixed(2)}s | Scale Factor a(t): ${this.state.scaleFactor.toFixed(3)}`;
+            },
+
+            resizeCanvas() {
+                const rect = this.elements.simCanvas.parentElement.getBoundingClientRect();
+                this.elements.simCanvas.width = rect.width;
+                this.elements.simCanvas.height = rect.height;
+                this.draw();
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+                this.elements.microlabsContent.innerHTML = this.getMicroLabsHTML();
+            },
+
+            getExpositionHTML() { return `
+                <h2>An Expanding Universe: Exploring Geodesics in de Sitter Space</h2>
+                <p>Welcome to an interactive laboratory for exploring de Sitter space, a fundamental concept in modern cosmology. This simulation visualizes a universe devoid of matter and radiation, where the dynamics are governed solely by a positive cosmological constant (Λ), often identified with "dark energy." The result is a universe that expands at an ever-accelerating rate. Here, you can launch particles and light rays to trace their paths—their <strong>geodesics</strong>—as they navigate this strange, empty, and perpetually expanding cosmos.</p>
+
+                <h3>Section 1: The Runaway Universe - A Beginner's Guide</h3>
+                <p>For most of human history, the universe was imagined as static and eternal. Even Einstein initially believed this. However, in the 1920s, observations by astronomers like Vesto Slipher and Edwin Hubble revealed a staggering truth: distant galaxies are all moving away from us. Moreover, the farther away a galaxy is, the faster it recedes. This is <strong>Hubble's Law</strong>, the first evidence for an expanding universe. For decades, a great cosmic debate raged: would the mutual gravitational attraction of all the matter in the universe eventually halt this expansion and cause a "Big Crunch," or would the expansion coast on forever?</p>
+                <p>The answer, discovered in 1998, was more shocking than either possibility. Two independent teams of astronomers found that the expansion is not slowing down; it's <strong>accelerating</strong>. Some mysterious, repulsive force, now called "dark energy," is pushing spacetime apart. De Sitter space is the idealized mathematical model of a universe completely dominated by this dark energy. It is a solution to Einstein's field equations where the only ingredient is a positive cosmological constant, Λ. This Λ represents a constant energy density inherent to the vacuum of space itself. As space expands, this vacuum energy doesn't dilute. More space creates more vacuum, which in turn drives more expansion in a runaway feedback loop. This simulation puts you in control of Λ, allowing you to witness its profound effect on the fabric of the cosmos.</p>
+
+                <h3>Section 2: The Geometry of Expansion - Core Theory</h3>
+                <p>The geometry of a de Sitter universe is described by the de Sitter metric. For our purposes, we can use a coordinate system (called "flat slicing") where the metric takes the form: <code>ds² = -c²dt² + a(t)²(dx² + dy² + dz²)</code>. This looks like the familiar metric for flat space, but with the crucial addition of the <strong>scale factor, a(t)</strong>. This function tells us how distances are stretching over time.</p>
+                <p>In a pure de Sitter universe, the scale factor grows exponentially: <code>a(t) = e^(Ht)</code>. Here, <code>H</code> is the Hubble parameter, which in this idealized case is a true constant related to the cosmological constant by <code>H = sqrt(Λ/3)</code> (in units where c=1). This exponential growth is the defining feature of accelerating expansion. It means the distance between any two observers who are "comoving" (at rest with respect to the expanding cosmic grid) will double in a fixed amount of time, known as the "doubling time."</p>
+                <p>A <strong>geodesic</strong> is the straightest possible path a particle can take through this curved spacetime. In our simulation, you can launch three types of particles:</p>
+                <ul>
+                    <li><strong>Massless particles (photons):</strong> These travel at the speed of light, <code>c</code>, and define the causal structure of the universe (the "light cones").</li>
+                    <li><strong>Massive particles:</strong> These travel at speeds less than <code>c</code>.</li>
+                </ul>
+                <p>A fascinating effect of the expansion is that the "peculiar velocity" (the velocity of a particle relative to the comoving grid) decays over time. As space stretches out, a particle's initial momentum is effectively diluted, causing it to slow down with respect to the comoving coordinates. This is why, over time, galaxies tend to come to rest on the Hubble flow. In the simulation, you can see this effect: a particle given an initial kick will slow down on the comoving grid, even as its proper distance from other objects explodes.</p>
+
+                <h3>Section 3: The Edge of the World - The Cosmic Event Horizon</h3>
+                <p>One of the most profound and counter-intuitive features of an accelerating universe is the existence of a <strong>cosmic event horizon</strong>. This is a spherical boundary surrounding any observer, beyond which no signal can ever reach them. As you look at more distant objects, their recession velocity due to cosmic expansion increases. The event horizon marks the distance where this recession velocity equals the speed of light. Any galaxy, star, or event beyond this boundary is moving away from us faster than light can travel towards us through the expanding space in between. It is causally disconnected from our future, forever. Its light will never reach us.</p>
+                <p>The radius of this horizon, in comoving coordinates, is constant and given by a simple formula: <code>R_horizon = 1/H</code>. In the simulation, this is represented by the dashed red circle. You can perform a simple experiment: place a particle just inside the horizon and another just outside. Launch a photon from the inner particle towards the outer one. You will see that even though the photon travels at the speed of light, the space ahead of it expands so rapidly that it can never reach the outer particle. It is a race that is fundamentally unwinnable.</p>
+
+                <h3>Section 4: Coordinates and Reality - Comoving vs. Proper</h3>
+                <p>The simulation offers two different coordinate views, which are essential for understanding the physics:</p>
+                <ul>
+                    <li><strong>Comoving Coordinates:</strong> This view is like looking at a map of the universe that expands with the universe. The grid lines are fixed. A galaxy that is only moving due to the Hubble flow would remain at a fixed (x,y) coordinate for all time. This view is excellent for seeing the underlying geometry and concepts like the comoving distance and the fixed comoving radius of the event horizon.</li>
+                    <li><strong>Proper Coordinates:</strong> This view attempts to show what you would "actually" see. The grid itself expands according to the scale factor a(t). In this view, you can see every point rushing away from every other point. It provides a more visceral sense of the universal repulsion of dark energy. A particle at rest in comoving coordinates will appear to rush away from the origin in proper coordinates.</li>
+                </ul>
+                <p>Understanding the distinction is key. The comoving distance between two galaxies might be constant, but their proper distance (the "real" distance you would measure with a ruler at a specific moment) is constantly increasing: <code>Proper Distance = Comoving Distance × a(t)</code>.</p>
+
+                <h3>Section 5: Our Universe and Its Fate</h3>
+                <p>A pure de Sitter space is a simplified model. Our actual universe contains matter and radiation. The standard cosmological model, <strong>Lambda-CDM (ΛCDM)</strong>, describes a universe containing Cold Dark Matter (CDM) and a cosmological constant (Λ). In the early universe, the density of matter was much higher, and its attractive gravity dominated, causing the expansion to slow down. However, as the universe expanded, the matter density diluted away. The energy density of Λ, being a property of the vacuum, remained constant. About five billion years ago, the matter density dropped below the vacuum energy density, and Λ became the dominant driver of cosmic dynamics. At this point, the universe transitioned from decelerating to accelerating expansion. De Sitter space is therefore not just a mathematical toy; it is a remarkably accurate description of our universe's present and its ultimate future.</p>
+
+                <h3>Section 6: Practical Exercises and Micro-Labs</h3>
+                <p>Use the "Micro-Labs" tab to run guided experiments. Here are some ideas to try on your own:</p>
+                <ol>
+                    <li><strong>Hubble's Law in Action:</strong> Reset the simulation. Let it run for a few seconds. Pause it. For several particles, estimate their proper distance from the origin (approx. comoving distance from origin * scale factor) and their peculiar velocity (how fast they move on the grid). You'll see that their recession velocity (H * proper distance) is much larger than their peculiar velocity.</li>
+                    <li><strong>The Redshift Effect:</strong> Launch a fast massive particle. As time goes on, notice in the comoving view that it appears to slow down. This is the "peculiar velocity redshift"—its momentum is being diluted by the expansion of space, causing it to eventually come to rest relative to the Hubble flow.</li>
+                    <li><strong>Horizon Crossing:</strong> Set a high Λ. Launch a photon from the center towards the edge. Watch it approach the red cosmic horizon. Does it ever cross? Why not? What does this imply about our ability to observe the entire universe?</li>
+                </ol>
+            `; },
+            getQnaHTML() { return `
+                <h2>Q&A: The de Sitter Universe</h2>
+                <div class="qa-item"><p class="question">1. Is our universe really a de Sitter universe?</p><p class="answer">Not exactly, but it's an excellent approximation for our present and future. Our universe contains matter and radiation, which de Sitter space lacks. However, the density of these components dilutes as the universe expands, while the density of dark energy (the cosmological constant Λ) remains constant. Dark energy is now the dominant component, making our expansion accelerate. Asymptotically, in the far future, our universe will be virtually indistinguishable from a pure de Sitter space.</p></div>
+                <div class="qa-item"><p class="question">2. If space is expanding, why don't atoms or solar systems expand too?</p><p class="answer">On small scales, other fundamental forces dominate. The electromagnetic force holds atoms together, and local gravity binds solar systems and galaxies. These forces are vastly stronger than the weak repulsive effect of cosmic expansion over such short distances. The expansion of space is only significant on vast, intergalactic scales where local gravitational binding is negligible.</p></div>
+                <div class="qa-item"><p class="question">3. What is the difference between a massive and massless particle's path (geodesic)?</p><p class="answer">Massless particles (photons) travel at the speed of light and follow "null geodesics," which define the edge of the light cone. Massive particles travel slower than light and follow "time-like geodesics." The expansion of space affects both, carrying them along with the Hubble flow, but only massive particles can be at rest relative to the comoving grid.</p></div>
+                <div class="qa-item"><p class="question">4. What is the cosmic event horizon? Is it a physical barrier?</p><p class="answer">It is not a physical barrier. It's an observer-dependent boundary of information. It's the point of no return for signals. If you were to travel towards the horizon, you would pass through it without noticing anything special. However, an observer back at your starting point would never see you cross it, as the light from you would be infinitely redshifted. It's a horizon of our future knowledge, not a wall in space.</p></div>
+                <div class="qa-item"><p class="question">5. What is the cosmological constant (Λ)?</p><p class="answer">It's a term in Einstein's field equations that represents a constant energy density of the vacuum. It has the unusual property of exerting a negative pressure, which acts as a repulsive gravitational force, driving the accelerating expansion of the universe. It is the simplest mathematical explanation for the observed phenomenon of dark energy.</p></div>
+                <div class="qa-item"><p class="question">6. What does "comoving" mean?</p><p class="answer">A comoving coordinate system is one that expands along with the universe. An observer at rest in comoving coordinates is one who is carried along perfectly by the "Hubble flow," having no additional "peculiar" motion. The comoving distance between two such observers remains constant, while the proper distance between them increases as the universe expands.</p></div>
+                <div class="qa-item"><p class="question">7. What is the Hubble Parameter (H)?</p><p class="answer">The Hubble Parameter, H, measures the expansion rate of the universe. It's defined by the relation v = Hd, where v is the recession velocity of a distant galaxy and d is its proper distance. In a pure de Sitter universe, H is a true constant. In our real universe, H changes over time, and its current value is denoted H₀.</p></div>
+                <div class="qa-item"><p class="question">8. Can anything travel faster than light in an expanding universe?</p><p class="answer">No object can travel faster than light *locally* through space. However, space itself can expand at any rate. For distant galaxies, the expansion of the space between us and them can cause their total recession velocity to exceed the speed of light. This does not violate relativity, as no information is being transmitted faster than light locally.</p></div>
+                <div class="qa-item"><p class="question">9. What is "peculiar velocity"?</p><p class="answer">Peculiar velocity is the motion of an object *in addition* to the Hubble flow. It's caused by the local gravitational pull of other objects. For example, the Andromeda galaxy has a peculiar velocity directed towards us, causing it to be on a collision course with the Milky Way despite the overall cosmic expansion.</p></div>
+                <div class="qa-item"><p class="question">10. What is the "proper distance"?</p><p class="answer">Proper distance is the distance between two points at a specific moment in cosmic time, as if you could freeze the expansion and measure it with a ruler. It is calculated by multiplying the comoving distance by the scale factor, a(t). This is the distance that is constantly increasing between galaxies.</p></div>
+                <div class="qa-item"><p class="question">11. Is energy conserved in an expanding universe?</p><p class="answer">Not globally. This is a very subtle point in General Relativity. In a fixed spacetime, energy is conserved. But in an expanding spacetime, this symmetry is broken. For example, photons lose energy as they are redshifted by the expansion. This energy is not transferred to anything; it is lost from the system due to the dynamics of spacetime itself.</p></div>
+                <div class="qa-item"><p class="question">12. What would an observer see in a de Sitter universe?</p><p class="answer">An observer would see themselves in a perfectly empty and isotropic universe. Any other objects would appear to recede away, eventually crossing the cosmic event horizon and disappearing from view. In the far future, the observer would be left completely alone in an empty, expanding void.</p></div>
+                <div class="qa-item"><p class="question">13. How is de Sitter space related to cosmic inflation?</p><p class="answer">Inflation theory posits that the very early universe underwent a brief period of extremely rapid, de Sitter-like expansion. This was driven by the potential energy of a quantum "inflaton" field, which acted like a huge cosmological constant. This phase smoothed out and flattened the universe, explaining key features we observe today.</p></div>
+                <div class="qa-item"><p class="question">14. What does "maximally symmetric" mean?</p><p class="answer">A space is maximally symmetric if it looks the same at every point and in every direction. It possesses the highest possible degree of symmetry. For a 4D spacetime, the only three maximally symmetric solutions to Einstein's equations are Minkowski space (flat, Λ=0), de Sitter space (positively curved, Λ>0), and Anti-de Sitter space (negatively curved, Λ<0).</p></div>
+                <div class="qa-item"><p class="question">15. What is the ultimate fate of a de Sitter universe?</p><p class="answer">Eternal, accelerating expansion. This leads to a scenario known as the "Heat Death" or "Big Freeze," where all structures not gravitationally bound to an observer will recede beyond their event horizon, leaving the observer in an increasingly cold, dark, and empty cosmos.</p></div>
+                <div class="qa-item"><p class="question">16. What is the temperature of de Sitter space?</p><p class="answer">Due to quantum effects near the event horizon, a de Sitter space has a specific temperature, known as the Gibbons-Hawking temperature. An observer will perceive a faint thermal bath of radiation coming from the horizon. This temperature is proportional to the Hubble parameter H, and for our universe, it is incredibly small.</p></div>
+                <div class="qa-item"><p class="question">17. Can the cosmological constant be negative?</p><p class="answer">Yes. A negative cosmological constant (Λ<0) corresponds to an Anti-de Sitter (AdS) space. Instead of a repulsive force, a negative Λ creates an attractive force, causing the universe to have a tendency to re-collapse. AdS space has very different and fascinating properties, such as having a "boundary" that can be reached in a finite time, making it crucial for theories like the AdS/CFT correspondence.</p></div>
+                <div class="qa-item"><p class="question">18. Why do the particle paths curve?</p><p class="answer">The paths (geodesics) are the straightest possible lines in a curved spacetime. They appear curved to us in our flat-screen representation for the same reason that a flight path from New York to Tokyo looks curved on a flat map of the world. The curvature is intrinsic to the geometry of de Sitter space itself, not caused by a central massive object.</p></div>
+                <div class="qa-item"><p class="question">19. What created the initial peculiar velocities?</p><p class="answer">In the real universe, peculiar velocities are remnants of the initial density fluctuations from the very early universe. Tiny quantum fluctuations during inflation were stretched to macroscopic scales, creating slightly denser and less dense regions. The gravitational pull from these inhomogeneities gave galaxies their initial peculiar motions.</p></div>
+                <div class="qa-item"><p class="question">20. If space is expanding, where is the center of the expansion?</p><p class="answer">There is no center. The expansion is happening everywhere at once. Every comoving observer can consider themselves to be at the center of their own observable universe. It's not an explosion *in* space, but an expansion *of* space itself. Every point is moving away from every other point (on large scales).</p></div>
+                <div class="qa-item"><p class="question">21. Does the size of the horizon change?</p><p class="answer">In a pure de Sitter universe, where H is constant, the comoving radius of the horizon (1/H) is also constant. However, the proper radius of the horizon (a(t)/H) grows exponentially, just like all other proper distances.</p></div>
+                <div class="qa-item"><p class="question">22. What happens to a photon emitted exactly at the event horizon?</p><p class="answer">A photon emitted exactly at the horizon and directed towards the observer will essentially be "stuck." It travels towards the observer at the speed of light, while the space it is in is receding from the observer at the speed of light. These effects cancel out, causing the photon to remain at a constant proper distance from the observer, never getting closer or farther away.</p></div>
+                <div class="qa-item"><p class="question">23. Does a de Sitter universe have a "Big Bang"?</p><p class="answer">A pure, eternal de Sitter spacetime does not have an initial singularity or a Big Bang. It has existed and expanded forever. However, the de Sitter *phase* of our own universe, which began about 5 billion years ago, was preceded by the Big Bang and the matter-dominated era.</p></div>
+                <div class="qa-item"><p class="question">24. What does the "Distance Plot" show?</p><p class="answer">The distance plot, if implemented, would show the proper distance between two particles as a function of time. You would typically see an exponential curve, illustrating the accelerating expansion and the core mathematical nature of de Sitter space.</p></div>
+                <div class="qa-item"><p class="question">25. Can we use the expansion of space for propulsion?</p><p class="answer">This is a concept from science fiction known as an "Alcubierre drive" or warp drive. It involves creating a local bubble of expanding spacetime behind a ship and contracting spacetime in front of it. While a valid solution in General Relativity, it requires "exotic matter" with negative energy density, which is not known to exist and may be physically impossible. So, for now, this remains purely theoretical.</p></div>
+            `; },
+            getMicroLabsHTML() { return `
+                <h2>Micro-Labs: de Sitter Experiments</h2>
+                <p>Run these guided experiments to build your intuition for cosmic expansion.</p>
+                <ol>
+                    <li><strong>Hubble's Law:</strong> Set Λ to 0.05. Reset. Let two particles drift apart. Observe that their proper distance grows at an accelerating rate.</li>
+                    <li><strong>High Lambda:</strong> Set Λ to the maximum value (0.2). Reset. Notice how quickly everything flies apart and how small the cosmic horizon (red circle) is.</li>
+                    <li><strong>Flat Space:</strong> Set Λ to 0. Reset. Notice that there is no expansion. Particles travel in straight lines. This is Minkowski space.</li>
+                    <li><strong>Race to the Horizon:</strong> Set Λ to 0.1. Reset. Add a new 'massless' particle near the center. Try to make it "catch" the initial particle, which is likely outside the horizon. Observe that it cannot.</li>
+                    <li><strong>Comoving vs. Proper:</strong> Set Λ to 0.08. Let it run. Switch the 'Coordinate System' view back and forth. In 'Comoving', particles slow down. In 'Proper', the grid expands and particles are carried with it.</li>
+                    <li><strong>Peculiar Velocity Redshift:</strong> Add a 'massive_fast' particle. Watch it in the 'Comoving' view. Its path on the grid will slow down over time, as its initial momentum is "redshifted" away by the expansion.</li>
+                    <li><strong>Horizon Size vs. Lambda:</strong> Set Λ to 0.2. Note the small size of the horizon. Now set Λ to 0.02. Note the much larger size of the horizon. This shows R_horizon = 1/H = sqrt(3/Λ).</li>
+                    <li><strong>Inside the Horizon:</strong> Set Λ to 0.1. Reset, then add two 'massless' particles inside the horizon. Can they reach each other? Yes, causal contact is possible inside the horizon.</li>
+                    <li><strong>Causal Disconnection:</strong> Set Λ to 0.1. Reset. Add one particle at the center, and another outside the red circle. They can never interact.</li>
+                    <li><strong>Light Cone Visualization:</strong> Check the "Show Light Cones" box. Add a massless particle. The yellow circle represents the expanding sphere of light from its starting point.</li>
+                    <li><strong>Particle Salad:</strong> Reset. Add a dozen particles of different types all over the canvas. Observe the beautiful, chaotic expansion as they all drift apart.</li>
+                    <li><strong>The Ultimate Fate:</strong> Let the simulation run for a long time with a high Λ. Eventually, all particles will be separated by vast distances, a visual metaphor for the "Heat Death" of the universe.</li>
+                    <li><strong>Slow Expansion:</strong> Set Λ to a very low value like 0.01. The expansion is almost imperceptible at first, demonstrating how dark energy was less important in the early universe.</li>
+                    <li><strong>Measuring the Doubling Time:</strong> Set Λ to 0.07. Note the time it takes for the scale factor a(t) to go from 1 to 2. Reset. Note the time it takes to go from 2 to 4. It should be roughly the same.</li>
+                    <li><strong>No Escape:</strong> Add a particle with a high initial velocity directed towards the center. In a universe with gravity from matter, it might orbit. In a de Sitter universe, the expansion will always win, and it will eventually be carried away.</li>
+                    <li><strong>Visualizing H:</strong> The Hubble parameter H is directly related to the rate at which the scale factor grows. A high H (from a high Λ) means a(t) increases very quickly.</li>
+                    <li><strong>The Center is Everywhere:</strong> Add a particle far from the center of the canvas. To that particle, it appears that *it* is at the center of the expansion, with everything else receding from it.</li>
+                    <li><strong>Massive vs. Massless Race:</strong> Add a 'massive_fast' and a 'massless' particle at the same spot. The massless particle always defines the outer edge of any possible future interaction.</li>
+                    <li><strong>Grid Scale:</strong> Switch to 'Proper' view. Notice how the grid lines themselves expand, providing a visual cue for the scale factor a(t).</li>
+                    <li><strong>Isotropy:</strong> Add particles randomly. Notice that the expansion looks the same in all directions. This is a key feature of de Sitter space.</li>
+                    <li><strong>Homogeneity:</strong> The expansion also looks the same from every starting point (see lab #17). The universe has no special "center."</li>
+                    <li><strong>Effect of Speed:</strong> Does a 'massive_slow' particle get carried away by expansion differently than a 'massive_fast' one? No, the Hubble flow affects all objects equally, regardless of their peculiar velocity.</li>
+                    <li><strong>Path History:</strong> The trails left by particles are their geodesics—the straightest possible lines through the curved 4D spacetime, projected onto our 2D comoving map.</li>
+                    <li><strong>Maximum Distance:</strong> Let the simulation run. Can two particles ever reach a maximum separation and then start coming together? Not in a pure de Sitter universe. The expansion is eternal.</li>
+                    <li><strong>Freestyle Exploration:</strong> Create your own scenarios. What happens if you add particles right on the horizon? Can you time it so two particles collide? Experiment freely.</li>
+                </ol>
+            `; }
+        };
+
+        Sim.init();
+    });
+    </script>
+</body>
+</html>

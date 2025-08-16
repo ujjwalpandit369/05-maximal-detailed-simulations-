@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: de Sitter vs. Anti-de Sitter Potential Landscapes</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #9d4edd;
+            --accent-hover: #7b2cbf; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+            --ds-color: #4d9de0; --ads-color: #e07a5f;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; }
+        .container { display: grid; grid-template-columns: 350px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "controls main"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; text-align:center; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .controls-panel { grid-area: controls; overflow-y: auto; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; }
+        header h1 { color: var(--accent-color); margin:0; font-size: 2.5rem; }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; margin:0; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; font-size: 1.2rem; }
+        .control { margin-bottom: 1rem; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control button, .control select { width: 100%; padding: 10px; border-radius: 4px; background-color: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); font-size: 1rem;}
+        .control button { background-color: var(--accent-color); color:white; font-weight:bold; cursor:pointer; transition: background-color 0.2s;}
+        .control button:hover { background-color: var(--accent-hover); }
+        .sim-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height:100%; }
+        .sim-box { border: 2px solid var(--border-color); border-radius: 8px; padding: 1rem; display:flex; flex-direction:column; }
+        .sim-box h3 { text-align: center; margin-top: 0; }
+        .sim-box.desitter h3 { color: var(--ds-color); }
+        .sim-box.antidesitter h3 { color: var(--ads-color); }
+        .sim-box canvas { width: 100%; flex-grow:1; background: #000; border-radius: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size:0.9em; margin-top:1rem; }
+        .metric-item .label { color: var(--secondary-text); }
+        .metric-item .value { font-weight: bold; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1200px; border-radius: 8px; position: relative; }
+        .modal-close { position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-body { max-height: 80vh; overflow-y: auto; padding-right: 20px; }
+        .modal-body h2 { color: var(--accent-color); }
+        .qa-item { border-left: 4px solid var(--accent-color); padding-left: 15px; margin-bottom: 20px; }
+        .qa-item .question { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>de Sitter vs. Anti-de Sitter Potential Landscapes</h1>
+            <h2>Comparing the "Cosmic Hill" of Expansion with the "Cosmic Well" of Confinement</h2>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="lambda-slider">Cosmological Constant |Λ|: <span class="value-display" id="lambda-value">0.05</span></label>
+                    <input type="range" id="lambda-slider" min="0" max="0.1" step="0.001" value="0.05">
+                </div>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div class="control">
+                    <button id="reset-sim">Reset Particles</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Particle Controls</h3>
+                <div class="control">
+                    <label for="particle-mass">Particle Mass: <span class="value-display" id="particle-mass-value">1.0</span></label>
+                    <input type="range" id="particle-mass" min="0.1" max="5" step="0.1" value="1.0">
+                </div>
+                 <div class="control">
+                    <label for="initial-energy">Initial Kinetic Energy: <span class="value-display" id="initial-energy-value">0.5</span></label>
+                    <input type="range" id="initial-energy" min="0" max="2" step="0.1" value="0.5">
+                </div>
+                <div class="control">
+                    <button id="add-particle">Add Particle</button>
+                </div>
+            </div>
+             <div class="control-group">
+                <h3>Content & Learning</h3>
+                <button onclick="openModal('exposition-modal')">Read Full Exposition</button>
+                <button onclick="openModal('qna-modal')" style="margin-top:5px;">Explore Q&A</button>
+                <button onclick="openModal('microlabs-modal')" style="margin-top:5px;">View Micro-Labs</button>
+            </div>
+        </aside>
+
+        <main class="main-panel panel">
+            <div class="sim-container">
+                <div class="sim-box desitter">
+                    <h3>de Sitter Universe (Λ > 0)</h3>
+                    <canvas id="ds-canvas"></canvas>
+                    <div class="metrics-grid" id="ds-metrics"></div>
+                </div>
+                <div class="sim-box antidesitter">
+                    <h3>Anti-de Sitter Universe (Λ < 0)</h3>
+                    <canvas id="ads-canvas"></canvas>
+                    <div class="metrics-grid" id="ads-metrics"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('exposition-modal')">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('qna-modal')">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+    <div id="microlabs-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('microlabs-modal')">&times;</span><div class="modal-body" id="microlabs-content"></div></div></div>
+
+    <script>
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const Sim = {
+            config: { lambda: 0.05, simSpeed: 1, particleMass: 1.0, initialEnergy: 0.5 },
+            state: { ds_particles: [], ads_particles: [], lastFrameTime: 0 },
+            elements: {},
+
+            init() {
+                this.cacheDOMElements();
+                this.setupControls();
+                this.setupContent();
+                this.reset();
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'lambda-slider', 'lambda-value', 'sim-speed', 'sim-speed-value', 'reset-sim', 'add-particle',
+                    'particle-mass', 'particle-mass-value', 'initial-energy', 'initial-energy-value',
+                    'ds-canvas', 'ads-canvas', 'ds-metrics', 'ads-metrics',
+                    'exposition-content', 'qna-content', 'microlabs-content'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.ds_ctx = this.elements.dsCanvas.getContext('2d');
+                this.elements.ads_ctx = this.elements.adsCanvas.getContext('2d');
+            },
+
+            setupControls() {
+                this.elements.lambdaSlider.addEventListener('input', e => {
+                    this.config.lambda = parseFloat(e.target.value);
+                    this.elements.lambdaValue.textContent = this.config.lambda.toFixed(3);
+                });
+                this.elements.simSpeed.addEventListener('input', e => this.config.simSpeed = parseFloat(e.target.value));
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.addParticle.addEventListener('click', () => this.addParticle());
+                this.elements.particleMass.addEventListener('input', e => this.config.particleMass = parseFloat(e.target.value));
+                this.elements.initialEnergy.addEventListener('input', e => this.config.initialEnergy = parseFloat(e.target.value));
+            },
+
+            reset() {
+                this.state.ds_particles = [];
+                this.state.ads_particles = [];
+                for (let i = 0; i < 5; i++) { this.addParticle(); }
+            },
+
+            addParticle() {
+                const x = (Math.random() - 0.5) * 2;
+                const v = Math.sqrt(2 * this.config.initialEnergy / this.config.particleMass) * (Math.random() > 0.5 ? 1 : -1);
+                const color = `hsl(${Math.random() * 360}, 90%, 70%)`;
+                this.state.ds_particles.push({ x, v, mass: this.config.particleMass, color });
+                this.state.ads_particles.push({ x, v, mass: this.config.particleMass, color });
+            },
+
+            gameLoop(currentTime) {
+                const dt = ((currentTime - this.state.lastFrameTime) / 1000) * this.config.simSpeed;
+                if (dt > 0) { this.update(dt); this.draw(); }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                const updateParticles = (particles, lambda) => {
+                    particles.forEach(p => {
+                        const force = lambda * p.x; // Simplified force F = -dV/dx = -d/dx(-1/2 * lambda * x^2) = lambda * x
+                        const acceleration = force / p.mass;
+                        p.v += acceleration * dt;
+                        p.x += p.v * dt;
+                    });
+                };
+                updateParticles(this.state.ds_particles, this.config.lambda); // Repulsive force
+                updateParticles(this.state.ads_particles, -this.config.lambda); // Attractive force
+            },
+
+            draw() {
+                this.drawPotential(this.elements.ds_ctx, this.config.lambda, this.state.ds_particles, 'var(--ds-color)');
+                this.drawPotential(this.elements.ads_ctx, -this.config.lambda, this.state.ads_particles, 'var(--ads-color)');
+                this.updateMetrics();
+            },
+
+            drawPotential(ctx, lambda, particles, color) {
+                const { width, height } = ctx.canvas;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
+
+                // Draw potential curve
+                ctx.strokeStyle = color; ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let i = 0; i <= width; i++) {
+                    const x_coord = (i / width) * 4 - 2; // Map pixel to range [-2, 2]
+                    const potential = -0.5 * lambda * x_coord * x_coord;
+                    const y_coord = height / 2 - potential * (height*0.8); // Scale potential for display
+                    if (i === 0) ctx.moveTo(i, y_coord); else ctx.lineTo(i, y_coord);
+                }
+                ctx.stroke();
+
+                // Draw particles
+                particles.forEach(p => {
+                    const canvas_x = (p.x + 2) / 4 * width;
+                    const potential = -0.5 * lambda * p.x * p.x;
+                    const canvas_y = height / 2 - potential * (height*0.8);
+
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(canvas_x, canvas_y, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    // Draw velocity vector
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(canvas_x, canvas_y);
+                    ctx.lineTo(canvas_x + p.v * 20, canvas_y); // Scale velocity for display
+                    ctx.stroke();
+                });
+            },
+
+            updateMetrics() {
+                const updateMetricsFor = (div, particles, lambda) => {
+                    if (particles.length === 0) { div.innerHTML = ''; return; }
+                    const p = particles[0];
+                    const kinetic = 0.5 * p.mass * p.v * p.v;
+                    const potential = -0.5 * lambda * p.x * p.x;
+                    const total = kinetic + potential;
+                    div.innerHTML = `
+                        <div class="metric-item"><div class="label">P1 Position</div><div class="value" style="color:${p.color}">${p.x.toFixed(2)}</div></div>
+                        <div class="metric-item"><div class="label">P1 Velocity</div><div class="value" style="color:${p.color}">${p.v.toFixed(2)}</div></div>
+                        <div class="metric-item"><div class="label">Kinetic E</div><div class="value">${kinetic.toFixed(2)}</div></div>
+                        <div class="metric-item"><div class="label">Potential E</div><div class="value">${potential.toFixed(2)}</div></div>
+                        <div class="metric-item"><div class="label">Total E</div><div class="value">${total.toFixed(2)}</div></div>
+                        <div class="metric-item"><div class="label">Force</div><div class="value">${(lambda * p.x).toFixed(2)}</div></div>
+                    `;
+                };
+                updateMetricsFor(this.elements.dsMetrics, this.state.ds_particles, this.config.lambda);
+                updateMetricsFor(this.elements.adsMetrics, this.state.ads_particles, -this.config.lambda);
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+                this.elements.microlabsContent.innerHTML = this.getMicroLabsHTML();
+            },
+
+            getExpositionHTML() { return `
+                <h2>The Cosmic Skate Park: A Deep Dive into dS vs. AdS Potential Landscapes</h2>
+                <p>The geometry of our universe, and thus its ultimate fate, is one of the deepest questions in science. Is the universe a runaway train, expanding forever at an accelerating rate? Or is it a cosmic prison, destined to re-collapse? The answer lies in the sign of the <strong>cosmological constant, Λ</strong>. This simulation provides a powerful, intuitive analogy for this concept by visualizing the "effective potential landscapes" for de Sitter (dS) and Anti-de Sitter (AdS) spacetimes. Think of this as a cosmic skate park: de Sitter space (positive Λ) is an infinitely long hill that pushes everything away, while Anti-de Sitter space (negative Λ) is a cosmic bowl that traps and confines everything that falls in.</p>
+
+                <h3>Section 1: Force from Potential - A Newtonian Analogy</h3>
+                <p>In classical mechanics, the concept of potential energy, V(x), is a powerful tool. Instead of thinking about forces directly, we can think about the "landscape" an object moves in. The force on an object is simply the negative slope (the gradient) of this landscape: <code>F = -dV/dx</code>. A ball placed on a hill (a region of high potential) will roll down towards lower potential. A ball in a bowl will oscillate around the minimum of the potential well. The shape of the landscape dictates the motion.</p>
+                <p>Remarkably, a similar principle can be applied to the entire universe within the framework of General Relativity. For a universe whose dynamics are dominated by a cosmological constant Λ, the effective potential experienced by a test particle as a function of its distance 'r' from an observer can be modeled by a simple quadratic relationship:</p>
+                <p><code>V(r) = - (1/6) * Λ * c² * r²</code></p>
+                <p>Let's analyze this:
+                <ul>
+                    <li>If Λ is <strong>positive (de Sitter space)</strong>, the potential is <code>V(r) ∝ -r²</code>. This is the equation for a downward-opening parabola—a "hill." The force, being the negative slope, is repulsive (<code>F ∝ +r</code>), pushing particles to ever-larger distances. This is the engine of cosmic acceleration.</li>
+                    <li>If Λ is <strong>negative (Anti-de Sitter space)</strong>, the potential is <code>V(r) ∝ +r²</code>. This is an upward-opening parabola—a "well" or a "bowl." The force is attractive (<code>F ∝ -r</code>), pulling particles back towards the center. This is a cosmic confinement.</li>
+                </ul>
+                <p>This simulation visualizes a 1D version of these potential curves. By observing the particles' motion, you are seeing a direct analogy for the geometric behavior of these two fundamental types of spacetimes.</p>
+
+                <h3>Section 2: Interpreting the Two Universes</h3>
+                <p>The screen is split into two independent simulations that share the same magnitude of the cosmological constant, |Λ|, which you control with the main slider.
+                <ul>
+                    <li>The <strong>de Sitter (dS) panel on the left</strong> always uses a positive Λ. You can see the potential landscape is a hill. Particles placed on this hill immediately accelerate "downhill," which corresponds to moving away from the center (r=0) towards infinity. This is a universe that will expand forever, becoming increasingly empty.</li>
+                    <li>The <strong>Anti-de Sitter (AdS) panel on the right</strong> always uses a negative Λ. Here, the potential is a well. Particles are trapped within this well. If given some initial energy, they will oscillate back and forth, but they can never escape to infinity. This is a universe that is self-confining.</li>
+                </ul>
+                <p>Notice the relationship between kinetic and potential energy in the metrics panel. In dS, particles roll down the hill, converting potential energy into kinetic energy, accelerating away. In AdS, particles roll up and down the sides of the well, constantly exchanging kinetic and potential energy, but their total energy remains constant, trapping them.</p>
+
+                <h3>Section 3: Beyond the Analogy - Connection to General Relativity</h3>
+                <p>While the Newtonian potential analogy is incredibly useful for building intuition, it's important to remember what it represents. There isn't a "real" hill or well in space. This potential is a way of describing the curvature of spacetime itself. In General Relativity, the motion of free particles is determined by geodesics—the straightest possible paths through curved spacetime.
+                <ul>
+                    <li>In <strong>de Sitter space</strong>, the geometry is such that the geodesics of any two initially nearby particles will always diverge. The very fabric of space is expanding and pushing them apart.</li>
+                    <li>In <strong>Anti-de Sitter space</strong>, the geometry is "hyperbolic" and has a natural boundary. Geodesics are focused inward, such that particles can never reach this infinitely distant boundary. This confining property is what makes AdS so important in theoretical physics, particularly in the AdS/CFT correspondence.</li>
+                </ul>
+                The potential landscape is therefore a clever visualization of these deep geometric properties. The "force" a particle feels in the simulation is analogous to the "acceleration" term in the geodesic equation that arises from the curvature of spacetime.</p>
+
+                <h3>Section 4: Our Universe - A More Complex Landscape</h3>
+                <p>Our real universe is more complicated than either of these pure models. Its effective potential contains several terms:
+                <ul>
+                    <li>A term for dark energy (Λ), which dominates at large scales (the <code>~ -r²</code> hill).</li>
+                    <li>A term for matter (both normal and dark), which creates local gravitational wells (a <code>~ -1/r</code> potential).</li>
+                    <li>A term for radiation, which was important in the very early universe.</li>
+                </ul>
+                On small scales, like within a galaxy, the matter term dominates, creating a local gravity well that easily overcomes the cosmic repulsion of Λ. This is why our solar system isn't flying apart. However, on the vast scales between galaxy clusters, the matter density is very low, and the Λ term becomes the dominant feature of the landscape. An observer in our universe is essentially living in a local gravity well (the Milky Way) which is itself accelerating away from other wells down the gentle, large-scale de Sitter hill. This simulation isolates the Λ component to make its effects clear.</p>
+
+                <h3>Section 5: Micro-Labs and Exploration</h3>
+                <p>Use the Micro-Labs tab to run guided experiments that highlight key concepts. Try to answer these questions on your own:
+                <ol>
+                    <li><strong>Escape Velocity:</strong> In the AdS panel, how much "Initial Kinetic Energy" do you need to give a particle to make it escape the well? (Answer: You can't! The well is infinitely high).</li>
+                    <li><strong>Conservation of Energy:</strong> In the AdS panel, add one particle. Watch the metrics. As the particle moves up the well, its kinetic energy decreases and potential energy increases, but the total energy remains constant.</li>
+                    <li><strong>Unstable Equilibrium:</strong> In the dS panel, can you get a particle to balance perfectly at the top of the hill (x=0)? It's an unstable equilibrium point; any tiny nudge will send it rolling away. This is analogous to the unstable nature of a static universe, which Einstein first proposed.</li>
+                </ol>
+                </p>
+            `; },
+            getQnaHTML() { return `
+                <h2>Q&A: de Sitter vs. Anti-de Sitter Potentials</h2>
+                <div class="qa-item"><p class="question">1. Is this potential a 'real' physical potential?</p><p class="answer">It's a very powerful and accurate analogy, but not a fundamental potential in the same way as, say, the electric potential. It's a Newtonian way of visualizing the purely geometric effects of spacetime curvature from General Relativity. The "force" particles feel here is a representation of how geodesics behave in these curved spacetimes.</p></div>
+                <div class="qa-item"><p class="question">2. Why is the de Sitter potential (repulsive force) a hill that goes down?</p><p class="answer">This is a common point of confusion. Force is the *negative* gradient (slope) of potential energy: F = -dV/dx. For a particle to be pushed *away* from the center (a repulsive force), the potential V must decrease with distance. A downward-sloping potential has a negative slope, so the force (-dV/dx) is positive (outward/repulsive). Particles "roll downhill" to lower potential energy.</p></div>
+                <div class="qa-item"><p class="question">3. Why is the AdS potential (attractive force) a bowl?</p><p class="answer">Conversely, for a particle to be pulled *toward* the center (an attractive force), the potential energy must increase with distance. This creates an upward-sloping "bowl" or "well." The slope is positive, so the force (-dV/dx) is negative (inward/attractive). The particle is confined to the well.</p></div>
+                <div class="qa-item"><p class="question">4. How does this relate to the real universe's expansion?</p><p class="answer">The potential landscape of our real universe is a combination of different effects. On large scales, it's dominated by the de Sitter "hill" from dark energy (Λ), driving acceleration. On small scales, it's dominated by the gravitational "wells" from matter (stars, galaxies). We live inside a local well that is itself sliding down the larger cosmic hill.</p></div>
+                <div class="qa-item"><p class="question">5. Is energy conserved in these simulations?</p><p class="answer">Yes. In this simplified Newtonian analogy, the total energy of each particle (Kinetic + Potential) is conserved, as you can see in the metrics panel. This is a key feature of the model. However, it's important to note that in the full theory of General Relativity, energy is *not* generally conserved in an expanding universe.</p></div>
+                <div class="qa-item"><p class="question">6. What happens if Λ = 0?</p><p class="answer">If Λ=0, the potential V(r) is zero everywhere. This is a flat landscape. The force is zero, and particles travel in straight lines at constant velocity. This corresponds to a flat, empty Minkowski spacetime, the world of Special Relativity.</p></div>
+                <div class="qa-item"><p class="question">7. Can a particle escape the AdS well?</p><p class="answer">No. In this idealized model, the potential well V(r) ∝ r² grows infinitely high. No matter how much initial kinetic energy you give a particle, it will eventually reach a turning point and fall back towards the center. This is the essence of confinement in AdS space.</p></div>
+                <div class="qa-item"><p class="question">8. What determines the frequency of oscillation in the AdS well?</p><p class="answer">The potential is that of a simple harmonic oscillator. The "spring constant" k is proportional to |Λ|. The frequency of oscillation is given by ω = sqrt(k/m), so a larger |Λ| (a steeper well) or a smaller particle mass will result in faster oscillations.</p></div>
+                <div class="qa-item"><p class="question">9. Does the de Sitter "hill" have a top?</p><p class="answer">Yes, at r=0. This is a point of unstable equilibrium. In theory, a particle could balance there forever, but the slightest nudge will send it accelerating away. This is analogous to the fact that a static universe is unstable; it will either expand or contract.</p></div>
+                <div class="qa-item"><p class="question">10. Where does the formula V(r) = - (1/6)Λc²r² come from?</p><p class="answer">It comes from solving the geodesic deviation equation or by taking the non-relativistic limit (the "Newtonian limit") of the Einstein Field Equations for a spacetime with a cosmological constant. It describes the effective acceleration between two nearby test particles.</p></div>
+                <div class="qa-item"><p class="question">11. Why is AdS space so important in physics?</p><p class="answer">Its confining "potential well" structure gives it a natural "boundary." This property makes it a perfect theoretical laboratory for studying quantum gravity. The famous AdS/CFT correspondence conjectures that a theory of quantum gravity in AdS space is equivalent to a simpler quantum field theory living on its boundary, providing a powerful tool to study black holes and other deep problems.</p></div>
+                <div class="qa-item"><p class="question">12. Does a particle's mass affect its motion?</p><p class="answer">Yes. In this Newtonian analogy, F=ma, so for the same force (which depends on position), a more massive particle will have a smaller acceleration. You can test this in the simulation by increasing the particle mass and observing that it moves more "sluggishly" on the potential curve.</p></div>
+                <div class="qa-item"><p class="question">13. Is the potential always quadratic (shaped like x²)?</p><p class="answer">In this simplified model for a pure Λ-dominated universe, yes. In more complex scenarios, other terms appear. For example, the potential around a star includes a -1/r term (the familiar gravity well). The full potential for our universe is a sum of these different components.</p></div>
+                <div class="qa-item"><p class="question">14. What does "total energy" mean here?</p><p class="answer">Total energy is the sum of the particle's kinetic energy (E_k = 1/2 * m * v²) and its potential energy (E_p = -1/2 * λ * x²). In the AdS case, if the total energy is positive, the particle can reach a larger maximum distance before turning around. In the dS case, the total energy will increase over time as potential energy is converted to kinetic energy.</p></div>
+                <div class="qa-item"><p class="question">15. Why is this a 1D simulation?</p><p class="answer">Using a single spatial dimension (x) simplifies the physics and visualization tremendously while still capturing the core concept of the potential landscape's shape. A 3D version would involve a 3D potential that is harder to visualize, but the essential behavior (rolling off a hill vs. being trapped in a bowl) would be the same.</p></div>
+                <div class="qa-item"><p class="question">16. Can particles in dS space turn around?</p><p class="answer">No. Once a particle starts rolling down the dS potential hill, the repulsive force only gets stronger with distance. It will accelerate away forever and never return.</p></div>
+                <div class="qa-item"><p class="question">17. Is the center (x=0) a special point?</p><p class="answer">In this model, it's the point of equilibrium (stable in AdS, unstable in dS). In the context of cosmology, you can think of it as the position of the observer. The potential describes the universe as seen from that observer's reference frame.</p></div>
+                <div class="qa-item"><p class="question">18. Does this model include black holes?</p><p class="answer">No. This model shows the global curvature of an empty universe due to Λ. Black holes are local, high-density objects. To include a black hole, you would need to add a sharp, deep -1/r potential well on top of the gentle cosmic landscape.</p></div>
+                <div class="qa-item"><p class="question">19. What happens if I set the initial energy to zero?</p><p class="answer">If the initial kinetic energy is zero, the particle starts with zero velocity. In the dS simulation, it will remain at its initial position for a moment before the repulsive force pushes it away. In the AdS simulation, it will immediately start accelerating towards the center.</p></div>
+                <div class="qa-item"><p class="question">20. Is the force really linear with distance (F ∝ x)?</p><p class="answer">Yes, for this effective potential model. The potential is quadratic (V ∝ x²), and since F = -dV/dx, the force is linear (F ∝ x). This is the same force law as a simple spring (Hooke's Law), which is why the motion in AdS is a perfect simple harmonic oscillation.</p></div>
+                <div class="qa-item"><p class="question">21. Does the particle's color mean anything?</p><p class="answer">No, the colors are assigned randomly to help you distinguish between the different particles when you add more than one to the simulation.</p></div>
+                <div class="qa-item"><p class="question">22. Can the total energy in the AdS well be negative?</p><p class="answer">Yes. Since potential energy is defined relative to an arbitrary zero point (here, V(0)=0), the total energy can be negative. If a particle is placed at rest at some position x > 0, its kinetic energy is zero and its potential energy is positive, so total energy is positive. If it's given a kick towards the center, its total energy could be higher or lower depending on the kick, but it will be conserved.</p></div>
+                <div class="qa-item"><p class="question">23. How does quantum mechanics affect this?</p><p class="answer">In quantum mechanics, a particle in a potential well is not allowed to have zero energy; it must have a minimum "zero-point energy." Furthermore, a particle can "tunnel" through a potential barrier. In dS space, this leads to the idea of a "quantum fluctuation" at the peak of the hill spontaneously creating particles. In AdS, it implies a discrete set of energy levels for any bound particle.</p></div>
+                <div class="qa-item"><p class="question">24. What are the units in the simulation?</p><p class="answer">The units are arbitrary, chosen for good visualization. They can be thought of as a system where c=1 and other constants are scaled appropriately. The key is not the absolute values, but the relationships between the parameters and the resulting motion.</p></div>
+                <div class="qa-item"><p class="question">25. Why is the dS potential negative?</p><p class="answer">The zero point of potential energy is arbitrary. We have set V(0) = 0. Since the dS potential hill slopes downwards from the center, the potential at all other points must be negative relative to the center. What matters is the *slope*, not the absolute value.</p></div>
+            `; },
+            getMicroLabsHTML() { return `
+                <h2>Micro-Labs: Potential Landscape Experiments</h2>
+                <p>Use these guided experiments to build your intuition.</p>
+                <ol>
+                    <li><strong>Pure dS:</strong> Set |Λ| to 0.05. Reset. Watch particles accelerate away from the center in the dS panel.</li>
+                    <li><strong>Pure AdS:</strong> Set |Λ| to 0.05. Reset. Watch particles oscillate in the AdS potential well.</li>
+                    <li><strong>Flat Space:</strong> Set |Λ| to 0. Reset. Notice particles move at constant velocity, as there is no potential gradient (no force).</li>
+                    <li><strong>Steep dS Hill:</strong> Set |Λ| to max (0.1). The dS hill is very steep, causing rapid acceleration and expansion.</li>
+                    <li><strong>Deep AdS Well:</strong> Set |Λ| to max (0.1). The AdS well is very deep, causing rapid, high-frequency oscillations.</li>
+                    <li><strong>Shallow AdS Well:</strong> Set |Λ| to a low value (0.01). The AdS oscillations are much slower and wider.</li>
+                    <li><strong>High Mass Particle:</strong> Set Particle Mass to max (5.0). Reset. Notice the particles are more "sluggish" and accelerate less quickly for the same potential shape.</li>
+                    <li><strong>Low Mass Particle:</strong> Set Particle Mass to min (0.1). Reset. The particles are "light" and react very quickly to the potential gradients.</li>
+                    <li><strong>High Initial Energy:</strong> Set Initial Energy to max (2.0). Reset. In AdS, particles now oscillate much higher up the sides of the well. In dS, they start with a much faster initial kick.</li>
+                    <li><strong>Low Initial Energy:</strong> Set Initial Energy to min (0.1). Reset. In AdS, particles are confined to small oscillations at the bottom of the well.</li>
+                    <li><strong>Unstable Equilibrium:</strong> Set |Λ| > 0. Add a single particle with zero initial energy exactly at x=0. It should balance precariously at the peak of the dS hill. (This is hard to do perfectly!).</li>
+                    <li><strong>Stable Equilibrium:</strong> In the AdS panel, notice that all particles are drawn towards the stable equilibrium point at x=0.</li>
+                    <li><strong>Energy Conservation:</strong> Focus on the AdS panel. Add one particle. Watch the metrics. As Kinetic Energy increases, Potential Energy decreases, and vice-versa, but Total Energy stays constant.</li>
+                    <li><strong>Energy Conversion:</strong> Focus on the dS panel. Watch the metrics. Potential Energy is continuously converted into Kinetic Energy as the particle accelerates away.</li>
+                    <li><strong>Hooke's Law:</strong> The force in the AdS panel is F = -|Λ|x, which is the same as Hooke's Law for a spring. This is why the motion is simple harmonic.</li>
+                    <li><strong>Anti-Hooke's Law:</strong> The force in the dS panel is F = +|Λ|x. This is a "repulsive spring" that pushes things away.</li>
+                    <li><strong>Turning Points:</strong> In AdS, watch a particle oscillate. The point where it stops and turns around is where its total energy equals its potential energy (and kinetic energy is zero).</li>
+                    <li><strong>No Turning Points in dS:</strong> A particle in dS never turns around. It accelerates away forever.</li>
+                    <li><strong>Effect of Speed Control:</strong> Set up an AdS oscillation. Move the Simulation Speed slider up and down to see the effect on the dynamics.</li>
+                    <li><strong>Multiple Particles:</strong> Reset and add 10-15 particles. Observe the "gas" of particles oscillating in the AdS well, and the "exploding gas" in the dS universe.</li>
+                    <li><strong>Symmetry:</strong> The potentials are symmetric around x=0. The force at +x is equal in magnitude and opposite in direction to the force at -x.</li>
+                    <li><strong>Zero Force Point:</strong> The only point where the force is zero is at x=0. This is the definition of an equilibrium point.</li>
+                    <li><strong>Velocity Vector:</strong> The white line attached to each particle shows its current velocity vector. Watch how it shrinks and grows as the particle moves in the AdS well.</li>
+                    <li><strong>Landscape Control:</strong> Manually slide the |Λ| slider. You are directly changing the curvature of these two model universes.</li>
+                    <li><strong>Freestyle:</strong> Choose your own combination of parameters. Can you find a setup where the AdS particle just barely reaches the edge of the screen? What does this imply about its total energy?</li>
+                </ol>
+            `; }
+        };
+
+        Sim.init();
+    });
+    </script>
+</body>
+</html>

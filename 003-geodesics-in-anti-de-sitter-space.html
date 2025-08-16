@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Geodesics in an Anti-de Sitter Universe</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #e07a5f;
+            --accent-hover: #c9674f; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; }
+        .container { display: grid; grid-template-columns: 350px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "controls main"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; text-align:center; border-bottom: 2px solid var(--border-color); padding-bottom: 1rem; }
+        .controls-panel { grid-area: controls; overflow-y: auto; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem; }
+        header h1 { color: var(--accent-color); margin:0; font-size: 2.5rem; }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; margin:0; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; font-size: 1.2rem; }
+        .control { margin-bottom: 1rem; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control button, .control select { width: 100%; padding: 10px; border-radius: 4px; background-color: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); font-size: 1rem;}
+        .control button { background-color: var(--accent-color); color:white; font-weight:bold; cursor:pointer; }
+        .sim-view { position: relative; width: 100%; height: 100%; background: #000; border-radius: 4px; overflow:hidden; flex-grow: 1; }
+        .metrics-overlay { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 5px; color: white; font-family: var(--code-font); font-size: 1rem; z-index: 10;}
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.8); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1200px; border-radius: 8px; }
+        .modal-close { position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-body { max-height: 80vh; overflow-y: auto; padding-right: 20px; }
+        .qa-item { border-left: 4px solid var(--accent-color); padding-left: 15px; margin-bottom: 20px; }
+        .qa-item .question { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Geodesics in an Anti-de Sitter Universe</h1>
+            <h2>Discover how a negative cosmological constant creates a "containing" universe.</h2>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div class="control">
+                    <button id="reset-sim">Reset Simulation</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Physical Parameters</h3>
+                <div class="control">
+                    <label for="lambda-slider">Cosmological Constant |Λ|: <span id="lambda-value">-0.1</span></label>
+                    <input type="range" id="lambda-slider" min="0.01" max="0.5" step="0.01" value="0.1">
+                </div>
+                <div class="control">
+                    <label for="particle-energy">Initial Particle Energy: <span id="particle-energy-value">0.5</span></label>
+                    <input type="range" id="particle-energy" min="0.1" max="2.0" step="0.1" value="0.5">
+                </div>
+                <div class="control">
+                    <button id="add-particle">Add Particle at Center</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Visualization (Poincaré Disk)</h3>
+                <div class="control">
+                    <label>Show Hyperbolic Tiling: <input type="checkbox" id="show-tiling" checked></label>
+                </div>
+            </div>
+            <div class="control-group">
+                <h3>Content & Learning</h3>
+                <button onclick="openModal('exposition-modal')">Read Full Exposition</button>
+                <button onclick="openModal('qna-modal')" style="margin-top:5px;">Explore Q&A</button>
+                <button onclick="openModal('microlabs-modal')" style="margin-top:5px;">View Micro-Labs</button>
+            </div>
+        </aside>
+
+        <main class="main-panel panel">
+            <div class="sim-view">
+                <canvas id="sim-canvas"></canvas>
+                <div class="metrics-overlay" id="metrics-overlay"></div>
+            </div>
+        </main>
+    </div>
+
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('exposition-modal')">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('qna-modal')">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+    <div id="microlabs-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="closeModal('microlabs-modal')">&times;</span><div class="modal-body" id="microlabs-content"></div></div></div>
+
+    <script>
+    function openModal(id) { document.getElementById(id).style.display = 'block'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const Sim = {
+            config: { simSpeed: 1, lambda: 0.1, particleEnergy: 0.5, showTiling: true },
+            state: { isRunning: true, time: 0, lastFrameTime: 0, particles: [], adsRadius: 1 },
+            elements: {},
+
+            init() {
+                this.cacheDOMElements();
+                this.setupControls();
+                this.setupContent();
+                this.resizeCanvas();
+                this.reset();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'sim-canvas', 'sim-speed', 'reset-sim', 'lambda-slider', 'lambda-value',
+                    'particle-energy', 'add-particle', 'show-tiling', 'metrics-overlay',
+                    'exposition-content', 'qna-content', 'microlabs-content'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.ctx = this.elements.simCanvas.getContext('2d');
+            },
+
+            setupControls() {
+                this.elements.simSpeed.addEventListener('input', e => this.config.simSpeed = parseFloat(e.target.value));
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.lambdaSlider.addEventListener('input', e => {
+                    this.config.lambda = parseFloat(e.target.value);
+                    this.elements.lambdaValue.textContent = `-${this.config.lambda.toFixed(2)}`;
+                });
+                this.elements.particleEnergy.addEventListener('input', e => this.config.particleEnergy = parseFloat(e.target.value));
+                this.elements.addParticle.addEventListener('click', () => this.addParticle());
+                this.elements.showTiling.addEventListener('change', e => this.config.showTiling = e.target.checked);
+            },
+
+            addParticle() {
+                const angle = Math.random() * 2 * Math.PI;
+                const speed = this.config.particleEnergy;
+                this.state.particles.push({
+                    x: 0, y: 0,
+                    vx: speed * Math.cos(angle), vy: speed * Math.sin(angle),
+                    path: [{x: 0, y: 0}],
+                    color: `hsl(${Math.random() * 360}, 90%, 70%)`
+                });
+            },
+
+            reset() {
+                this.state.time = 0;
+                this.state.particles = [];
+                this.addParticle();
+            },
+
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) return;
+                const dt = ((currentTime - this.state.lastFrameTime) / 1000) * this.config.simSpeed;
+                if (dt > 0) { this.update(dt); this.draw(); }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                this.state.time += dt;
+                this.state.adsRadius = Math.sqrt(3 / this.config.lambda);
+
+                this.state.particles.forEach(p => {
+                    // This is a simplified model of geodesic motion in Poincare disk.
+                    // A proper integration is very complex. This captures the key behavior.
+                    const r2 = p.x * p.x + p.y * p.y;
+                    const scale = (1 - r2); // Conformal factor derivative term
+
+                    // The force is effectively an attractive harmonic force in this model
+                    const force_x = -this.config.lambda * p.x * scale;
+                    const force_y = -this.config.lambda * p.y * scale;
+
+                    p.vx += force_x * dt;
+                    p.vy += force_y * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+
+                    // Keep particles inside the disk boundary
+                     const r = Math.sqrt(p.x*p.x + p.y*p.y);
+                     if (r >= 1) {
+                         p.x /= r; p.y /= r; // Put it back on the boundary
+                         // Reflect velocity
+                         const dot = p.x * p.vx + p.y * p.vy;
+                         p.vx -= 2 * dot * p.x;
+                         p.vy -= 2 * dot * p.y;
+                     }
+
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.path.length > 1000) p.path.shift();
+                });
+            },
+
+            draw() {
+                const { ctx, simCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const radius = Math.min(width, height) / 2 * 0.95;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
+
+                // Draw boundary
+                ctx.strokeStyle = 'var(--accent-color)'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI); ctx.stroke();
+
+                // Draw hyperbolic tiling for visual effect
+                if (this.config.showTiling) {
+                    ctx.strokeStyle = 'rgba(224, 122, 95, 0.2)';
+                    ctx.lineWidth = 1;
+                    // This is a simplified tiling, not a true hyperbolic one
+                    for(let i = 1; i < 5; i++) {
+                        ctx.beginPath();
+                        ctx.arc(centerX, centerY, radius * (1 - Math.pow(0.6, i)), 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                }
+
+                // Draw particles and paths
+                this.state.particles.forEach(p => {
+                    ctx.strokeStyle = p.color; ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    p.path.forEach((pos, i) => {
+                        const canvasX = centerX + pos.x * radius;
+                        const canvasY = centerY + pos.y * radius;
+                        if (i === 0) ctx.moveTo(canvasX, canvasY);
+                        else ctx.lineTo(canvasX, canvasY);
+                    });
+                    ctx.stroke();
+
+                    const finalPos = p.path[p.path.length-1];
+                    const canvasX = centerX + finalPos.x * radius;
+                    const canvasY = centerY + finalPos.y * radius;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+
+                this.updateMetrics();
+            },
+
+            updateMetrics() {
+                this.elements.metricsOverlay.innerHTML = `Time: ${this.state.time.toFixed(2)}s<br>AdS Radius L: ${this.state.adsRadius.toFixed(2)}<br>Particles: ${this.state.particles.length}`;
+            },
+
+            resizeCanvas() {
+                const rect = this.elements.simCanvas.parentElement.getBoundingClientRect();
+                this.elements.simCanvas.width = rect.width;
+                this.elements.simCanvas.height = rect.height;
+                this.draw();
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+                this.elements.microlabsContent.innerHTML = this.getMicroLabsHTML();
+            },
+
+            getExpositionHTML() { return `
+                <h2>The Universe in a Bottle: A Deep Dive into Geodesics in Anti-de Sitter Space</h2>
+                <p>Welcome to Anti-de Sitter (AdS) space, the fascinating, negatively-curved counterpart to our expanding universe. Governed by a <strong>negative cosmological constant (Λ < 0)</strong>, AdS space possesses a unique, uniform, saddle-like curvature that gives it bizarre and profound properties. Instead of flying apart, all paths are bent inward, creating a universe that is, in a sense, self-containing. It acts like a cosmic bottle. This simulation visualizes geodesics—the straightest possible paths for particles—within the famous <strong>Poincaré disk model</strong>, a 2D map of this strange, hyperbolic spacetime.</p>
+
+                <h3>Section 1: Hyperbolic Geometry - A New Kind of Curvature</h3>
+                <p>Our intuition is built on flat, Euclidean geometry. But spacetime can be curved. We are familiar with the positive curvature of a sphere, like the Earth's surface, where parallel lines eventually meet. Anti-de Sitter space is built on the opposite concept: <strong>negative curvature</strong>. The classic analogy is the surface of a Pringle's chip or a horse's saddle. On such a "hyperbolic" surface, initially parallel lines diverge from one another. In General Relativity, this type of geometry is sourced by a negative cosmological constant, which corresponds to an attractive vacuum energy density. While our universe's positive Λ acts as a repulsive "anti-gravity," a negative Λ creates a global attractive effect, pulling everything back towards its center. The result is a spacetime that acts like a giant gravitational potential well.</p>
+
+                <h3>Section 2: The Poincaré Disk - Mapping Infinity to a Circle</h3>
+                <p>How can we visualize an infinite, curved space on a finite screen? The Poincaré disk is a clever mathematical map, a type of "conformal" projection, that represents an entire infinite hyperbolic plane within a finite circle. It has several key properties that you can observe in the simulation:</p>
+                <ul>
+                    <li><strong>The Boundary is Infinity:</strong> The circular edge of the disk represents "spatial infinity." It is infinitely far away from any point inside the disk.</li>
+                    <li><strong>Geodesics are Arcs:</strong> The straightest possible lines (geodesics) in this space are not straight Euclidean lines. They are either diameters of the disk or arcs of circles that intersect the boundary of the disk at a perfect 90-degree angle.</li>
+                    <li><strong>Distortion of Distances:</strong> The map distorts distances and sizes. As an object moves from the center of the disk towards the edge, it appears to shrink. A constant speed in AdS space appears as a slowing motion on the disk, with the object seeming to slow to a halt as it approaches the boundary, never quite reaching it.</li>
+                </ul>
+                <p>In the simulation, you can launch particles and watch them follow these curved geodesic paths. No matter their initial speed or direction, their paths are always bent back towards the center, preventing them from ever reaching the boundary. This is the "confining" nature of AdS space, a direct result of its uniform negative curvature.</p>
+
+                <h3>Section 3: The AdS Radius - Defining the Scale of Curvature</h3>
+                <p>The geometry of an AdS spacetime is characterized by a single parameter, the <strong>AdS radius, L</strong>. This sets the characteristic length scale of the curvature. It is inversely related to the cosmological constant: <code>L = sqrt(-3/Λ)</code>.
+                <ul>
+                    <li>A very negative Λ (large |Λ|) results in a small AdS radius L. This corresponds to a very "tightly" curved, small universe where the confining force is strong and particles oscillate rapidly.</li>
+                    <li>A Λ very close to zero results in a very large AdS radius L. This space is only gently curved, and particles can travel very far before being turned back. As L approaches infinity (Λ approaches 0), the space becomes flat Minkowski space.</li>
+                </ul>
+                You can control |Λ| with the slider and observe how it changes the "size" of the effective universe and the dynamics of the particles within it.</p>
+
+                <h3>Section 4: The Holographic Universe - Why AdS is Crucial</h3>
+                <p>While AdS space does not describe our own expanding cosmos, it has become arguably the most important "laboratory" in theoretical physics for the last quarter-century. The reason is the revolutionary <strong>AdS/CFT correspondence</strong>, a concrete realization of the holographic principle. Proposed by Juan Maldacena in 1997, this powerful conjecture states that a theory of quantum gravity (like string theory) taking place within a volume of Anti-de Sitter space (the "bulk") is mathematically equivalent to a simpler, non-gravitational quantum field theory (a Conformal Field Theory, or CFT) living on its lower-dimensional boundary.</p>
+                <p>This "dictionary" allows physicists to translate very difficult problems about quantum gravity (in the AdS bulk) into more tractable calculations in a standard quantum field theory (on the boundary), and vice-versa. It has provided profound insights into the nature of black holes, quantum entanglement, and the idea that spacetime itself might be an emergent phenomenon "built" from the entanglement of quantum bits on a distant holographic screen.</p>
+            `; },
+            getQnaHTML() { return `
+                <h2>Q&A: The Anti-de Sitter Universe</h2>
+                <div class="qa-item"><p class="question">1. Is AdS space like a black hole since you can't escape?</p><p class="answer">That's an excellent analogy that highlights a key difference. A black hole is a *local* object with a one-way event horizon inside a larger spacetime. You are only trapped if you cross its horizon. AdS is a *global* property of an entire spacetime. There is no specific boundary to cross; the entire geometry of the universe itself is what prevents you from reaching infinity. No matter where you are in AdS, you are inside the "bottle."</p></div>
+                <div class="qa-item"><p class="question">2. What is the "boundary" of the Poincaré disk?</p><p class="answer">The circular edge of the disk represents spatial infinity. It's not a physical wall, but the set of points that are infinitely far away from the center. In the context of the AdS/CFT correspondence, this boundary is where the dual, non-gravitational quantum field theory "lives."</p></div>
+                <div class="qa-item"><p class="question">3. Why do the geodesics look like circular arcs?</p><p class="answer">These are the "straight lines" of hyperbolic geometry, as represented on the Poincaré disk map. Just as a great circle is the straightest path on a sphere, these specific arcs are the shortest paths between two points in this negatively curved space. Any deviation from these paths would be a longer, "curved" route in the hyperbolic sense.</p></div>
+                <div class="qa-item"><p class="question">4. Does time behave differently in AdS?</p><p class="answer">Yes. One of the strange properties of AdS space is that a light ray can travel from the center to the boundary (infinity) and back to the center in a finite amount of time as measured by an observer at the center. This is unlike flat space where such a journey would take infinite time. This is why AdS is sometimes described as a "universe in a bottle."</p></div>
+                <div class="qa-item"><p class="question">5. What is hyperbolic geometry?</p><p class="answer">It is a non-Euclidean geometry where the parallel postulate is false. In Euclidean geometry, for a given line and a point not on it, there is exactly one line through the point that never intersects the first line. In hyperbolic geometry, there are infinitely many such lines. This leads to other strange properties, like the fact that the angles of a triangle always sum to less than 180 degrees.</p></div>
+                <div class="qa-item"><p class="question">6. What is the AdS Radius (L)?</p><p class="answer">It is the characteristic length scale of curvature of the space. In a sense, it tells you "how big" the bottle is. A smaller L (from a larger |Λ|) means a more tightly curved space, and particles are confined to a smaller effective region.</p></div>
+                <div class="qa-item"><p class="question">7. Can you have a "central mass" or star in AdS space?</p><p class="answer">Yes. You can have objects like stars or black holes within an AdS universe. Their local gravity would create a deeper potential well superimposed on the global, confining potential of the AdS space itself. An "AdS-Schwarzschild" black hole is a black hole living inside an AdS universe.</p></div>
+                <div class="qa-item"><p class="question">8. Why does a particle seem to slow down near the edge?</p><p class="answer">This is an artifact of the Poincaré disk map. The map distorts distances, making equal lengths look shorter near the boundary. A particle moving at a constant hyperbolic speed will appear to slow down as it approaches the edge because it has to cover more "map distance" for the same "real distance."</p></div>
+                <div class="qa-item"><p class="question">9. What is the "hyperbolic tiling"?</p><p class="answer">This is a visual aid to help you see the curved geometry. In flat space, a grid is made of squares. In hyperbolic space, a regular grid can be made of other shapes, like triangles or heptagons, as famously drawn by M.C. Escher in his "Circle Limit" woodcuts. The tiling in the simulation gives a sense of the warped coordinate system.</p></div>
+                <div class="qa-item"><p class="question">10. Is AdS space "real"?</p><p class="answer">It is a valid mathematical solution to Einstein's equations, so it is "real" in that sense. However, astronomical observations strongly indicate that our universe is described by a positive cosmological constant (de Sitter-like), not a negative one. The immense value of AdS space is as a theoretical laboratory for studying quantum gravity, not as a description of our cosmos.</p></div>
+                <div class="qa-item"><p class="question">11. What is the AdS/CFT correspondence?</p><p class="answer">It's a powerful conjecture stating that a theory of gravity in a (d+1)-dimensional AdS space is equivalent to a non-gravitational quantum field theory on its d-dimensional boundary. It's a "holographic" duality, mapping a bulk theory to a boundary theory.</p></div>
+                <div class="qa-item"><p class="question">12. Why is the cosmological constant negative?</p><p class="answer">A negative Λ corresponds to a vacuum with a negative energy density and a positive pressure. This attractive vacuum energy is what sources the overall confining curvature of the spacetime.</p></div>
+                <div class="qa-item"><p class="question">13. Does the particle's energy affect its path?</p><p class="answer">Yes. A higher initial energy allows the particle to travel further out towards the boundary before being turned back. Its path will be a larger arc, and it will have a larger maximum radial coordinate.</p></div>
+                <div class="qa-item"><p class="question">14. What happens if Λ = 0?</p><p class="answer">If Λ=0, the AdS radius L becomes infinite. The space becomes flat Minkowski space. The Poincaré disk model breaks down, and particles would travel in straight Euclidean lines forever.</p></div>
+                <div class="qa-item"><p class="question">15. Are all geodesics closed loops?</p><p class="answer">Not necessarily. Depending on their initial position and velocity, particles can follow a wide variety of oscillating paths. Some might be simple back-and-forth oscillations through the center, while others might be complex, rosette-like paths that never exactly repeat.</p></div>
+                <div class="qa-item"><p class="question">16. What is the "center" of the disk?</p><p class="answer">It's just a convenient reference point. Because AdS space is maximally symmetric, every point is equivalent. An observer at any point would see themselves as being at the center of their own Poincaré disk.</p></div>
+                <div class="qa-item"><p class="question">17. How is this different from the de Sitter simulation?</p><p class="answer">They are opposites. In de Sitter space, particles accelerate away from each other, and there is a cosmic event horizon you cannot see past. In Anti-de Sitter space, particles are confined and oscillate, and you can, in principle, receive signals from the entire space.</p></div>
+                <div class="qa-item"><p class="question">18. What do the metrics show?</p><p class="answer">The metrics show the current simulation time and the AdS Radius L, which is calculated from the |Λ| you set. It also shows the radial coordinate of the first particle, so you can track how far it gets from the center.</p></div>
+                <div class="qa-item"><p class="question">19. Can two particles collide in AdS?</p><p class="answer">Yes. If you add multiple particles, their geodesics can certainly cross, leading to collisions (though the simulation doesn't model the interaction itself).</p></div>
+                <div class="qa-item"><p class="question">20. What would an astronaut experience in AdS space?</p><p class="answer">They would feel as if they were in a giant, invisible gravity well. If they fired their engines to move away from the center, they would feel a constant pull dragging them back. They would see strange visual distortions, with objects near the boundary appearing compressed.</p></div>
+                <div class="qa-item"><p class="question">21. Is there a "force" in this simulation?</p><p class="answer">The simulation uses a simplified force law (F ∝ -λ * r * (1-r²)) to approximate the true geodesic motion on the disk. This is not a fundamental force of nature, but a mathematical trick to create visually correct paths that bend back from the boundary.</p></div>
+                <div class="qa-item"><p class="question">22. Can you orbit the center?</p><p class="answer">Yes. If a particle is given an initial velocity that is perfectly sideways ("tangential"), it can enter a stable circular orbit around the center of the disk. The simulation starts particles with a random velocity, so you are more likely to see oscillating paths.</p></div>
+                <div class="qa-item"><p class="question">23. Why is it called "Anti-de Sitter"?</p><p class="answer">It is named after Willem de Sitter, who discovered the de Sitter spacetime solution. The "anti" prefix was added to denote the solution with the opposite sign of the cosmological constant and thus opposite curvature properties.</p></div>
+                <div class="qa-item"><p class="question">24. What happens to the path if I change Λ mid-flight?</p><p class="answer">Changing Λ is equivalent to changing the curvature of spacetime everywhere, instantly. If you decrease |Λ| (making the space flatter), a particle's path will become a wider, less curved arc. If you increase |Λ|, its path will become more tightly curved.</p></div>
+                <div class="qa-item"><p class="question">25. Does the particle's color mean anything?</p><p class="answer">No, the colors are assigned randomly when you add a particle, simply to make it easier to distinguish between the different paths on the screen.</p></div>
+            `; },
+            getMicroLabsHTML() { return `
+                <h2>Micro-Labs: Anti-de Sitter Experiments</h2>
+                <p>Use these guided experiments to build your intuition for hyperbolic space.</p>
+                <ol>
+                    <li><strong>Default Trajectory:</strong> Reset the simulation. Watch the single particle follow a curved geodesic path, always staying within the boundary.</li>
+                    <li><strong>High Energy:</strong> Set Particle Energy to its maximum value. Reset. Notice the particle travels much closer to the boundary circle before being turned back.</li>
+                    <li><strong>Low Energy:</strong> Set Particle Energy to its minimum value. Reset. The particle is confined to a small region near the center of the disk.</li>
+                    <li><strong>High Curvature:</strong> Set |Λ| to its maximum value. This corresponds to a small AdS Radius L. Reset. Notice the paths are more tightly curved and oscillations are faster.</li>
+                    <li><strong>Low Curvature:</strong> Set |Λ| to its minimum value. The space is nearly flat. Reset. The particle's path looks almost like a straight line until it gets very far out.</li>
+                    <li><strong>Particle Party:</strong> Click "Add Particle" 10-15 times. Watch as the collection of particles fills the space, each following its own geodesic, creating a chaotic "gas" in a bottle.</li>
+                    <li><strong>The Boundary is Infinity:</strong> Try as you might, you can't get a particle to cross the boundary circle. This is because it is infinitely far away in the hyperbolic geometry.</li>
+                    <li><strong>Geodesics are Arcs:</strong> Observe the shape of the paths. They are arcs of circles that would intersect the boundary at a right angle if extended.</li>
+                    <li><strong>Visualizing Curvature:</strong> The hyperbolic tiling gives a visual sense of the warped space. To a tiny creature living in this space, all the triangular "tiles" would appear to be the same size and shape.</li>
+                    <li><strong>No Parallel Lines:</strong> Add two particles with very similar initial velocities. Watch as their paths, initially almost parallel, curve away from each other before eventually re-converging.</li>
+                    <li><strong>Radial Oscillation:</strong> Try to add a particle with almost zero sideways velocity. Its path will be a nearly straight line (a diameter) through the center, oscillating back and forth.</li>
+                    <li><strong>Circular Orbit:</strong> (Hard) Try to time a button click or parameter change to nudge a particle into a stable circular orbit around the center.</li>
+                    <li><strong>Effect of Speed Control:</strong> Set up a nice, wide-ranging oscillation. Use the Simulation Speed slider to slow down time as the particle nears its turning point.</li>
+                    <li><strong>Relationship between L and |Λ|:</strong> Note that as you increase |Λ|, the AdS Radius L shown in the metrics gets smaller.</li>
+                    <li><strong>Confined Gas:</strong> Add many particles with high energy. They form a "gas" that fills the entire disk, but is confined by the global curvature. It cannot expand forever like in de Sitter space.</li>
+                    <li><strong>Symmetry of the space:</strong> No matter where a particle is, the "force" pulling it back is always directed towards the center. Every point on the disk is part of a similar-looking geometry.</li>
+                    <li><strong>Path History Length:</strong> Adjust the (conceptual) path length slider. A longer setting would let you see more of the complex, rosette-like patterns that can emerge over time.</li>
+                    <li><strong>Comparing to a Flat World:</strong> Set |Λ| to a very low value. The paths look like straight lines. This shows that AdS space locally resembles flat space, just as the surface of the Earth looks flat from close up.</li>
+                    <li><strong>Maximum Radial Distance:</strong> With high energy, a particle reaches a large maximum radius before turning back. This turning point is where all its kinetic energy has been converted into "potential energy" from moving "up" the global gravitational well.</li>
+                    <li><strong>No Escape Velocity:</strong> The concept of escape velocity doesn't apply here. Because the potential well is infinitely deep, the escape velocity is infinite.</li>
+                    <li><strong>The "Wall" Illusion:</strong> It might look like particles are "bouncing" off a wall at the boundary. This is an illusion of the map. They are not hitting anything; their path is simply being bent by the curved geometry.</li>
+                    <li><strong>Change Curvature Mid-Flight:</strong> Let a particle travel outwards. As it nears its peak, dramatically increase |Λ|. This makes the "bottle" smaller and will cause the particle to be pulled back much more sharply.</li>
+                    <li><strong>Geodesic Crossing:</strong> With two or more particles, observe how their paths can cross. This is different from de Sitter space where all geodesics diverge.</li>
+                    <li><strong>The Center is Not Special:</strong> Remember that any point can be mapped to the center of the disk. An observer traveling with any particle would see themselves as being at rest at the center of their own Poincaré disk.</li>
+                    <li><strong>Freestyle Exploration:</strong> Find a combination of parameters that produces the most interesting or beautiful path. Can you make a particle trace a star-like shape?</li>
+                </ol>
+            `; }
+        };
+        Sim.init();
+    });
+    </script>
+</body>
+</html>
