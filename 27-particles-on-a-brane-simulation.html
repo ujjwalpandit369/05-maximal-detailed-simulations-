@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Particles on a Brane</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: pointer; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Particles on a Brane: Open vs. Closed Strings</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Bulk Spacetime (Side View)</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <p>Click on the brane (the horizontal line) to launch a particle.</p>
+                <label for="particle-type">Particle Type</label>
+                <select id="particle-type">
+                    <option value="matter">Matter (Open String)</option>
+                    <option value="graviton">Graviton (Closed String)</option>
+                </select>
+                <button id="reset-btn">Reset</button>
+                <div id="metrics"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Particles on a Brane script.
+    // The final version will contain the logic for two particle types,
+    // one confined to the brane and one free to move in the bulk.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        particleTypeSelect: document.getElementById('particle-type'),
+        resetBtn: document.getElementById('reset-btn'),
+        metrics: document.getElementById('metrics'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { particles: [] };
+    const BRANE_Y = 300;
+
+    function createParticle(x, type) {
+        const p = {
+            x: x, y: BRANE_Y,
+            vx: (Math.random() - 0.5) * 4,
+            vy: -Math.random() * 5, // Launch away from the brane
+            type: type
+        };
+        state.particles.push(p);
+    }
+
+    function update() {
+        state.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            // If it's a matter particle, confine it to the brane
+            if (p.type === 'matter') {
+                p.y = BRANE_Y;
+            }
+            // Periodic boundaries for x
+            p.x = (p.x + DOM.canvas.width) % DOM.canvas.width;
+        });
+        // Filter out gravitons that have left the bulk
+        state.particles = state.particles.filter(p => p.y > 0 && p.y < DOM.canvas.height);
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw the brane
+        ctx.strokeStyle = '#444'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, BRANE_Y); ctx.lineTo(canvas.width, BRANE_Y); ctx.stroke();
+
+        state.particles.forEach(p => {
+            if (p.type === 'matter') {
+                ctx.strokeStyle = 'cyan'; ctx.lineWidth = 4;
+                ctx.beginPath(); ctx.moveTo(p.x, p.y - 10); ctx.lineTo(p.x, p.y + 10); ctx.stroke();
+            } else { // Graviton
+                ctx.strokeStyle = '#00ffaa'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, 2*Math.PI); ctx.stroke();
+            }
+        });
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        DOM.canvas.width = DOM.canvas.offsetWidth;
+        DOM.canvas.height = 500;
+
+        DOM.canvas.addEventListener('click', (e) => {
+            createParticle(e.offsetX, DOM.particleTypeSelect.value);
+        });
+        DOM.resetBtn.onclick = () => { state.particles = []; };
+
+        DOM.expositionContent.innerHTML = `<h1>Open Strings on a Brane</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
