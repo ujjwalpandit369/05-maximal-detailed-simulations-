@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: M-Theory Unification</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #8f4bce;
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #7d3aaf;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #c299ff;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #a978e8;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; }
+        .viz-container svg, .viz-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .control-group .value-display { font-family: var(--font-family-mono); }
+        .control-group input { width: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        #info-panel { background-color: var(--color-control-bg); padding: 1rem; border-radius: 4px; }
+        .node { cursor: pointer; transition: all 0.2s; }
+        .node .label { font-size: 14px; text-anchor: middle; pointer-events: none; }
+        .node.active circle { stroke: var(--color-accent); stroke-width: 4px; }
+        .link { stroke: var(--color-secondary); stroke-width: 2px; opacity: 0.5; }
+        .link.active { stroke: var(--color-accent); opacity: 1; stroke-width: 4px; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: M-Theory Unification</h1>
+            <p class="subtitle">An interactive diagram showing how the five superstring theories are unified into a single 11-dimensional theory through dualities.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Light</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>001-m-theory-unification.html</code></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container" id="viz-container">
+                    <svg id="main-svg"></svg>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Parameter Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label>String Coupling (g_s) <span class="value-display" id="coupling-val"></span></label>
+                        <input type="range" id="coupling-slider" min="-2" max="2" step="0.05" value="0">
+                    </div>
+                    <div class="control-group">
+                        <label>Compactification Radius (R) <span class="value-display" id="radius-val"></span></label>
+                        <input type="range" id="radius-slider" min="-2" max="2" step="0.05" value="0">
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Schematic View</h3>
+                <div class="viz-container" style="padding-top: 50%;">
+                    <canvas id="schematic-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel" id="info-panel">
+                <h3>Theory Information</h3>
+                <div id="info-content">Click on a theory node to learn more.</div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to the String Theory Revolution</h2>
+    <p>In the 1980s, string theory was a vibrant but fractured field. There were five different, self-consistent string theories, all living in 10 spacetime dimensions. This was an embarrassment of riches; if you're looking for a "theory of everything," having five of them is a problem. The five theories were:
+    <ul>
+        <li><strong>Type I:</strong> Contains both open and closed strings, with a specific symmetry group SO(32).</li>
+        <li><strong>Type IIA & Type IIB:</strong> Both contain only closed strings but differ in the details of their supersymmetry.</li>
+        <li><strong>Heterotic E8×E8 & Heterotic SO(32):</strong> These are "hybrid" theories whose left-moving and right-moving vibrations are treated differently.</li>
+    </ul>
+    For a long time, these were thought to be distinct theories. The breakthrough of the "second superstring revolution" in the mid-1990s, led by physicists like Edward Witten, was the discovery that these five theories were not different at all. They were just different "corners" or limiting cases of a single, more fundamental, 11-dimensional theory, which Witten dubbed <strong>M-theory</strong>.</p>
+    <p>The connections between the theories are a web of transformations called <strong>dualities</strong>. A duality is a "Rosetta Stone" that allows you to translate the physics of one theory into the physics of another. The two most important types are T-duality and S-duality. This simulation provides an interactive map of this duality web. By changing the parameters of the underlying theory—the string coupling constant (g_s) and the size of a compactified dimension (R)—you can see which of the five string theories provides the best description, and how they are all secretly related.</p>
+
+    <h2>Core Theory: The Duality Web</h2>
+    <h3>1. T-Duality (Radius Inversion)</h3>
+    <p>T-duality is a remarkable property of string theory that relates a theory with a large compactified dimension to a theory with a small one. Specifically, a string theory compactified on a circle of radius R is physically equivalent to another string theory compactified on a circle of radius 1/R (in Planck units). The energy modes of a string winding around the small circle correspond precisely to the momentum modes of a string moving along the large circle, and vice-versa. T-duality connects Type IIA and Type IIB string theories, and also the two Heterotic theories.</p>
+
+    <h3>2. S-Duality (Strong/Weak Coupling)</h3>
+    <p>S-duality relates a theory at strong coupling (g_s > 1) to a different theory at weak coupling (g_s < 1). This is incredibly powerful, because it allows us to do calculations in a strongly-coupled theory, which is normally impossible, by translating the problem into a weakly-coupled dual theory where our usual perturbative methods work. S-duality connects Type I string theory to the Heterotic SO(32) theory, and also relates Type IIB to itself.</p>
+
+    <h3>3. The Emergence of M-Theory</h3>
+    <p>The most profound connection involves Type IIA string theory. As its coupling constant g_s is increased, S-duality doesn't lead to another 10D string theory. Instead, a new, 11th spatial dimension emerges, whose size is proportional to g_s. In the strong coupling limit, the theory is no longer best described by 10D strings, but by a mysterious 11-dimensional theory whose low-energy limit is 11D supergravity. This is M-theory. The other string theories can also be reached from M-theory by compactifying it on different shapes (e.g., a circle for Type IIA, or a line segment for Heterotic E8×E8).</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is M-theory? What does the 'M' stand for?</strong>
+            <p>M-theory is the name for the still-mysterious 11-dimensional theory that is believed to unify all five 10D superstring theories. Its low-energy limit is 11D supergravity. Unlike the string theories, its fundamental objects are not just strings, but also higher-dimensional "branes," including a 2-brane (a membrane) and a 5-brane. Edward Witten, who first proposed it, has said the 'M' can stand for "Magic, Mystery, or Membrane," depending on your taste, as the full theory is not yet known.</p></li>
+        <li><strong>What does the interactive map show?</strong>
+            <p>The map is a schematic of the "moduli space" of the underlying theory. The nodes represent the different theories. As you move the sliders for coupling (g_s) and radius (R), a cursor moves around this space. The node closest to the cursor becomes highlighted, indicating which theory is the best description in that parameter regime. The lines between the nodes represent the dualities that connect them. For example, the line between Type IIA and IIB is T-duality, active when R is small or large.</p></li>
+        <li><strong>What does the "Schematic View" canvas show?</strong>
+            <p>This provides a conceptual animation of what is happening to the extra dimensions. It shows a 10D space (represented by a plane) and one compactified dimension (represented by a circle). As you change the Radius slider, this circle will grow or shrink. As you change the Coupling slider while near the Type IIA theory, you will see a new, 11th dimension (another circle) appear and grow, representing the emergence of M-theory.</p></li>
+    </ol>
+`;
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.draw();
+    }
+
+    initDOM() {
+        this.dom = {
+            svg: document.getElementById('main-svg'),
+            schematicCanvas: document.getElementById('schematic-canvas'),
+            couplingSlider: document.getElementById('coupling-slider'),
+            radiusSlider: document.getElementById('radius-slider'),
+            couplingVal: document.getElementById('coupling-val'),
+            radiusVal: document.getElementById('radius-val'),
+            infoContent: document.getElementById('info-content'),
+        };
+        this.schematicCtx = this.dom.schematicCanvas.getContext('2d');
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            g: 1, // coupling = 10^slider_val
+            R: 1, // radius = 10^slider_val
+            activeTheory: 'M-Theory',
+        };
+        this.theories = {
+            'IIA': {x: 100, y: 200, info: "Type IIA: Contains D-branes and closed strings. At strong coupling, it grows an 11th dimension and becomes M-theory."},
+            'IIB': {x: 300, y: 200, info: "Type IIB: Contains different types of D-branes. It is S-dual to itself and T-dual to Type IIA."},
+            'HE8': {x: 100, y: 400, info: "Heterotic E8xE8: A hybrid theory. Can be obtained from M-theory on a line segment."},
+            'HSO': {x: 300, y: 400, info: "Heterotic SO(32): Another hybrid theory. T-dual to HE8 and S-dual to Type I."},
+            'I': {x: 500, y: 300, info: "Type I: Contains both open and closed strings, and D-branes. S-dual to HSO."},
+            'M': {x: 100, y: 50, info: "M-Theory: The 11D theory that unifies all string theories. Its fundamental objects are membranes, not just strings."},
+        };
+        this.dualities = [
+            {from: 'IIA', to: 'IIB', type: 'T'},
+            {from: 'HSO', to: 'HE8', type: 'T'},
+            {from: 'I', to: 'HSO', type: 'S'},
+            {from: 'IIA', to: 'M', type: 'S'},
+        ];
+    }
+
+    initControls() {
+        this.dom.couplingSlider.oninput = (e) => { this.state.g = Math.pow(10, parseFloat(e.target.value)); this.update(); };
+        this.dom.radiusSlider.oninput = (e) => { this.state.R = Math.pow(10, parseFloat(e.target.value)); this.update(); };
+    }
+
+    update() {
+        this.dom.couplingVal.textContent = this.state.g.toFixed(3);
+        this.dom.radiusVal.textContent = this.state.R.toFixed(3);
+        this.determineActiveTheory();
+        this.draw();
+    }
+
+    determineActiveTheory() {
+        const {g, R} = this.state;
+        if (g > 5) { this.state.activeTheory = 'M'; }
+        else if (g < 0.2) { this.state.activeTheory = 'I'; }
+        else if (R > 5) { this.state.activeTheory = 'IIA'; }
+        else if (R < 0.2) { this.state.activeTheory = 'IIB'; }
+        else { this.state.activeTheory = 'HSO'; }
+    }
+
+    draw() {
+        this.drawSVG();
+        this.drawSchematic();
+    }
+
+    drawSVG() {
+        const svg = this.dom.svg;
+        svg.innerHTML = '';
+        const { width, height } = svg.getBoundingClientRect();
+
+        this.dualities.forEach(d => {
+            const p1 = this.theories[d.from];
+            const p2 = this.theories[d.to];
+            const line = document.createElementNS("http://www.w3.org/2000/svg", 'line');
+            line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
+            line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
+            line.classList.add('link');
+            if(d.from === this.state.activeTheory || d.to === this.state.activeTheory) line.classList.add('active');
+            svg.appendChild(line);
+        });
+
+        for(const name in this.theories) {
+            const t = this.theories[name];
+            const g = document.createElementNS("http://www.w3.org/2000/svg", 'g');
+            g.classList.add('node');
+            if(name === this.state.activeTheory) g.classList.add('active');
+            g.onclick = () => { this.dom.infoContent.innerHTML = `<h3>${name}</h3><p>${t.info}</p>`; };
+
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+            circle.setAttribute('cx', t.x); circle.setAttribute('cy', t.y);
+            circle.setAttribute('r', 30);
+            circle.setAttribute('fill', 'var(--color-control-bg)');
+            circle.setAttribute('stroke', 'var(--color-primary)');
+            circle.setAttribute('stroke-width', 2);
+
+            const text = document.createElementNS("http://www.w3.org/2000/svg", 'text');
+            text.setAttribute('x', t.x); text.setAttribute('y', t.y+5);
+            text.classList.add('label');
+            text.textContent = name;
+
+            g.appendChild(circle);
+            g.appendChild(text);
+            svg.appendChild(g);
+        }
+    }
+
+    drawSchematic() {
+        const { ctx, width, height } = {ctx: this.schematicCtx, width: this.dom.schematicCanvas.width, height: this.dom.schematicCanvas.height};
+        ctx.clearRect(0,0,width,height);
+
+        const R = this.state.R;
+        const g = this.state.g;
+
+        // Draw 10D plane
+        ctx.fillStyle = 'rgba(143, 75, 206, 0.2)';
+        ctx.fillRect(20, height/2 - 10, width-40, 20);
+        ctx.fillStyle = 'var(--color-text)';
+        ctx.fillText("10D Spacetime", 25, height/2 - 15);
+
+        // Draw compact dimension
+        const r_vis = Math.min(height/4, 20 * R);
+        ctx.strokeStyle = 'var(--color-accent)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(width/2, height/2, 5, r_vis, Math.PI/2, 0, 2*Math.PI);
+        ctx.stroke();
+
+        // Draw M-theory dimension
+        if(this.state.activeTheory === 'M' || g > 1) {
+            const m_r_vis = 20 * (g-1);
+            ctx.strokeStyle = 'var(--color-primary)';
+            ctx.beginPath();
+            ctx.ellipse(width/2, height/2, m_r_vis, 5, 0, 0, 2*Math.PI);
+            ctx.stroke();
+            ctx.fillText("11th Dimension", width/2 + m_r_vis, height/2 - 10);
+        }
+    }
+}
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>

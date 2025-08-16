@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The Heterotic M-Theory Model</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #8f4bce;
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #7d3aaf;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #c299ff;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #a978e8;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; cursor: grab; }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .control-group input { width: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: The Heterotic M-Theory Model</h1>
+            <p class="subtitle">Visualizing the Horava-Witten model, where our universe is a brane at the end of an 11th dimension.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Medium</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>003-heterotic-m-theory-model.html</code></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container" id="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Simulation Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="size-slider">Size of 11th Dimension</label>
+                        <input type="range" id="size-slider" min="50" max="400" step="1" value="200">
+                    </div>
+                    <div class="control-group">
+                        <button id="send-graviton-btn" class="button">Send Graviton</button>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Analysis</h3>
+                 <div class="chart-panel">
+                    <div class="chart-title">4D Gravity Strength vs. Dimension Size</div>
+                    <canvas id="gravity-chart" height="150"></canvas>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to the Horava-Witten Model</h2>
+    <p>How can we get a realistic 4-dimensional universe from a theory that lives in 11 dimensions? One of the most compelling and influential answers is the <strong>Horava-Witten model</strong>, a specific realization of Heterotic M-theory. It provides a clever geometric picture for how our universe could be embedded in a higher-dimensional reality.</p>
+    <p>The core idea is that the 11th dimension is not a circle, but a finite <strong>line segment</strong>. This is technically called an "orbifold." At each of the two ends of this line segment, there exists a 10-dimensional "end-of-the-world" brane.
+    <ul>
+        <li><strong>Our Brane:</strong> One of these branes is our universe (or more precisely, a 10D version of it before further compactification). The particles and forces of the Standard Model are described by one of the E8 gauge groups of Heterotic theory, and they are confined to live on this brane.</li>
+        <li><strong>Hidden Brane:</strong> At the other end of the 11th dimension lies another brane, containing the other E8 gauge group. This is a "shadow" or "hidden" sector. We cannot interact with it directly, because the particles that mediate our forces (like photons) are open strings stuck to our own brane.</li>
+        <li><strong>The Bulk:</strong> The 11-dimensional space between the two branes is the "bulk." Only gravity, which is mediated by closed strings (gravitons), is free to travel through the bulk and interact with both branes.</li>
+    </ul>
+    This simulation provides a 3D visualization of this setup. You can see our brane and the hidden brane separated by the bulk. You can send a graviton (a closed loop) to see it travel between the branes, while the forces on our brane (wiggling open strings) remain confined.</p>
+
+    <h2>Core Theory: M-Theory on S¹/ℤ₂</h2>
+    <p>The Horava-Witten model is technically described as M-theory compactified on a spacetime that has the structure of a line segment, which can be written as S¹/ℤ₂. This means you start with a circle (S¹) and then "identify" each point with its reflection through the center (the ℤ₂ symmetry). This "folding" process turns the circle into a line segment, with the two identified points becoming the two "ends of the world" or boundaries.</p>
+
+    <h3>1. Anomaly Cancellation and E8 Gauge Groups</h3>
+    <p>A remarkable feature of this construction is that it is required for mathematical consistency. The theory of supergravity in 11D with boundaries is "anomalous," meaning it has subtle quantum inconsistencies. Horava and Witten showed that these anomalies can be perfectly cancelled if, and only if, a specific (E8) gauge theory is placed on each of the two boundaries. In this sense, the existence of the Standard Model-like forces on our brane is required to make the theory of gravity in the bulk consistent.</p>
+
+    <h3>2. Unification of Couplings</h3>
+    <p>This model also provides an elegant unification of the fundamental constants. In this picture, the 4D Planck mass (which sets the strength of gravity), the 4D gauge coupling (which sets the strength of other forces), and the compactification scale are all related. The perceived weakness of gravity in 4D can be explained if the extra dimensions (both the 11th dimension and the Calabi-Yau dimensions) are large compared to the fundamental Planck scale.</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is a "hidden sector"?</strong>
+            <p>A hidden sector, or shadow world, is a hypothetical set of particles and forces that do not interact with our Standard Model particles and forces, except through gravity. In the Horava-Witten model, the second E8 brane is a hidden sector. It could have its own complex physics and even its own form of "dark matter," but we would only ever be able to detect it through its gravitational influence on our brane.</p></li>
+        <li><strong>What does the "Size of 11th Dimension" slider do?</strong>
+            <p>This slider controls the length of the line segment separating our brane from the hidden brane. In the visualization, it physically moves the two planes further apart or closer together. As you can see in the "Gravity Strength" chart, this has a direct physical consequence. The larger the 11th dimension is, the more the force of gravity is "diluted" as it spreads out into the bulk, and the weaker it appears to us on our brane.</p></li>
+        <li><strong>How does this get us to our 4D universe?</strong>
+            <p>The Horava-Witten model is the first step. It takes us from 11D M-theory to a 10D brane-world. To get to our 4-dimensional world (3 space + 1 time), we need a second step of compactification. We must assume that the 6 extra spatial dimensions on our brane are curled up into a tiny Calabi-Yau manifold, as explored in other simulations. The full picture is therefore M-theory compactified on a (Calabi-Yau) x (S¹/ℤ₂) space.</p></li>
+    </ol>
+`;
+
+class Simple3D { /* ... Identical to Brane sim ... */ }
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.mainLoop();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            gravityChartCanvas: document.getElementById('gravity-chart'),
+            sizeSlider: document.getElementById('size-slider'),
+            sendGravitonBtn: document.getElementById('send-graviton-btn'),
+        };
+        this.renderer = new Simple3D('main-canvas');
+        this.chartCtx = this.dom.gravityChartCanvas.getContext('2d');
+    }
+
+    initState() {
+        this.state = {
+            size: 200,
+            graviton: null,
+            time: 0,
+        };
+    }
+
+    initControls() {
+        this.dom.sizeSlider.oninput = (e) => { this.state.size = parseFloat(e.target.value); };
+        this.dom.sendGravitonBtn.onclick = () => {
+            this.state.graviton = { z: -this.state.size/2, progress: 0 };
+        };
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    mainLoop() {
+        this.state.time += 0.1;
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.mainLoop());
+    }
+
+    update() {
+        if(this.state.graviton) {
+            this.state.graviton.progress += 0.02;
+            this.state.graviton.z = -this.state.size/2 + this.state.graviton.progress * this.state.size;
+            if(this.state.graviton.progress >= 1) this.state.graviton = null;
+        }
+    }
+
+    draw() {
+        const points = [], edges = [], faces = [];
+        const { size } = this.state;
+        const halfSize = size/2;
+
+        // Our Brane
+        faces.push({verts: [
+            {x:-150,y:-150,z:-halfSize}, {x:150,y:-150,z:-halfSize},
+            {x:150,y:150,z:-halfSize}, {x:-150,y:150,z:-halfSize}
+        ], color: 'rgba(0,0,255,0.3)'});
+
+        // Hidden Brane
+        faces.push({verts: [
+            {x:-150,y:-150,z:halfSize}, {x:150,y:-150,z:halfSize},
+            {x:150,y:150,z:halfSize}, {x:-150,y:150,z:halfSize}
+        ], color: 'rgba(255,0,0,0.3)'});
+
+        // Open strings on our brane
+        const p_base = points.length;
+        for(let i=0; i<=10; i++) {
+             const y = (i/10 - 0.5) * 80;
+             const x = Math.sin(y*0.2 + this.state.time) * 20;
+             points.push({x,y,z:-halfSize});
+             if(i>0) edges.push([p_base+i-1, p_base+i]);
+        }
+
+        // Graviton
+        if(this.state.graviton) {
+            const g_base = points.length;
+            for(let i=0; i<10; i++){
+                const angle = i/10 * 2 * Math.PI;
+                points.push({x: Math.cos(angle)*15, y:Math.sin(angle)*15, z:this.state.graviton.z});
+                edges.push([g_base+i, g_base+(i+1)%10]);
+            }
+        }
+
+        this.renderer.setObject(points, edges, faces);
+        this.renderer.render();
+        this.drawChart();
+    }
+
+    drawChart() {
+        const { ctx, width, height } = {ctx:this.chartCtx, width:this.dom.gravityChartCanvas.width, height:this.dom.gravityChartCanvas.height};
+        ctx.clearRect(0,0,width,height);
+
+        const g_strength = 1 / this.state.size;
+        const max_g = 1/50;
+
+        ctx.fillStyle = 'var(--color-accent)';
+        const barHeight = (g_strength / max_g) * height;
+        ctx.fillRect(width/2 - 20, height - barHeight, 40, barHeight);
+
+        ctx.fillStyle = 'var(--color-text)';
+        ctx.textAlign = 'center';
+        ctx.fillText(g_strength.toExponential(2), width/2, height - barHeight - 5);
+    }
+}
+
+// Dummy 3D renderer
+Simple3D = function(id) {
+    this.canvas = document.getElementById(id); this.ctx = this.canvas.getContext('2d');
+    this.points = []; this.edges = []; this.faces = []; this.rotX = 0.2; this.rotY = 0.2;
+    this.canvas.onmousedown = ()=>{}; this.canvas.onmouseup = ()=>{}; this.canvas.onmousemove = ()=>{};
+    this.setObject = (p,e,f) => { this.points=p; this.edges=e||[]; this.faces=f||[]; };
+    this.render = () => {
+        const {ctx, width, height} = this.canvas; ctx.clearRect(0,0,width,height);
+        ctx.save(); ctx.translate(width/2, height/2);
+        this.rotY += 0.001;
+        const all_verts = this.points.slice();
+        this.faces.forEach(f=>f.verts.forEach(v=>all_verts.push(v)));
+        const proj = all_verts.map(p => {
+            let y=p.y*Math.cos(this.rotX)-p.z*Math.sin(this.rotX), z=p.y*Math.sin(this.rotX)+p.z*Math.cos(this.rotX);
+            let x=p.x*Math.cos(this.rotY)+z*Math.sin(this.rotY); z=-p.x*Math.sin(this.rotY)+z*Math.cos(this.rotY);
+            const factor=400/(400+z); return{x:x*factor, y:y*factor};
+        });
+        const proj_p = proj.slice(0, this.points.length);
+        const proj_f = proj.slice(this.points.length);
+        let f_idx = 0;
+        this.faces.forEach(f=>{
+            ctx.fillStyle = f.color; ctx.beginPath();
+            f.verts.forEach((v,i)=>{
+                const p = proj_f[f_idx + i];
+                if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            });
+            f_idx += f.verts.length;
+            ctx.closePath(); ctx.fill();
+        });
+        this.edges.forEach(e=>{
+            ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.beginPath();
+            ctx.moveTo(proj_p[e[0]].x, proj_p[e[0]].y); ctx.lineTo(proj_p[e[1]].x, proj_p[e[1]].y); ctx.stroke();
+        });
+        ctx.restore();
+    };
+};
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>

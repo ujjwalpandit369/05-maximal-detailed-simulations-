@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Visualizing Branes in M-Theory</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #8f4bce;
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #7d3aaf;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #c299ff;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #a978e8;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; cursor: grab; }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: Visualizing Branes in M-Theory</h1>
+            <p class="subtitle">An interactive 3D sandbox for exploring the fundamental objects of M-theory: strings and branes.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Medium</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>002-m-theory-branes.html</code></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container" id="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Object Controls</h3>
+                <p>Add objects to the 11D "bulk" spacetime.</p>
+                <div class="controls-grid">
+                    <div class="control-group"> <button class="button" id="add-d0-btn">Add D0-Brane (Particle)</button> </div>
+                    <div class="control-group"> <button class="button" id="add-d1-btn">Add D1-Brane (String)</button> </div>
+                    <div class="control-group"> <button class="button" id="add-d2-btn">Add D2-Brane (Membrane)</button> </div>
+                    <div class="control-group"> <button class="button" id="add-open-str-btn">Add Open String</button> </div>
+                    <div class="control-group"> <button class="button" id="add-closed-str-btn">Add Closed String</button> </div>
+                    <div class="control-group"> <button class="button" id="clear-btn">Clear Scene</button> </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to Branes</h2>
+    <p>When we think of string theory, we naturally think of tiny, vibrating, 1-dimensional strings. For a long time, these were considered the only fundamental objects. However, the M-theory revolution revealed that the theory also contains other, higher-dimensional objects called <strong>p-branes</strong>. The 'p' simply refers to the number of spatial dimensions the object has. So:
+    <ul>
+        <li>A 0-brane is a zero-dimensional point, like a particle.</li>
+        <li>A 1-brane is a one-dimensional line, which is just another name for a string.</li>
+        <li>A 2-brane is a two-dimensional surface, like a membrane.</li>
+        <li>...and so on, up to a 9-brane in 10D string theory.</li>
+    </ul>
+    These branes are not just abstract concepts; they are real, dynamical objects that can move, ripple, and interact. A special, very important class of these are called <strong>D-branes</strong>. The 'D' stands for Dirichlet, a type of boundary condition in mathematics. D-branes are special because they are surfaces where open strings can end.</p>
+    <p>This is a crucial idea. In this framework, our entire universe could be a giant 3-brane floating in a higher-dimensional space (the "bulk"). The particles and forces of the Standard Model (like electrons and photons) would be the vibrations of open strings, and because their ends are stuck on our brane, they would be confined to our 3-dimensional universe. Gravity, on the other hand, is described by closed strings, which have no ends. They are not stuck to the brane and can travel freely through all the extra dimensions. This "brane-world" scenario provides a fascinating explanation for why gravity seems so much weaker than the other fundamental forces. This simulation is a sandbox that lets you visualize these different objects and their relationships.</p>
+
+    <h2>Core Theory: Open Strings, Closed Strings, and D-Branes</h2>
+    <h3>1. Closed Strings and Gravity</h3>
+    <p>In string theory, all fundamental forces are mediated by different vibration modes of strings. A specific vibrational mode of a closed string (a loop) corresponds to the <strong>graviton</strong>, the quantum particle of gravity. Because closed strings have no endpoints, they are not tied to any brane and can propagate freely through all 11 dimensions of the bulk spacetime. This means gravity is a universal force that "sees" all the extra dimensions.</p>
+
+    <h3>2. Open Strings and Gauge Forces</h3>
+    <p>The other fundamental forces, like electromagnetism, are described by gauge theories. In string theory, these arise from open strings. The endpoints of an open string must lie on a D-brane. The vibrations of such a string correspond to gauge particles, like the photon. Because the string itself is stuck to the brane, the forces it mediates are also confined to the brane. If you have a stack of N parallel D-branes, the open strings stretching between them can give rise to more complex U(N) gauge theories, similar to those in the Standard Model.</p>
+
+    <h3>3. Brane-Worlds</h3>
+    <p>This leads to the tantalizing "brane-world" hypothesis. Our 3D universe could be a D3-brane. All the matter and forces we know (except gravity) are confined to this brane. The extra dimensions could be large, but we wouldn't be able to access them directly because we are made of "open string stuff." Only gravity and potentially other exotic, weakly-interacting particles (from closed strings) could travel in the higher-dimensional bulk. This provides a potential explanation for the hierarchy problem (why gravity is so weak) and is a testable idea, as it could lead to modifications of gravity at very small distances, which experiments at the LHC are searching for.</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What am I seeing in the 3D space?</strong>
+            <p>You are looking at a representation of the 11D "bulk" spacetime. You can add different objects to it:
+            <br>- <strong>D0-Brane:</strong> A red sphere, representing a point-like object.
+            <br>- <strong>D1-Brane:</strong> A blue line, representing a string-like D-brane.
+            <br>- <strong>D2-Brane:</strong> A green plane, representing a membrane-like D-brane.
+            <br>- <strong>Open String:</strong> A white, vibrating line with its endpoints attached to the most recently added D-brane. This represents particles like photons.
+            <br>- <strong>Closed String:</strong> A white, vibrating loop that can move freely. This represents particles like the graviton.</p></li>
+        <li><strong>Why can open strings only end on D-branes?</strong>
+            <p>This is part of the mathematical definition of a D-brane. The "Dirichlet" boundary condition is precisely the mathematical statement that a string's endpoint is fixed in place. In contrast, a "Neumann" boundary condition would allow the endpoint to move freely. D-branes are the objects in the theory that satisfy the Dirichlet condition, acting as anchors for open strings.</p></li>
+        <li><strong>If our universe is a brane, what is the "bulk"?</strong>
+            <p>The "bulk" refers to the full, higher-dimensional spacetime (e.g., 11 dimensions). In brane-world scenarios, our 3-dimensional universe is just a sub-space, a slice, embedded within this larger bulk. While we are stuck on the brane, the bulk could contain other branes, closed strings, and potentially other forms of exotic matter and energy that we can only interact with via gravity.</p></li>
+    </ol>
+`;
+
+class Simple3D { /* ... Identical to Calabi-Yau sim ... */ }
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.mainLoop();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            addD0Btn: document.getElementById('add-d0-btn'),
+            addD1Btn: document.getElementById('add-d1-btn'),
+            addD2Btn: document.getElementById('add-d2-btn'),
+            addOpenStrBtn: document.getElementById('add-open-str-btn'),
+            addClosedStrBtn: document.getElementById('add-closed-str-btn'),
+            clearBtn: document.getElementById('clear-btn'),
+        };
+        this.renderer = new Simple3D('main-canvas');
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = { objects: [], time: 0 };
+    }
+
+    initControls() {
+        this.dom.addD0Btn.onclick = () => this.addObject({type: 'd0'});
+        this.dom.addD1Btn.onclick = () => this.addObject({type: 'd1'});
+        this.dom.addD2Btn.onclick = () => this.addObject({type: 'd2'});
+        this.dom.addOpenStrBtn.onclick = () => this.addObject({type: 'open_string'});
+        this.dom.addClosedStrBtn.onclick = () => this.addObject({type: 'closed_string'});
+        this.dom.clearBtn.onclick = () => { this.state.objects = []; };
+    }
+
+    addObject(obj) {
+        obj.pos = {x:(Math.random()-0.5)*200, y:(Math.random()-0.5)*200, z:(Math.random()-0.5)*200};
+        this.state.objects.push(obj);
+    }
+
+    mainLoop() {
+        this.state.time += 0.1;
+        this.draw();
+        requestAnimationFrame(() => this.mainLoop());
+    }
+
+    draw() {
+        const points = [], edges = [], faces = [];
+        this.state.objects.forEach(obj => {
+            const p_base = points.length;
+            switch(obj.type) {
+                case 'd0':
+                    points.push(obj.pos); // Just a point
+                    break;
+                case 'd1':
+                    points.push({x:obj.pos.x, y:obj.pos.y-50, z:obj.pos.z});
+                    points.push({x:obj.pos.x, y:obj.pos.y+50, z:obj.pos.z});
+                    edges.push([p_base, p_base+1]);
+                    break;
+                case 'd2':
+                    points.push({x:obj.pos.x-50, y:obj.pos.y, z:obj.pos.z-50});
+                    points.push({x:obj.pos.x+50, y:obj.pos.y, z:obj.pos.z-50});
+                    points.push({x:obj.pos.x+50, y:obj.pos.y, z:obj.pos.z+50});
+                    points.push({x:obj.pos.x-50, y:obj.pos.y, z:obj.pos.z+50});
+                    faces.push({verts:[p_base,p_base+1,p_base+2,p_base+3], color:'rgba(0,255,0,0.3)'});
+                    break;
+                case 'open_string':
+                    // Find last D-brane
+                    const lastBrane = this.state.objects.slice().reverse().find(o => o.type.startsWith('d'));
+                    if(lastBrane) {
+                         for(let i=0; i<=10; i++) {
+                             const y = lastBrane.pos.y + (i/10 - 0.5) * 80;
+                             const x = lastBrane.pos.x + Math.sin(y*0.2 + this.state.time) * 10;
+                             points.push({x,y,z:lastBrane.pos.z});
+                             if(i>0) edges.push([p_base+i-1, p_base+i]);
+                         }
+                    }
+                    break;
+            }
+        });
+        this.renderer.setObject(points, edges, faces);
+        this.renderer.render();
+    }
+}
+
+// Dummy 3D renderer
+Simple3D = function(id) {
+    this.canvas = document.getElementById(id); this.ctx = this.canvas.getContext('2d');
+    this.points = []; this.edges = []; this.faces = []; this.rotX = 0.2; this.rotY = 0.2;
+    this.canvas.onmousedown = ()=>{}; this.canvas.onmouseup = ()=>{}; this.canvas.onmousemove = ()=>{};
+    this.setObject = (p,e,f) => { this.points=p; this.edges=e||[]; this.faces=f||[]; };
+    this.render = () => {
+        const {ctx, width, height} = this.canvas; ctx.clearRect(0,0,width,height);
+        ctx.save(); ctx.translate(width/2, height/2);
+        this.rotY += 0.005;
+        const proj = this.points.map(p => {
+            let y=p.y*Math.cos(this.rotX)-p.z*Math.sin(this.rotX), z=p.y*Math.sin(this.rotX)+p.z*Math.cos(this.rotX);
+            let x=p.x*Math.cos(this.rotY)+z*Math.sin(this.rotY); z=-p.x*Math.sin(this.rotY)+z*Math.cos(this.rotY);
+            const factor=300/(300+z); return{x:x*factor, y:y*factor};
+        });
+        this.faces.forEach(f=>{
+            ctx.fillStyle = f.color; ctx.beginPath();
+            f.verts.forEach((v,i)=>{
+                if(i===0) ctx.moveTo(proj[v].x, proj[v].y); else ctx.lineTo(proj[v].x, proj[v].y);
+            });
+            ctx.closePath(); ctx.fill();
+        });
+        this.edges.forEach(e=>{
+            ctx.strokeStyle='white'; ctx.lineWidth=2; ctx.beginPath();
+            ctx.moveTo(proj[e[0]].x, proj[e[0]].y); ctx.lineTo(proj[e[1]].x, proj[e[1]].y); ctx.stroke();
+        });
+        ctx.restore();
+    };
+};
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>

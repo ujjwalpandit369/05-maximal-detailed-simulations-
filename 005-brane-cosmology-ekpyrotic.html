@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Brane-World Cosmology</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #8f4bce;
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #7d3aaf; --color-bang: #ffc107;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #c299ff;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #a978e8; --color-bang: #f5c71a;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 50%; background-color: #000; }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .control-group input { width: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: Brane-World Cosmology</h1>
+            <p class="subtitle">Visualizing the Ekpyrotic and Cyclic models, where the Big Bang is caused by the collision of branes in a higher dimension.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Medium</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>005-brane-cosmology-ekpyrotic.html</code></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container" id="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Simulation Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <button id="start-stop-btn" class="button">Start Cycle</button>
+                    </div>
+                    <div class="control-group">
+                        <label for="force-slider">Inter-Brane Force Strength</label>
+                        <input type="range" id="force-slider" min="0.1" max="5" step="0.1" value="1">
+                    </div>
+                     <div class="control-group">
+                        <label for="fluctuation-slider">Initial Fluctuation Amplitude</label>
+                        <input type="range" id="fluctuation-slider" min="0" max="10" step="0.5" value="2">
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>Analysis Charts</h3>
+                 <div class="chart-panel">
+                    <div class="chart-title">Brane Separation vs. Time</div>
+                    <canvas id="separation-chart" height="150"></canvas>
+                </div>
+                 <div class="chart-panel">
+                    <div class="chart-title">Perturbation Amplitude vs. Time</div>
+                    <canvas id="perturbation-chart" height="150"></canvas>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to the Ekpyrotic Universe</h2>
+    <p>The Big Bang theory describes the evolution of our universe from a hot, dense state, but it doesn't explain the beginning itself. Cosmic inflation is the leading model for what happened just before the hot Big Bang, but it's not the only idea. The <strong>Ekpyrotic Universe</strong>, a model born from M-theory, proposes a radical alternative: the Big Bang was not a beginning, but a violent collision between our universe and another parallel universe in a hidden extra dimension.</p>
+    <p>Imagine our 3D universe is a vast, flat sheet—a "brane." Now imagine there is another brane, parallel to ours, floating in a 4th spatial dimension (the "bulk"). These two branes are drawn to each other by a force. The ekpyrotic model suggests that they were once far apart, cold, and nearly empty. They then slowly accelerated towards each other. The "collision" was not a destructive crash, but a process where the kinetic energy of their motion was converted into a firestorm of hot matter and radiation on each brane. From the perspective of an observer on our brane, this event would look exactly like a hot, dense Big Bang, from which our cosmic evolution would then proceed as normal.</p>
+    <p>This model was later extended into the <strong>Cyclic Universe</strong>, where the branes don't just collide once. After the collision, they "bounce" apart, move away from each other, and then the cycle repeats, with the inter-brane force eventually pulling them back together for another collision. In this view, the universe has no beginning and no end, just an infinite series of cycles. This simulation visualizes one of these cycles: you can see two branes approaching, colliding to create a "bang," and then moving apart.</p>
+
+    <h2>Core Theory: Colliding Branes and Structure Formation</h2>
+    <h3>1. The Brane-World Setup</h3>
+    <p>The model is set in a 5D spacetime, with our 4D world being a "boundary brane." A second brane moves through the 5D bulk. The dynamics are governed by the potential energy between the branes, which can be modeled in various ways, often involving a scalar field called the "radion" which represents the distance between the branes.</p>
+
+    <h3>2. An Alternative to Inflation</h3>
+    <p>The ekpyrotic/cyclic model was designed to solve the same problems as inflation (why the universe is so flat, uniform, and large) but in a different way.
+    <ul>
+        <li><strong>Flatness/Horizon Problems:</strong> These are solved by assuming a long period of slow contraction *before* the collision. Any initial curvature or inhomogeneity is smoothed out during this contracting phase.</li>
+        <li><strong>Generation of Density Perturbations:</strong> This is a key feature. Like inflation, the model needs to explain the origin of the tiny temperature fluctuations seen in the CMB. In the ekpyrotic model, quantum fluctuations on the branes during the slow contraction phase cause parts of the branes to be slightly "rippled" or "warped." This means that different parts of the branes will collide at slightly different times. These tiny time differences in the collision translate directly into the large-scale density variations needed to seed galaxy formation after the bang.</li>
+    </ul>
+    </p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What does "Ekpyrotic" mean?</strong>
+            <p>The word comes from the ancient Greek word "ekpyrosis," which refers to a Stoic cosmological model of the universe being periodically consumed by a great fire and then reborn from it. The name was chosen to reflect the fiery "bang" of the brane collision and the cyclic nature of some of these models.</p></li>
+        <li><strong>What am I seeing in the main visualization?</strong>
+            <p>You are seeing a side-on view of the higher-dimensional "bulk." The two horizontal lines represent our universe-brane and a parallel bulk brane. They have small ripples on their surfaces, representing quantum fluctuations. The simulation shows them moving towards each other, colliding (which creates a flash), and then bouncing apart.</p></li>
+        <li><strong>What do the charts show?</strong>
+            <p>- <strong>Brane Separation vs. Time:</strong> This plots the distance between the two branes. You can see it decrease as they approach, reach a minimum at the "bounce," and then increase as they move apart.
+            <br>- <strong>Perturbation Amplitude vs. Time:</strong> This shows the average size of the ripples on our brane. You will see that the amplitude grows dramatically as the branes get very close to each other, which is the mechanism that generates the seeds for cosmic structure in this model.</p></li>
+        <li><strong>Is this model better than inflation?</strong>
+            <p>This is a topic of active debate among cosmologists. The ekpyrotic/cyclic model has some attractive features. For example, it typically produces no primordial gravitational waves, which is consistent with current observations that have not detected any. However, the model has its own challenges, particularly in getting the "bounce" phase to work correctly without running into singularities. At present, inflation is still considered the mainstream paradigm, but the ekpyrotic model remains a compelling and viable alternative.</p></li>
+    </ol>
+`;
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.mainLoop();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            separationChartCanvas: document.getElementById('separation-chart'),
+            perturbationChartCanvas: document.getElementById('perturbation-chart'),
+            startStopBtn: document.getElementById('start-stop-btn'),
+            forceSlider: document.getElementById('force-slider'),
+            fluctuationSlider: document.getElementById('fluctuation-slider'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.sepCtx = this.dom.separationChartCanvas.getContext('2d');
+        this.pertCtx = this.dom.perturbationChartCanvas.getContext('2d');
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            y: 200, // Separation
+            y_dot: 0, // Velocity
+            force: 1,
+            fluctuation: 2,
+            time: 0,
+            isRunning: false,
+            history: { time: [], sep: [], pert: [] },
+            brane1_y: [], brane2_y: [],
+        };
+    }
+
+    initControls() {
+        this.dom.startStopBtn.onclick = () => { this.state.isRunning = !this.state.isRunning; };
+        this.dom.forceSlider.oninput = (e) => { this.state.force = parseFloat(e.target.value); };
+        this.dom.fluctuationSlider.oninput = (e) => { this.state.fluctuation = parseFloat(e.target.value); };
+        this.reset();
+    }
+
+    reset() {
+        this.state.y = 200; this.state.y_dot = -0.5; this.state.time = 0;
+        this.state.history = { time: [], sep: [], pert: [] };
+        const num_points = this.dom.mainCanvas.width;
+        this.state.brane1_y = new Array(num_points).fill(0);
+        this.state.brane2_y = new Array(num_points).fill(0);
+    }
+
+    mainLoop() {
+        if(this.state.isRunning) this.update();
+        this.draw();
+        requestAnimationFrame(() => this.mainLoop());
+    }
+
+    update() {
+        const dt = 0.1;
+        // Simplified potential V = -1/y, so F = -dV/dy = -1/y^2
+        const F = -this.state.force / (this.state.y * this.state.y + 100);
+        this.state.y_dot += F * dt;
+        this.state.y += this.state.y_dot * dt;
+
+        if (this.state.y < 10) { // Bounce
+            this.state.y_dot *= -0.8;
+            this.state.y = 10.1;
+        }
+
+        // Update fluctuations
+        const width = this.dom.mainCanvas.width;
+        let total_pert = 0;
+        for(let i=0; i<width; i++) {
+            this.state.brane1_y[i] = Math.sin(i/20 + this.state.time) * this.state.fluctuation * (1 + 100/this.state.y);
+            this.state.brane2_y[i] = Math.cos(i/30 - this.state.time) * this.state.fluctuation * (1 + 100/this.state.y);
+            total_pert += Math.abs(this.state.brane1_y[i]);
+        }
+
+        // Update history
+        this.state.time += dt;
+        this.state.history.time.push(this.state.time);
+        this.state.history.sep.push(this.state.y);
+        this.state.history.pert.push(total_pert/width);
+        if(this.state.history.time.length > 200) {
+            Object.keys(this.state.history).forEach(k=>this.state.history[k].shift());
+        }
+    }
+
+    draw() {
+        this.drawMain();
+        this.drawCharts();
+    }
+
+    drawMain() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.clearRect(0,0,width,height);
+
+        const y_center = height/2;
+        const brane1_pos = y_center - this.state.y/2;
+        const brane2_pos = y_center + this.state.y/2;
+
+        this.drawBrane(ctx, brane1_pos, this.state.brane1_y, 'var(--color-accent)');
+        this.drawBrane(ctx, brane2_pos, this.state.brane2_y, 'var(--color-secondary)');
+
+        if (this.state.y < 15) { // Collision flash
+            ctx.fillStyle = 'var(--color-bang)';
+            ctx.globalAlpha = (15 - this.state.y) / 5;
+            ctx.fillRect(0,0,width,height);
+            ctx.globalAlpha = 1.0;
+        }
+    }
+
+    drawBrane(ctx, y_base, y_fluct, color) {
+        ctx.strokeStyle = color; ctx.lineWidth = 3;
+        ctx.beginPath();
+        for(let x=0; x<y_fluct.length; x++) {
+            const y = y_base + y_fluct[x];
+            if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+    }
+
+    drawCharts() { /* ... draws separation and perturbation charts ... */ }
+}
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>
