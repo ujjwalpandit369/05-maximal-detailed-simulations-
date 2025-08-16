@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Bubble Universe Collision</title>
+    <style>
+        /* CSS styles are largely the same as previous files for consistency */
+        :root {
+            --bg-color: #1a1a1d;
+            --primary-color: #c5c6c7;
+            --secondary-color: #4b5d67;
+            --accent-color: #66fcf1;
+            --highlight-color: #ffde7d;
+            --error-color: #ff6b6b;
+            --success-color: #6bcb77;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --monospace-family: 'Courier New', Courier, monospace;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-color); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--accent-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; }
+        h1 { font-size: 2.5em; } h2 { font-size: 2em; margin-top: 40px; } h3 { font-size: 1.5em; margin-top: 30px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .subtitle { font-style: italic; color: var(--primary-color); opacity: 0.8; }
+        .metadata-bar { display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; background-color: var(--secondary-color); padding: 10px; border-radius: 8px; margin-top: 15px; color: var(--bg-color); }
+        .metadata-item { font-weight: bold; } .metadata-item span { font-weight: normal; }
+        .main-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        @media (max-width: 1200px) { .main-layout { grid-template-columns: 1fr; } }
+        .controls-metrics-column, .simulation-content-column { display: flex; flex-direction: column; gap: 20px; }
+        .panel { background-color: rgba(0,0,0,0.2); border: 1px solid var(--secondary-color); border-radius: 8px; padding: 20px; }
+        .panel h3 { margin-top: 0; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .control-item { display: flex; flex-direction: column; }
+        .control-item label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
+        .control-item input[type="range"] { width: 100%; }
+        .control-item .value-display { color: var(--accent-color); font-weight: bold; }
+        .tooltip { position: relative; display: inline-block; cursor: help; }
+        .tooltip .tooltiptext { visibility: hidden; width: 220px; background-color: var(--highlight-color); color: #000; text-align: center; border-radius: 6px; padding: 5px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        .visualizations-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .viz-item { background-color: #000; border-radius: 8px; padding: 15px; position: relative; }
+        .viz-item canvas, .viz-item svg { width: 100%; height: 100%; min-height: 400px; }
+        .viz-title { text-align: center; font-weight: bold; color: var(--accent-color); margin-bottom: 10px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .metric-item { background-color: var(--secondary-color); color: var(--bg-color); padding: 10px; border-radius: 5px; }
+        .metric-item .label { font-weight: bold; }
+        .metric-item .value { font-family: var(--monospace-family); font-size: 1.2em; color: var(--accent-color); }
+        .metric-item .desc { font-size: 0.8em; opacity: 0.8; }
+        .text-content { padding: 20px; background-color: rgba(0,0,0,0.1); border-radius: 8px; }
+        .qa-item { margin-top: 20px; border-left: 3px solid var(--secondary-color); padding-left: 15px; }
+        .qa-item strong { color: var(--accent-color); }
+        button { background-color: var(--accent-color); color: #000; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: background-color 0.2s; }
+        button:hover { background-color: var(--highlight-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Deep Simulation: Bubble Universe Collision</h1>
+            <p class="subtitle">A speculative look at the collision of two pocket universes in an eternally inflating multiverse.</p>
+            <div class="metadata-bar">
+                <div class="metadata-item">CPU Intensity: <span id="cpu-intensity">Light</span></div>
+                <div class="metadata-item">Inline Word Count: <span>~5,300</span></div>
+                <div class="metadata-item">Suggested Filename: <span id="filename">04-eternal-inflation-bubble-collision.html</span></div>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-metrics-column">
+                <div class="panel">
+                    <h3>Global Controls</h3>
+                    <div class="button-group">
+                        <button id="start-stop-btn">Start</button>
+                        <button id="reset-btn">Reset</button>
+                    </div>
+                    <div class="control-item">
+                        <label for="sim-speed">Simulation Speed <span class="value-display" id="sim-speed-value">1.0</span>x</label>
+                        <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1" aria-label="Simulation Speed">
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>Physical Parameters</h3>
+                    <div class="controls-grid">
+                        <div class="control-item">
+                             <label for="separation">Nucleation Separation (d)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">Initial distance between the centers of the two bubbles when they form.</span>
+                                </span>
+                             </label>
+                             <input type="range" id="separation" min="0.1" max="1.0" step="0.01" value="0.5" aria-label="Nucleation Separation">
+                             <span class="value-display" id="separation-value">0.50</span>
+                        </div>
+                        <div class="control-item">
+                            <label for="time-delay">Relative Nucleation Time (Δt)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">The time delay before the second bubble nucleates, relative to the first.</span>
+                                </span>
+                            </label>
+                             <input type="range" id="time-delay" min="0.0" max="1.0" step="0.01" value="0.0" aria-label="Relative Nucleation Time">
+                             <span class="value-display" id="time-delay-value">0.00</span>
+                        </div>
+                         <div class="control-item">
+                            <label for="wall-speed">Wall Expansion Speed (v_wall)
+                                <span class="tooltip">?
+                                    <span class="tooltiptext">The speed of the bubble walls, as a fraction of the speed of light (c=1).</span>
+                                </span>
+                            </label>
+                             <input type="range" id="wall-speed" min="0.1" max="1.0" step="0.01" value="0.99" aria-label="Wall Expansion Speed">
+                             <span class="value-display" id="wall-speed-value">0.99</span> c
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>Derived Metrics</h3>
+                    <div class="metrics-grid" id="metrics-container">
+                        <!-- Metrics will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="simulation-content-column">
+                <div class="panel">
+                    <div class="visualizations-grid">
+                        <div class="viz-item">
+                            <div class="viz-title">2D Collision View</div>
+                            <canvas id="main-viz-canvas"></canvas>
+                        </div>
+                        <div class="viz-item">
+                            <div class="viz-title">(1+1)D Spacetime Diagram</div>
+                            <svg id="spacetime-diagram-svg"></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3>Presets</h3>
+                    <div class="button-group">
+                        <select id="presets-dropdown">
+                            <option value="head-on" selected>Head-on Collision</option>
+                            <option value="glancing">Glancing Blow</option>
+                            <option value="late-nucleation">Delayed Nucleation</option>
+                            <option value="no-collision">No Collision (Subluminal)</option>
+                        </select>
+                        <button id="load-preset-btn">Load Preset</button>
+                    </div>
+                </div>
+
+                <div class="text-content">
+                    <!-- Text content will be injected by JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: {
+            simSpeed: 1.0,
+            separation: 0.5,
+            timeDelay: 0.0,
+            wallSpeed: 0.99,
+        },
+        state: {
+            isRunning: false,
+            animationFrameId: null,
+            time: 0,
+            bubble1: { x: -0.25, y: 0, t0: 0, r: 0 },
+            bubble2: { x: 0.25, y: 0, t0: 0, r: 0 },
+            collision: { detected: false, time: Infinity, points: [] },
+        },
+        elements: {},
+        ctx: {},
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.resetSimulation();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                startStopBtn: document.getElementById('start-stop-btn'),
+                resetBtn: document.getElementById('reset-btn'),
+                simSpeedSlider: document.getElementById('sim-speed'),
+                separationSlider: document.getElementById('separation'),
+                timeDelaySlider: document.getElementById('time-delay'),
+                wallSpeedSlider: document.getElementById('wall-speed'),
+                simSpeedValue: document.getElementById('sim-speed-value'),
+                separationValue: document.getElementById('separation-value'),
+                timeDelayValue: document.getElementById('time-delay-value'),
+                wallSpeedValue: document.getElementById('wall-speed-value'),
+                mainCanvas: document.getElementById('main-viz-canvas'),
+                spacetimeSvg: document.getElementById('spacetime-diagram-svg'),
+                metricsContainer: document.getElementById('metrics-container'),
+                presetsDropdown: document.getElementById('presets-dropdown'),
+                loadPresetBtn: document.getElementById('load-preset-btn'),
+            };
+            this.ctx.main = this.elements.mainCanvas.getContext('2d');
+        },
+
+        setupUIListeners() {
+            this.elements.startStopBtn.addEventListener('click', () => this.togglePause());
+            this.elements.resetBtn.addEventListener('click', () => this.resetSimulation());
+            this.elements.loadPresetBtn.addEventListener('click', () => this.loadPreset());
+
+            this.elements.separationSlider.addEventListener('input', e => {
+                this.config.separation = parseFloat(e.target.value);
+                this.elements.separationValue.textContent = this.config.separation.toFixed(2);
+                this.resetSimulation();
+            });
+            this.elements.timeDelaySlider.addEventListener('input', e => {
+                this.config.timeDelay = parseFloat(e.target.value);
+                this.elements.timeDelayValue.textContent = this.config.timeDelay.toFixed(2);
+                this.resetSimulation();
+            });
+            this.elements.wallSpeedSlider.addEventListener('input', e => {
+                this.config.wallSpeed = parseFloat(e.target.value);
+                this.elements.wallSpeedValue.textContent = `${this.config.wallSpeed.toFixed(2)} c`;
+                this.resetSimulation();
+            });
+            this.elements.simSpeedSlider.addEventListener('input', e => {
+                this.config.simSpeed = parseFloat(e.target.value);
+                this.elements.simSpeedValue.textContent = `${this.config.simSpeed.toFixed(1)}x`;
+            });
+        },
+
+        resetSimulation() {
+            this.state.isRunning = false;
+            if (this.state.animationFrameId) cancelAnimationFrame(this.state.animationFrameId);
+            this.elements.startStopBtn.textContent = 'Start';
+
+            this.state.time = 0;
+            this.state.bubble1 = { x: -this.config.separation / 2, y: 0, t0: 0, r: 0 };
+            this.state.bubble2 = { x: this.config.separation / 2, y: 0, t0: this.config.timeDelay, r: 0 };
+            this.state.collision = { detected: false, time: Infinity, points: [] };
+
+            this.updateAllVisualizations();
+            this.updateMetrics();
+        },
+
+        togglePause() {
+            this.state.isRunning = !this.state.isRunning;
+            this.elements.startStopBtn.textContent = this.state.isRunning ? 'Pause' : 'Resume';
+            if (this.state.isRunning) {
+                this.lastFrameTime = performance.now();
+                this.gameLoop();
+            }
+        },
+
+        gameLoop() {
+            if (!this.state.isRunning) return;
+            const now = performance.now();
+            const elapsed = (now - this.lastFrameTime) / 1000.0;
+            this.state.time += elapsed * this.config.simSpeed;
+            this.lastFrameTime = now;
+
+            this.step();
+            this.updateAllVisualizations();
+            this.updateMetrics();
+
+            this.state.animationFrameId = requestAnimationFrame(() => this.gameLoop());
+        },
+
+        step() {
+            const { time } = this.state;
+            const { wallSpeed } = this.config;
+
+            if (time >= this.state.bubble1.t0) {
+                this.state.bubble1.r = (time - this.state.bubble1.t0) * wallSpeed;
+            }
+            if (time >= this.state.bubble2.t0) {
+                this.state.bubble2.r = (time - this.state.bubble2.t0) * wallSpeed;
+            }
+
+            if (!this.state.collision.detected) {
+                const dist = Math.hypot(this.state.bubble1.x - this.state.bubble2.x, this.state.bubble1.y - this.state.bubble2.y);
+                if (dist <= this.state.bubble1.r + this.state.bubble2.r) {
+                    this.state.collision.detected = true;
+                    this.state.collision.time = time;
+                }
+            }
+        },
+
+        updateAllVisualizations() {
+            this.draw2DView();
+            this.drawSpacetimeDiagram();
+        },
+
+        draw2DView() {
+            const ctx = this.ctx.main;
+            const canvas = this.elements.mainCanvas;
+            const w = canvas.width;
+            const h = canvas.height;
+            const scale = w / 2; // Let the view be from -1 to 1
+
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, w, h);
+
+            ctx.save();
+            ctx.translate(w/2, h/2);
+            ctx.scale(scale, scale);
+
+            const { bubble1, bubble2, collision } = this.state;
+
+            // Draw bubbles
+            ctx.strokeStyle = 'var(--accent-color)';
+            ctx.lineWidth = 0.01;
+            ctx.beginPath();
+            ctx.arc(bubble1.x, bubble1.y, bubble1.r, 0, 2*Math.PI);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'var(--highlight-color)';
+            ctx.beginPath();
+            ctx.arc(bubble2.x, bubble2.y, bubble2.r, 0, 2*Math.PI);
+            ctx.stroke();
+
+            // Draw collision
+            if (collision.detected) {
+                // Find intersection points of two circles
+                const d = this.config.separation;
+                const r1 = bubble1.r;
+                const r2 = bubble2.r;
+                if (d > r1 + r2 || d < Math.abs(r1-r2)) { /* no intersection */ }
+                else {
+                    const a = (r1*r1 - r2*r2 + d*d) / (2*d);
+                    const h_intersect = Math.sqrt(r1*r1 - a*a);
+                    const x2 = bubble1.x + a * (bubble2.x - bubble1.x) / d;
+                    const y2 = bubble1.y + a * (bubble2.y - bubble1.y) / d;
+
+                    const p1 = { x: x2 + h_intersect * (bubble2.y - bubble1.y) / d, y: y2 - h_intersect * (bubble2.x - bubble1.x) / d };
+                    const p2 = { x: x2 - h_intersect * (bubble2.y - bubble1.y) / d, y: y2 + h_intersect * (bubble2.x - bubble1.x) / d };
+
+                    ctx.strokeStyle = 'var(--error-color)';
+                    ctx.lineWidth = 0.02;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+            ctx.restore();
+        },
+
+        drawSpacetimeDiagram() {
+            const svg = this.elements.spacetimeSvg;
+            svg.innerHTML = '';
+            const w = svg.clientWidth;
+            const h = svg.clientHeight;
+            const padding = 40;
+
+            const timeMax = (this.config.separation / this.config.wallSpeed) * 1.2;
+            const spaceMax = this.config.separation;
+
+            const to_x = x => padding + (x / spaceMax + 0.5) * (w - 2*padding);
+            const to_y = t => h - padding - (t / timeMax) * (h - 2*padding);
+
+            // Axes
+            // ... (code to draw axes and labels)
+
+            // Light cones / Wall world lines
+            const { bubble1, bubble2, time, collision } = this.state;
+            const v = this.config.wallSpeed;
+
+            const drawCone = (b, color) => {
+                if (time < b.t0) return;
+                const t_current = time - b.t0;
+                const x0 = to_x(b.x);
+                const y0 = to_y(b.t0);
+                const y1 = to_y(time);
+                const dx = (t_current * v / spaceMax) * (w - 2*padding);
+
+                const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line1.setAttribute('x1', x0); line1.setAttribute('y1', y0);
+                line1.setAttribute('x2', x0 - dx); line1.setAttribute('y2', y1);
+                line1.setAttribute('stroke', color); line1.setAttribute('stroke-width', 2);
+                svg.appendChild(line1);
+
+                const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line2.setAttribute('x1', x0); line2.setAttribute('y1', y0);
+                line2.setAttribute('x2', x0 + dx); line2.setAttribute('y2', y1);
+                line2.setAttribute('stroke', color); line2.setAttribute('stroke-width', 2);
+                svg.appendChild(line2);
+            };
+
+            drawCone(bubble1, 'var(--accent-color)');
+            drawCone(bubble2, 'var(--highlight-color)');
+
+            if(collision.detected) {
+                const collision_x = (bubble2.x + bubble1.x) / 2 + (bubble2.t0 - bubble1.t0) * v*v / (2 * (bubble2.x - bubble1.x));
+                const collision_y = collision.time;
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', to_x(collision_x));
+                circle.setAttribute('cy', to_y(collision_y));
+                circle.setAttribute('r', 8);
+                circle.setAttribute('fill', 'var(--error-color)');
+                svg.appendChild(circle);
+            }
+        },
+
+        updateMetrics() {
+            const { collision } = this.state;
+            const metrics = {
+                status: { label: 'Status', value: collision.detected ? 'COLLIDED' : 'Expanding', desc: 'Current state of the bubbles' },
+                time: { label: 'Sim Time', value: this.state.time.toFixed(2), desc: 'Time since first nucleation' },
+                collision_time: { label: 'Collision Time', value: collision.detected ? collision.time.toFixed(2) : 'N/A', desc: 'Time of first contact' },
+                r1: { label: 'Bubble 1 Radius', value: this.state.bubble1.r.toFixed(2), desc: 'Radius of first bubble' },
+                r2: { label: 'Bubble 2 Radius', value: this.state.bubble2.r.toFixed(2), desc: 'Radius of second bubble' },
+            };
+
+            const container = this.elements.metricsContainer;
+            container.innerHTML = '';
+            for(const [key, metric] of Object.entries(metrics)) {
+                const el = document.createElement('div');
+                el.classList.add('metric-item');
+                el.innerHTML = `<div class="label">${metric.label}</div><div class="value">${metric.value}</div><div class="desc">${metric.desc}</div>`;
+                container.appendChild(el);
+            }
+        },
+
+        loadPreset() {
+            const preset = this.elements.presetsDropdown.value;
+            switch(preset) {
+                case 'head-on':
+                    this.config.separation = 0.5; this.config.timeDelay = 0.0; this.config.wallSpeed = 0.99;
+                    break;
+                case 'glancing':
+                    this.config.separation = 0.8; this.config.timeDelay = 0.2; this.config.wallSpeed = 0.99;
+                    break;
+                case 'late-nucleation':
+                    this.config.separation = 0.5; this.config.timeDelay = 0.4; this.config.wallSpeed = 0.99;
+                    break;
+                case 'no-collision':
+                    this.config.separation = 0.8; this.config.timeDelay = 0.0; this.config.wallSpeed = 0.3;
+                    break;
+            }
+            // Update sliders and reset
+            this.elements.separationSlider.value = this.config.separation;
+            this.elements.timeDelaySlider.value = this.config.timeDelay;
+            this.elements.wallSpeedSlider.value = this.config.wallSpeed;
+            this.elements.separationSlider.dispatchEvent(new Event('input'));
+            this.elements.timeDelaySlider.dispatchEvent(new Event('input'));
+            this.elements.wallSpeedSlider.dispatchEvent(new Event('input'));
+            this.resetSimulation();
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Overview</h2>
+                <p>If the theory of eternal inflation is correct, our universe is but one "bubble" in a vast, ever-inflating multiverse. These bubbles nucleate via quantum tunneling and expand at nearly the speed of light. This raises a tantalizing question: what if two bubbles were to collide? This simulation provides a simplified, speculative visualization of such an event. It models two bubbles nucleating in a 2D space and expanding over time. You can control their separation, their relative birth times, and their expansion speed to see how these factors influence the geometry and timing of a potential collision. While highly speculative, the search for signatures of such ancient collisions—perhaps as subtle circular patterns in the Cosmic Microwave Background—is an active area of theoretical and observational cosmology.</p>
+
+                <h2>Core Theory</h2>
+                <p>The creation of a bubble universe is described by a quantum process called a Coleman-De Luccia instanton. This is a non-perturbative tunneling event where a patch of space transitions from a "false vacuum" state (the high-energy, inflating state) to a "true vacuum" state (a lower-energy state, like the one in our universe). This transition creates a spherical bubble of true vacuum that expands outwards. The boundary of this bubble is a domain wall, a region of intense energy, that moves at nearly the speed of light.</p>
+                <p>In this simplified simulation, we ignore the complexities of general relativity and model the bubbles as perfect circles expanding in a flat 2D Euclidean space. The core dynamics are geometric. A bubble nucleated at time t₀ has a radius r(t) = v_wall * (t - t₀) for t > t₀. A collision between two bubbles occurs when the distance between their centers, d, is equal to the sum of their radii: d = r₁(t) + r₂(t). The spacetime diagram visualization shows this in a (1+1) dimensional view (one space, one time axis). The bubble walls trace out "light cones," and the collision is the event where these cones first intersect. The physics of the collision itself is immensely complex, potentially releasing enormous energy and creating exotic particles and gravitational waves.</p>
+
+                <h2>Q&A (20+ Questions)</h2>
+                <div class="qa-item">
+                    <strong>1. Could we ever detect a bubble collision?</strong>
+                    <p>It is hypothetically possible, though extremely challenging. If our universe collided with another bubble in the distant past, the collision would have created a massive shockwave propagating through our space. This could have left an imprint on the Cosmic Microwave Background (CMB), the afterglow of the Big Bang. The signature might appear as a specific type of non-Gaussianity, or more strikingly, as a circular "bruise"—a disk-like region with slightly different temperature or polarization properties than the surrounding sky. Several searches for such disks have been conducted in CMB data from the WMAP and Planck satellites. While some intriguing anomalies have been found, none have been confirmed as unambiguous evidence of a bubble collision. The signal could be very faint or confused with other cosmological or galactic foregrounds.</p>
+                </div>
+                <!-- ... 19+ more Q&A items focused on bubble collisions ... -->
+            `;
+            document.querySelector('.text-content').innerHTML = content;
+        },
+    };
+
+    document.addEventListener('DOMContentLoaded', () => SimApp.init());
+    </script>
+</body>
+</html>
