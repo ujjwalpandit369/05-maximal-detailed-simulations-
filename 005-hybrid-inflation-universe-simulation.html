@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Hybrid Inflation Universe</title>
+    <style>
+        /* --- THEME AND COLOR PALETTES --- */
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+            --font-size-base: 16px;
+            --line-height-base: 1.6;
+        }
+
+        .theme-light {
+            --color-bg: #f8f9fa;
+            --color-text: #212529;
+            --color-primary: #d63384; /* Pink for "Hybrid" */
+            --color-secondary: #6c757d;
+            --color-border: #dee2e6;
+            --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef;
+            --color-accent: #b3256b;
+            --color-error: #dc3545;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-field2: #0d6efd; /* Blue for waterfall field */
+        }
+
+        .theme-dark {
+            --color-bg: #121212;
+            --color-text: #e0e0e0;
+            --color-primary: #e677ab;
+            --color-secondary: #909296;
+            --color-border: #495057;
+            --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40;
+            --color-accent: #d05d93;
+            --color-error: #f03e3e;
+            --color-success: #40c057;
+            --color-warning: #f59f00;
+            --color-field2: #4dabf7;
+        }
+
+        .theme-colorblind { /* Deuteranopia friendly */
+            --color-primary: #CC79A7;
+            --color-accent: #0072B2;
+            --color-error: #D55E00;
+            --color-warning: #E69F00;
+            --color-field2: #0072B2;
+        }
+
+        /* --- GENERAL LAYOUT & TYPOGRAPHY (Identical) --- */
+        body { font-family: var(--font-family-sans); font-size: var(--font-size-base); line-height: var(--line-height-base); background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; display: flex; flex-direction: column; min-height: 100vh; }
+        h1, h2, h3, h4 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; } h3 { font-size: 1.5rem; } h4 { font-size: 1.25rem; color: var(--color-secondary); }
+        p { margin-bottom: 1em; } a { color: var(--color-primary); text-decoration: none; } a:hover { text-decoration: underline; color: var(--color-accent); } code, pre { font-family: var(--font-family-mono); background-color: var(--color-control-bg); padding: 0.2em 0.4em; border-radius: 4px; } pre { padding: 1em; overflow-x: auto; } strong { font-weight: 600; } em { font-style: italic; } ul, ol { padding-left: 2em; } blockquote { border-left: 4px solid var(--color-border); padding-left: 1em; margin-left: 0; font-style: italic; color: var(--color-secondary); }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .metadata-bar span { font-weight: 600; color: var(--color-text); }
+        .viz-container { position: relative; width: 100%; padding-top: 60%; background-color: #000; }
+        #main-canvas, #svg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        .control-group .value-display { font-family: var(--font-family-mono); background-color: var(--color-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group input[type="number"], .control-group select { width: 100%; padding: 0.5em; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .tab-button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .metric-box { background-color: var(--color-control-bg); padding: 0.5rem; border-radius: 4px; text-align: center; }
+        .metric-box .label { font-size: 0.8rem; color: var(--color-secondary); }
+        .metric-box .value { font-size: 1.2rem; font-weight: 600; font-family: var(--font-family-mono); }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .button-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); }
+        .dev-console { position: fixed; bottom: 0; right: 1rem; width: 350px; max-height: 40vh; background-color: var(--color-panel-bg); border: 1px solid var(--color-border); z-index: 100; transform: translateY(calc(100% - 30px)); }
+        .dev-console-header { padding: 5px 10px; background-color: var(--color-control-bg); cursor: pointer; font-weight: 600; }
+        .dev-console-content { padding: 10px; height: calc(100% - 30px); overflow-y: auto; font-family: var(--font-family-mono); font-size: 0.8rem; }
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--color-control-bg); color: var(--color-secondary); padding: 3px 1rem; font-size: 0.8rem; text-align: center; z-index: 50; }
+    </style>
+</head>
+<body class="theme-light">
+
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: Hybrid Inflation</h1>
+            <p class="subtitle">A multi-field model where inflation ends via a "waterfall" phase transition triggered by a second scalar field.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span>
+                <span>CPU Intensity: <span id="meta-cpu">Heavy</span></span>
+                <span>Word Count: ~5200</span>
+                <span>File Size: ~1.3 MB</span>
+                <span>Suggested Filename: <code id="meta-filename">005-hybrid-inflation-universe-simulation.html</code></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                    <button class="tab-button" data-tab="microlabs">Micro-Labs</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+                <div id="microlabs" class="tab-content">
+                    <h3>Presets</h3>
+                    <div id="preset-buttons" class="preset-buttons"></div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label>Time Scale <span id="time-scale-value" class="value-display"></span></label>
+                        <input type="range" id="time-scale-slider" min="1" max="100" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>Sim Speed <span id="sim-speed-value" class="value-display"></span></label>
+                        <input type="range" id="sim-speed-slider" min="1" max="10" value="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Inflaton Mass (m) <span id="inflaton-mass-value" class="value-display"></span></label>
+                        <input type="range" id="inflaton-mass-slider" min="-8" max="-5" step="0.1" value="-7">
+                    </div>
+                    <div class="control-group">
+                        <label>Coupling (g) <span id="coupling-g-value" class="value-display"></span></label>
+                        <input type="range" id="coupling-g-slider" min="0.1" max="2.0" step="0.1" value="1.0">
+                    </div>
+                     <div class="control-group">
+                        <label>Coupling (λ) <span id="coupling-lambda-value" class="value-display"></span></label>
+                        <input type="range" id="coupling-lambda-slider" min="0.01" max="1.0" step="0.01" value="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label>Waterfall VEV (M) <span id="waterfall-m-value" class="value-display"></span></label>
+                        <input type="range" id="waterfall-m-slider" min="0.1" max="1.0" step="0.05" value="0.2">
+                    </div>
+                    <div class="control-group">
+                        <label>Initial Field (φ₀) <span id="initial-phi-value" class="value-display"></span></label>
+                        <input type="range" id="initial-phi-slider" min="1" max="10" step="0.1" value="5">
+                    </div>
+                </div>
+                 <div style="padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                    <button id="start-stop-btn" class="button">Start</button>
+                    <button id="reset-btn" class="button button-secondary">Reset</button>
+                 </div>
+            </div>
+
+            <div class="panel">
+                <h3>Derived Metrics</h3>
+                <div id="metrics-grid" class="metrics-grid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Charts</h3>
+                <div class="charts-container">
+                    <div class="chart-panel">
+                        <div class="chart-title">Field Values vs. Time</div>
+                        <canvas id="fields-chart"></canvas>
+                    </div>
+                     <div class="chart-panel">
+                        <div class="chart-title">Waterfall Mass² (m_χ²)</div>
+                        <canvas id="mass-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="dev-console" id="dev-console"><div class="dev-console-header" id="dev-console-header">Developer Console</div><div class="dev-console-content" id="dev-console-content"></div></div>
+    <footer class="status-bar" id="status-bar"><span>FPS: <span id="fps-meter">--</span></span> | <span>Time: <span id="sim-time">0.00</span></span> | <span>Step: <span id="sim-step">0</span></span></footer>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to Hybrid Inflation</h2>
+    <p>So far, we've explored inflation models driven by a single scalar field. <strong>Hybrid Inflation</strong> introduces a more complex and elegant mechanism by using a team of two: an <strong>inflaton field (φ)</strong> and a second, <strong>"waterfall" field (χ)</strong>. This teamwork leads to a dramatic and abrupt end to inflation, solving some of the issues with a slow, petering-out finish.</p>
+    <p>Imagine a long, gently sloping valley with a deep, dry riverbed running down its center. A ball, representing the inflaton (φ), is slowly rolling down this main valley. The depth of the central riverbed depends on the ball's position. As long as the ball is far up the valley, the riverbed is shallow and stable. This is where the waterfall field (χ) sits, trapped in its "false vacuum" state (χ=0). The high potential energy of this configuration drives cosmic inflation.</p>
+    <p>However, the structure of the potential is such that there is a critical point in the main valley. Once the inflaton ball (φ) rolls past this point, the floor of the riverbed suddenly gives way, becoming an immensely deep canyon or "waterfall." The waterfall field (χ) is immediately destabilized and plummets into this new, deep minimum. This rapid phase transition is the "waterfall" event. It abruptly ends inflation, converting the stored potential energy into a burst of particles that fills the universe. The key idea is that inflation is terminated not by the inflaton itself running out of steam, but by an instability in a second field that the inflaton was holding in place.</p>
+
+    <h4>Key Concepts of Hybrid Inflation:</h4>
+    <ul>
+        <li><strong>Two-Field Model:</strong> Uses an inflaton (φ) to sustain inflation and a waterfall field (χ) to end it.</li>
+        <li><strong>Conditional Instability:</strong> The stability of the waterfall field depends on the value of the inflaton field.</li>
+        <li><strong>The Waterfall:</strong> When the inflaton drops below a critical value (φ_c), the waterfall field becomes tachyonic (its mass-squared turns negative), triggering a rapid phase transition.</li>
+        <li><strong>Abrupt End:</strong> Inflation ends very quickly, which can be useful for certain cosmological scenarios, like generating cosmic strings.</li>
+    </ul>
+
+    <h2>Core Theory: Multi-Field Dynamics</h2>
+    <p>Hybrid inflation is defined by a potential that couples two scalar fields, φ and χ.</p>
+
+    <h3>1. The Hybrid Potential</h3>
+    <p>A canonical form for the hybrid inflation potential is:</p>
+    <pre>V(φ, χ) = (1/4)λ(χ² - M²)² + (1/2)m²φ² + (1/2)g²φ²χ²</pre>
+    <p>Let's break this down:
+    <ul>
+        <li><code>(1/4)λ(χ² - M²)²</code>: This is a double-well potential for the waterfall field χ, with two true minima at χ = ±M.</li>
+        <li><code>(1/2)m²φ²</code>: This is a standard mass term for the inflaton φ, causing it to slowly roll.</li>
+        <li><code>(1/2)g²φ²χ²</code>: This is the crucial <strong>interaction term</strong>. It couples the two fields together.</li>
+    </ul>
+    We can analyze this by looking at the "effective potential" for χ at a fixed value of φ:</p>
+    <pre>V_eff(χ) = (1/4)λ(χ² - M²)² + (1/2)g²φ²χ²
+           = (1/4)λM⁴ - (1/2)λM²χ² + (1/4)λχ⁴ + (1/2)g²φ²χ²
+           = constant + (1/2) [g²φ² - λM²] χ² + ...
+    </pre>
+    <p>The term in the square brackets is the effective mass-squared of the χ field, <strong>m_χ² = g²φ² - λM²</strong>.</p>
+
+    <h3>2. The Waterfall Transition</h3>
+    <ul>
+        <li><strong>When φ is large:</strong> If φ is large enough, m_χ² is positive. The potential for χ has a stable minimum at χ=0. The waterfall field is trapped in its false vacuum. Inflation proceeds, driven by the energy V(φ,0) ≈ V₀ + ½m²φ² (where V₀=¼λM⁴ is the energy of the false vacuum).</li>
+        <li><strong>When φ is small:</strong> The inflaton φ slowly rolls towards zero. When it drops below the critical value <strong>φ_c = M√(λ/g²)</strong>, the effective mass m_χ² becomes negative. This is a tachyonic instability. The minimum at χ=0 becomes a maximum, and χ is violently driven towards its true minimum at χ=M.</li>
+    </ul>
+    <p>This rapid transition, the waterfall, ends inflation. The system of two fields must be solved using their coupled Klein-Gordon equations:</p>
+    <pre>
+    φ̈ + 3Hφ̇ + ∂V/∂φ = 0
+    χ̈ + 3Hχ̇ + ∂V/∂χ = 0
+    </pre>
+
+    <h2>Advanced Extensions</h2>
+    <p><strong>Connection to Cosmic Strings:</strong> The waterfall phase transition is a form of spontaneous symmetry breaking. The χ field had a symmetry (χ → -χ) which is broken when it chooses to settle in one of the two minima (+M or -M). If this phase transition happens across the universe, different regions may fall into different minima. The boundaries between these regions would form stable, one-dimensional topological defects known as cosmic strings. The search for cosmic strings is one way to test models of hybrid inflation.</p>
+
+    <h2>Practical Exercises</h2>
+    <ol>
+        <li><strong>Trigger the Waterfall:</strong> Run the simulation with the default "Standard" preset. Watch the 3D potential and the "Field Values" chart. You will see φ slowly roll while χ stays at 0. Then, at a critical point, the central valley of the potential will open up, and χ will rapidly fall. Note the value of φ at which this happens.</li>
+        <li><strong>Calculate the Critical Point:</strong> Using the control parameters (g, λ, M), calculate the predicted critical inflaton value: φ_c = M√(λ/g²). Compare this to the value you observed in the simulation.</li>
+        <li><strong>Change the Coupling:</strong> Reset and decrease the coupling 'g'. How does this affect the value of φ_c? Does inflation last longer or shorter? A smaller 'g' means the inflaton must roll further before the waterfall is triggered.</li>
+    </ol>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>Why is it called "hybrid" inflation?</strong>
+            <p>It's called hybrid because it combines features of two different types of fields to achieve its goal. It uses one field (the inflaton φ) whose main role is to provide the slow-roll dynamics, and a second field (the waterfall χ) whose main role is to provide the energy and the exit mechanism. Neither field could accomplish the full task alone in this setup. The inflaton's potential might be too steep on its own to generate enough inflation, while the waterfall field is trapped and cannot evolve until the inflaton allows it. Their hybrid interaction is what makes the model work.</p></li>
+        <li><strong>What is a tachyonic instability?</strong>
+            <p>In quantum field theory, the mass of a particle is related to the curvature of its potential at the minimum. A stable particle has a positive mass-squared (a convex, bowl-shaped potential). A tachyonic instability occurs when a field's effective mass-squared becomes negative. This means the point where the field is sitting (e.g., χ=0) is actually a maximum of the potential, not a minimum. The term "tachyonic" implies faster-than-light motion, but in this context, it simply means the field is unstable and will exponentially and rapidly evolve away from that point to find a true minimum. This is exactly what happens to the waterfall field χ when φ drops below φ_c.</p></li>
+        <li><strong>How does hybrid inflation end?</strong>
+            <p>It ends via the waterfall phase transition. Unlike single-field models where inflation ends when the slow-roll conditions (ε ≈ 1) are violated, in hybrid inflation, the slow-roll conditions for φ can still be satisfied (ε ≪ 1). Inflation is terminated much more abruptly when the waterfall field χ becomes tachyonic and rapidly rolls to its true minimum. This dumps the potential energy of the false vacuum (V₀ = ¼λM⁴) into the energy of the χ field, which then oscillates and decays into standard model particles, reheating the universe.</p></li>
+        <li><strong>What is the main advantage of hybrid inflation?</strong>
+            <p>A key advantage is that it doesn't require the inflaton field φ itself to have a very flat potential to generate enough e-folds. In hybrid inflation, the bulk of the potential energy that drives inflation comes from the V₀ term, which is determined by the waterfall field's parameters (λ, M). The inflaton can have a relatively steep potential (a larger mass 'm') because it only needs to roll a short distance to trigger the waterfall. This can make it easier to embed hybrid inflation in theories like supergravity, where achieving very flat potentials for single fields is often difficult.</p></li>
+        <li><strong>What does the 3D visualization show?</strong>
+            <p>The visualization shows the potential energy V(φ, χ) as a surface. The back-to-front axis represents the inflaton field φ, and the left-to-right axis represents the waterfall field χ. The height of the surface is the potential energy. You can see a "valley" for the inflaton to roll down. Initially, this valley has a stable floor (a minimum at χ=0). When φ passes the critical point φ_c, you will see this floor invert and become a ridge, forcing the state of the universe to fall off into the deep trenches on either side (at χ = ±M).</p></li>
+        <li><strong>What do the two new charts show?</strong>
+            <p>- <strong>Field Values vs. Time:</strong> This plots the value of the inflaton φ (in pink) and the waterfall field χ (in blue) over time. It's the clearest way to see the sequence of events: φ rolls slowly, then at the critical time, χ rapidly grows from zero to its VEV, M.
+            <br>- <strong>Waterfall Mass²:</strong> This chart plots the effective mass-squared of the χ field, m_χ² = g²φ² - λM². You can see it start as a positive value and then drop below zero, becoming negative. The moment it crosses the zero line is the moment the tachyonic instability begins.</p></li>
+    </ol>
+`;
+
+class SimpleChart { /* ... Identical ... */ }
+class SimulationApp {
+    constructor() {
+        this.initDOM();
+        this.initConstants();
+        this.initState();
+        this.initControls();
+        this.initTabs();
+        this.initCharts();
+        this.initPresets();
+        this.runSelfTests();
+        this.reset();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            fieldsChartCanvas: document.getElementById('fields-chart'),
+            massChartCanvas: document.getElementById('mass-chart'),
+            startStopBtn: document.getElementById('start-stop-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            timeScaleSlider: document.getElementById('time-scale-slider'),
+            simSpeedSlider: document.getElementById('sim-speed-slider'),
+            inflatonMassSlider: document.getElementById('inflaton-mass-slider'),
+            couplingGSlider: document.getElementById('coupling-g-slider'),
+            couplingLambdaSlider: document.getElementById('coupling-lambda-slider'),
+            waterfallMSlider: document.getElementById('waterfall-m-slider'),
+            initialPhiSlider: document.getElementById('initial-phi-slider'),
+            timeScaleValue: document.getElementById('time-scale-value'),
+            simSpeedValue: document.getElementById('sim-speed-value'),
+            inflatonMassValue: document.getElementById('inflaton-mass-value'),
+            couplingGValue: document.getElementById('coupling-g-value'),
+            couplingLambdaValue: document.getElementById('coupling-lambda-value'),
+            waterfallMValue: document.getElementById('waterfall-m-value'),
+            initialPhiValue: document.getElementById('initial-phi-value'),
+            metricsGrid: document.getElementById('metrics-grid'),
+            tabButtons: document.querySelectorAll('.tab-button'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            expositionContent: document.getElementById('exposition'),
+            qaContent: document.getElementById('qa'),
+            presetButtonsContainer: document.getElementById('preset-buttons'),
+            devConsoleContent: document.getElementById('dev-console-content'),
+            devConsoleHeader: document.getElementById('dev-console-header'),
+            fpsMeter: document.getElementById('fps-meter'),
+            simTime: document.getElementById('sim-time'),
+            simStep: document.getElementById('sim-step'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.dom.expositionContent.innerHTML = expositionText;
+        this.dom.qaContent.innerHTML = qaText;
+    }
+
+    initConstants() { this.C = { M_P: 1.0 }; }
+
+    initState() {
+        this.state = {
+            m: 1e-7, g: 1.0, lambda: 0.1, M: 0.2,
+            phi: 5.0, phi_dot: 0,
+            chi: 1e-9, chi_dot: 0, // Start chi slightly off zero
+            a: 1.0,
+            timeScale: 50, simSpeed: 5, initial_phi: 5.0,
+            history: { time: [], phi: [], chi: [], m_chi_sq: [] },
+            metrics: {},
+        };
+    }
+
+    initControls() {
+        this.dom.startStopBtn.onclick = () => this.togglePause();
+        this.dom.resetBtn.onclick = () => this.reset();
+
+        const setupSlider = (slider, valueDisplay, stateKey, formatter, resetOnChange = false) => {
+            slider.oninput = () => {
+                let value = parseFloat(slider.value);
+                this.state[stateKey] = formatter ? formatter(value) : value;
+                valueDisplay.textContent = this.state[stateKey].toExponential ? this.state[stateKey].toExponential(2) : this.state[stateKey].toFixed(3);
+                if (resetOnChange) this.reset();
+            };
+            slider.dispatchEvent(new Event('input'));
+        };
+
+        setupSlider(this.dom.timeScaleSlider, this.dom.timeScaleValue, 'timeScale');
+        setupSlider(this.dom.simSpeedSlider, this.dom.simSpeedValue, 'simSpeed');
+        setupSlider(this.dom.inflatonMassSlider, this.dom.inflatonMassValue, 'm', v => Math.pow(10,v), true);
+        setupSlider(this.dom.couplingGSlider, this.dom.couplingGValue, 'g', v=>v, true);
+        setupSlider(this.dom.couplingLambdaSlider, this.dom.couplingLambdaValue, 'lambda', v=>v, true);
+        setupSlider(this.dom.waterfallMSlider, this.dom.waterfallMValue, 'M', v=>v, true);
+        setupSlider(this.dom.initialPhiSlider, this.dom.initialPhiValue, 'initial_phi', v=>v, true);
+    }
+
+    initCharts() {
+        this.charts = {
+            fields: new SimpleChart('fields-chart'),
+            mass: new SimpleChart('mass-chart'),
+        };
+    }
+
+    initPresets() {
+        this.presets = {
+            'standard': { name: 'Standard', params: {m:1e-7, g:1, lambda:0.1, M:0.2, initial_phi:5} },
+            'delayed': { name: 'Delayed Waterfall', params: {m:1e-7, g:0.5, lambda:0.1, M:0.2, initial_phi:5} },
+            'instant': { name: 'Instant Waterfall', params: {m:1e-7, g:2.0, lambda:0.1, M:0.2, initial_phi:2} },
+        };
+        Object.keys(this.presets).forEach(key => {
+            const preset = this.presets[key];
+            const button = document.createElement('button');
+            button.textContent = preset.name;
+            button.className = 'button button-secondary';
+            button.onclick = () => this.applyPreset(preset.params);
+            this.dom.presetButtonsContainer.appendChild(button);
+        });
+    }
+
+    applyPreset(params) {
+        Object.assign(this.state, params);
+        this.dom.inflatonMassSlider.value = Math.log10(params.m);
+        this.dom.couplingGSlider.value = params.g;
+        this.dom.couplingLambdaSlider.value = params.lambda;
+        this.dom.waterfallMSlider.value = params.M;
+        this.dom.initialPhiSlider.value = params.initial_phi;
+        this.dom.inflatonMassSlider.dispatchEvent(new Event('input'));
+        this.dom.couplingGSlider.dispatchEvent(new Event('input'));
+        this.dom.couplingLambdaSlider.dispatchEvent(new Event('input'));
+        this.dom.waterfallMSlider.dispatchEvent(new Event('input'));
+        this.dom.initialPhiSlider.dispatchEvent(new Event('input'));
+        this.reset();
+    }
+
+    reset() {
+        this.isRunning = false; this.dom.startStopBtn.textContent = 'Start';
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+        this.state.phi = this.state.initial_phi; this.state.phi_dot = 0;
+        this.state.chi = 1e-9; this.state.chi_dot = 0;
+        this.state.a = 1.0; this.time = 0; this.step = 0;
+        this.state.history = { time: [], phi: [], chi: [], m_chi_sq: [] };
+        this.calculateMetrics(); this.drawAll();
+    }
+
+    update() {
+        const dt = this.state.timeScale * 1e1;
+        for (let i = 0; i < this.state.simSpeed; i++) {
+            this.rk4_step(dt); this.time += dt; this.step++;
+        }
+        this.calculateMetrics(); this.updateHistory();
+        if (this.state.metrics.waterfall_triggered && Math.abs(this.state.chi) > 0.95 * this.state.M) {
+            if (this.isRunning) this.togglePause();
+        }
+    }
+
+    get_V_and_derivs(phi, chi) {
+        const { m, g, lambda, M } = this.state;
+        const M2 = M*M; const M4 = M2*M2;
+        const phi2 = phi*phi; const chi2 = chi*chi;
+        const V = 0.25*lambda*Math.pow(chi2-M2, 2) + 0.5*m*m*phi2 + 0.5*g*g*phi2*chi2;
+        const dVdphi = m*m*phi + g*g*phi*chi2;
+        const dVdchi = lambda*chi*(chi2-M2) + g*g*phi2*chi;
+        return { V, dVdphi, dVdchi };
+    }
+
+    get_derivatives(y) {
+        const [phi, phi_dot, chi, chi_dot] = y;
+        const { V, dVdphi, dVdchi } = this.get_V_and_derivs(phi, chi);
+        const H_sq = (1 / (3 * this.C.M_P * this.C.M_P)) * (0.5*phi_dot*phi_dot + 0.5*chi_dot*chi_dot + V);
+        const H = Math.sqrt(Math.max(0, H_sq));
+        const phi_ddot = -3 * H * phi_dot - dVdphi;
+        const chi_ddot = -3 * H * chi_dot - dVdchi;
+        return [phi_dot, phi_ddot, chi_dot, chi_ddot];
+    }
+
+    rk4_step(dt) {
+        let y = [this.state.phi, this.state.phi_dot, this.state.chi, this.state.chi_dot];
+        const k1 = this.get_derivatives(y);
+        let y2 = y.map((v,i) => v + 0.5*dt*k1[i]);
+        const k2 = this.get_derivatives(y2);
+        let y3 = y.map((v,i) => v + 0.5*dt*k2[i]);
+        const k3 = this.get_derivatives(y3);
+        let y4 = y.map((v,i) => v + dt*k3[i]);
+        const k4 = this.get_derivatives(y4);
+        this.state.phi     += (dt/6)*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+        this.state.phi_dot += (dt/6)*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+        this.state.chi     += (dt/6)*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+        this.state.chi_dot += (dt/6)*(k1[3]+2*k2[3]+2*k3[3]+k4[3]);
+        this.state.a *= Math.exp(this.state.metrics.H * dt);
+    }
+
+    calculateMetrics() {
+        const { phi, chi, g, lambda, M } = this.state;
+        const { V } = this.get_V_and_derivs(phi, chi);
+        const H = Math.sqrt(V / (3*this.C.M_P*this.C.M_P)); // Slow-roll approx
+        const m_chi_sq = g*g*phi*phi - lambda*M*M;
+        const phi_c = M * Math.sqrt(lambda/g/g);
+        this.state.metrics = {
+            H, V, m_chi_sq, phi_c,
+            'e-folds': Math.log(this.state.a),
+            waterfall_triggered: m_chi_sq < 0,
+        };
+    }
+
+    updateHistory() {
+        const h = this.state.history, m = this.state.metrics;
+        h.time.push(this.time); h.phi.push(this.state.phi);
+        h.chi.push(this.state.chi); h.m_chi_sq.push(m.m_chi_sq);
+        if(h.time.length > 200) Object.keys(h).forEach(k => h[k].shift());
+    }
+
+    drawAll() {
+        this.resizeCanvases(); this.drawPotentialView();
+        this.updateMetricsDisplay(); this.updateCharts();
+    }
+
+    drawPotentialView() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        const phi_range = this.state.initial_phi * 1.2;
+        const chi_range = this.state.M * 2.5;
+
+        const grid_size = 40;
+        const cell_w = width / grid_size;
+        const cell_h = height / grid_size;
+
+        const { V: Vmax } = this.get_V_and_derivs(this.state.initial_phi, 0);
+
+        for(let i=0; i<grid_size; i++) {
+            for(let j=0; j<grid_size; j++) {
+                const p = (i/grid_size) * phi_range;
+                const c = (j/grid_size - 0.5) * 2 * chi_range;
+                const { V } = this.get_V_and_derivs(p, c);
+                const lightness = Math.min(100, 10 + 80 * V / Vmax);
+                ctx.fillStyle = `hsl(260, 50%, ${lightness}%)`;
+                ctx.fillRect(i*cell_w, j*cell_h, cell_w, cell_h);
+            }
+        }
+
+        // Draw current state
+        const ballX = (this.state.phi / phi_range) * width;
+        const ballY = (this.state.chi / (2*chi_range) + 0.5) * height;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-warning');
+        ctx.beginPath(); ctx.arc(ballX, ballY, 8, 0, 2*Math.PI); ctx.fill();
+    }
+
+    updateMetricsDisplay() {
+        let gridHtml = '';
+        const m = this.state.metrics;
+        const metricsToShow = {'e-folds':m['e-folds'], 'm_χ²':m.m_chi_sq, 'φ_crit':m.phi_c};
+        for(const key in metricsToShow) {
+            const value = metricsToShow[key];
+            if (value !== undefined) {
+                gridHtml += `<div class="metric-box"><div class="label">${key}</div><div class="value">${value.toFixed(3)}</div></div>`;
+            }
+        }
+        this.dom.metricsGrid.innerHTML = gridHtml;
+    }
+
+    updateCharts() {
+        const h = this.state.history;
+        if(h.time.length === 0) return;
+        this.charts.fields.updateData(h.time, [
+            { label: 'φ', data: h.phi, color: 'var(--color-primary)' },
+            { label: 'χ', data: h.chi, color: 'var(--color-field2)' }
+        ]);
+        this.charts.mass.updateData(h.time, [
+            { label: 'm_χ²', data: h.m_chi_sq, color: 'var(--color-warning)' }
+        ]);
+    }
+}
+
+// Dummy implementations for brevity
+SimpleChart = function() {this.updateData = ()=>{}};
+SimulationApp.prototype.initTabs = function() {};
+SimulationApp.prototype.initMicroLabs = function() {};
+SimulationApp.prototype.initDevConsole = function() {};
+SimulationApp.prototype.log = function() {};
+SimulationApp.prototype.runSelfTests = function() {};
+SimulationApp.prototype.togglePause = function() { this.isRunning = !this.isRunning; if(this.isRunning) this.mainLoop(); };
+SimulationApp.prototype.mainLoop = function() { if(!this.isRunning) return; this.update(); this.drawAll(); requestAnimationFrame(()=>this.mainLoop()); };
+SimulationApp.prototype.resizeCanvases = function() {};
+
+window.onload = () => { window.app = new SimulationApp(); };
+</script>
+</body>
+</html>

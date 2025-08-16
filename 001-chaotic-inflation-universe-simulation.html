@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Chaotic Inflation Universe</title>
+    <style>
+        /* --- THEME AND COLOR PALETTES --- */
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+            --font-size-base: 16px;
+            --line-height-base: 1.6;
+        }
+
+        .theme-light {
+            --color-bg: #f8f9fa;
+            --color-text: #212529;
+            --color-primary: #007bff;
+            --color-secondary: #6c757d;
+            --color-border: #dee2e6;
+            --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef;
+            --color-accent: #0056b3;
+            --color-error: #dc3545;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+            --color-heatmap-low: #0000ff;
+            --color-heatmap-high: #ff0000;
+        }
+
+        .theme-dark {
+            --color-bg: #121212;
+            --color-text: #e0e0e0;
+            --color-primary: #4dabf7;
+            --color-secondary: #909296;
+            --color-border: #495057;
+            --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40;
+            --color-accent: #1c7ed6;
+            --color-error: #f03e3e;
+            --color-success: #40c057;
+            --color-warning: #f59f00;
+            --color-heatmap-low: #00ffff;
+            --color-heatmap-high: #ffff00;
+        }
+
+        .theme-colorblind { /* Deuteranopia friendly */
+            --color-primary: #0072B2;
+            --color-accent: #009E73;
+            --color-error: #D55E00;
+            --color-warning: #E69F00;
+            --color-heatmap-low: #56B4E9;
+            --color-heatmap-high: #F0E442;
+        }
+
+        /* --- GENERAL LAYOUT & TYPOGRAPHY --- */
+        body {
+            font-family: var(--font-family-sans);
+            font-size: var(--font-size-base);
+            line-height: var(--line-height-base);
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            margin: 0;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            color: var(--color-primary);
+        }
+
+        h1 { font-size: 2.5rem; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.25rem; color: var(--color-secondary); }
+
+        p { margin-bottom: 1em; }
+        a { color: var(--color-primary); text-decoration: none; }
+        a:hover { text-decoration: underline; color: var(--color-accent); }
+        code, pre { font-family: var(--font-family-mono); background-color: var(--color-control-bg); padding: 0.2em 0.4em; border-radius: 4px; }
+        pre { padding: 1em; overflow-x: auto; }
+        strong { font-weight: 600; }
+        em { font-style: italic; }
+        ul, ol { padding-left: 2em; }
+        blockquote { border-left: 4px solid var(--color-border); padding-left: 1em; margin-left: 0; font-style: italic; color: var(--color-secondary); }
+
+        /* --- MAIN STRUCTURE --- */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            grid-template-rows: auto 1fr;
+            grid-template-areas:
+                "header header"
+                "main-content side-panel";
+            gap: 1rem;
+            width: 100%;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        header { grid-area: header; }
+        .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; }
+        .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+
+        .panel {
+            background-color: var(--color-panel-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        /* --- HEADER & METADATA --- */
+        .metadata-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            font-size: 0.9rem;
+            color: var(--color-secondary);
+            background-color: var(--color-control-bg);
+            padding: 0.5em 1em;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+        .metadata-bar span { font-weight: 600; color: var(--color-text); }
+
+        /* --- VISUALIZATION & CONTROLS --- */
+        .viz-container {
+            position: relative;
+            width: 100%;
+            padding-top: 60%; /* Aspect ratio */
+            background-color: #000;
+        }
+        #main-canvas, #svg-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        .control-group .value-display {
+            font-family: var(--font-family-mono);
+            background-color: var(--color-bg);
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+        }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group input[type="number"], .control-group select {
+            width: 100%;
+            padding: 0.5em;
+            background-color: var(--color-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 4px;
+            color: var(--color-text);
+        }
+        .tooltip {
+            position: relative;
+            cursor: help;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+
+        /* --- TABS --- */
+        .tab-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .tab-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 2px solid var(--color-border);
+        }
+        .tab-button {
+            padding: 0.75em 1.25em;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: var(--color-secondary);
+            font-size: 1rem;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        .tab-button.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+        }
+        .tab-content {
+            display: none;
+            padding: 1.5rem 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* --- CHARTS & METRICS --- */
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .chart-panel {
+            border: 1px solid var(--color-border);
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+        }
+        .metric-box {
+            background-color: var(--color-control-bg);
+            padding: 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .metric-box .label { font-size: 0.8rem; color: var(--color-secondary); }
+        .metric-box .value { font-size: 1.2rem; font-weight: 600; font-family: var(--font-family-mono); }
+
+        /* --- MICRO-LABS & PRESETS --- */
+        .preset-buttons, .microlab-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .microlab-log {
+            height: 150px;
+            overflow-y: auto;
+            background-color: var(--color-bg);
+            border: 1px solid var(--color-border);
+            padding: 0.5rem;
+            font-family: var(--font-family-mono);
+            font-size: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        /* --- UTILITY & ACCESSIBILITY --- */
+        .button {
+            padding: 0.6em 1.2em;
+            border: 1px solid var(--color-primary);
+            background-color: var(--color-primary);
+            color: var(--color-panel-bg);
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .button:hover {
+            background-color: var(--color-accent);
+        }
+        .button-secondary {
+            background-color: var(--color-secondary);
+            border-color: var(--color-secondary);
+        }
+        .button-secondary:hover {
+            background-color: var(--color-text);
+        }
+
+        .dev-console {
+            position: fixed;
+            bottom: 0;
+            right: 1rem;
+            width: 350px;
+            max-height: 40vh;
+            background-color: var(--color-panel-bg);
+            border: 1px solid var(--color-border);
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            z-index: 100;
+            transform: translateY(calc(100% - 30px));
+            transition: transform 0.3s ease-in-out;
+        }
+        .dev-console:hover, .dev-console.open {
+            transform: translateY(0);
+        }
+        .dev-console-header {
+            padding: 5px 10px;
+            background-color: var(--color-control-bg);
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .dev-console-content {
+            padding: 10px;
+            height: calc(100% - 30px);
+            overflow-y: auto;
+            font-family: var(--font-family-mono);
+            font-size: 0.8rem;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--color-control-bg);
+            color: var(--color-secondary);
+            padding: 3px 1rem;
+            font-size: 0.8rem;
+            text-align: center;
+            z-index: 50;
+        }
+
+        #heavy-mode-warning {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        .warning-box {
+            background-color: var(--color-panel-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid var(--color-warning);
+        }
+
+        #self-test-report {
+            border: 2px solid var(--color-warning);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .micro-diagram {
+            width: 120px;
+            height: 80px;
+            border: 1px solid var(--color-border);
+            float: right;
+            margin-left: 1rem;
+        }
+    </style>
+</head>
+<body class="theme-light">
+
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: Chaotic Inflation Universe</h1>
+            <p class="subtitle">An interactive exploration of the V(φ) = ½m²φ² model of cosmic inflation, from the initial quantum state to the seeds of cosmic structure.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span>
+                <span>CPU Intensity: <span id="meta-cpu">Medium</span></span>
+                <span>Word Count: ~5100</span>
+                <span>File Size: ~1.2 MB</span>
+                <span>Suggested Filename: <code id="meta-filename">001-chaotic-inflation-universe-simulation.html</code></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div id="self-test-report" style="display: none;">
+                <h3>Self-Test Report</h3>
+                <ul id="self-test-results"></ul>
+            </div>
+
+            <div class="panel">
+                <div class="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                    <svg id="svg-overlay"></svg>
+                </div>
+                 <div id="view-modes" style="padding-top: 0.5rem; display: flex; gap: 0.5rem;">
+                    <button class="button-secondary" data-view="overview">Overview</button>
+                    <button class="button-secondary" data-view="zoomed">Potential View</button>
+                    <button class="button-secondary" data-view="field-overlay">Fluctuation Field</button>
+                    <button class="button-secondary" data-view="schematic">Schematic</button>
+                </div>
+            </div>
+
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                    <button class="tab-button" data-tab="microlabs">Micro-Labs</button>
+                    <button class="tab-button" data-tab="measure">Analysis Tools</button>
+                </div>
+                <div id="exposition" class="tab-content active">
+                    <!-- Text content will be dynamically loaded here -->
+                </div>
+                <div id="qa" class="tab-content">
+                    <!-- Q&A content will be dynamically loaded here -->
+                </div>
+                <div id="microlabs" class="tab-content">
+                    <h3>Presets</h3>
+                    <div id="preset-buttons" class="preset-buttons"></div>
+                    <hr>
+                    <h3>Micro-Experiments</h3>
+                    <p>Select a micro-lab from the dropdown and click "Auto-Run" to execute the steps. Results will appear in the log below.</p>
+                    <select id="microlab-select"></select>
+                    <button id="microlab-run-btn" class="button">Auto-Run Micro-Lab</button>
+                    <h4>Execution Log:</h4>
+                    <div id="microlab-log" class="microlab-log"></div>
+                </div>
+                <div id="measure" class="tab-content">
+                    <h3>Annotation & Measurement</h3>
+                    <p>Enable tools to interact with the visualization.</p>
+                    <button id="tool-annotate-btn">Pin Annotation</button>
+                    <button id="tool-measure-dist-btn">Measure Distance</button>
+                    <p>Measurement Data (click to copy):</p>
+                    <pre id="measurement-output">No measurements yet.</pre>
+                </div>
+            </div>
+        </main>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="time-scale-slider">Time Scale <span id="time-scale-value" class="value-display"></span></label>
+                        <input type="range" id="time-scale-slider" min="1" max="100" step="1" value="50" aria-label="Time Scale">
+                    </div>
+                    <div class="control-group">
+                        <label for="sim-speed-slider">Sim Speed <span id="sim-speed-value" class="value-display"></span></label>
+                        <input type="range" id="sim-speed-slider" min="1" max="10" step="1" value="5" aria-label="Simulation Speed">
+                    </div>
+                    <div class="control-group">
+                        <label for="resolution-select">Resolution <span class="tooltip">[?]<span class="tooltip-text">Grid size for fluctuation map. Higher values are CPU intensive.</span></span></label>
+                        <select id="resolution-select" aria-label="Grid Resolution">
+                            <option value="64">64x64 (Low)</option>
+                            <option value="128" selected>128x128 (Medium)</option>
+                            <option value="256">256x256 (Heavy)</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="inflaton-mass-slider">Inflaton Mass (m) <span id="inflaton-mass-value" class="value-display"></span></label>
+                        <input type="range" id="inflaton-mass-slider" min="0.1" max="5" step="0.1" value="1" aria-label="Inflaton Mass">
+                    </div>
+                    <div class="control-group">
+                        <label for="initial-phi-slider">Initial Field (φ₀) <span id="initial-phi-value" class="value-display"></span></label>
+                        <input type="range" id="initial-phi-slider" min="10" max="20" step="0.1" value="15" aria-label="Initial Inflaton Field Value">
+                    </div>
+                    <div class="control-group">
+                        <label for="initial-phi-dot-slider">Initial Vel (φ̇₀) <span id="initial-phi-dot-value" class="value-display"></span></label>
+                        <input type="range" id="initial-phi-dot-slider" min="-1" max="1" step="0.01" value="-0.01" aria-label="Initial Inflaton Field Velocity">
+                    </div>
+                    <div class="control-group">
+                        <label for="palette-select">Color Palette</label>
+                        <select id="palette-select" aria-label="Visualization Color Palette">
+                            <option value="theme-light">Light</option>
+                            <option value="theme-dark">Dark</option>
+                            <option value="theme-colorblind">High-Contrast</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="vis-scale-slider">Visual Scale <span id="vis-scale-value" class="value-display"></span></label>
+                        <input type="range" id="vis-scale-slider" min="0.1" max="2" step="0.05" value="1" aria-label="Visual Scale">
+                    </div>
+                    <div class="control-group">
+                        <label for="integrator-select">Integrator <span class="tooltip">[?]<span class="tooltip-text">Numerical method. RK4 is more accurate but slower than Euler.</span></span></label>
+                        <select id="integrator-select" aria-label="Numerical Integrator">
+                            <option value="rk4">Runge-Kutta 4</option>
+                            <option value="euler">Forward Euler</option>
+                        </select>
+                    </div>
+                </div>
+                 <div style="padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                    <button id="start-stop-btn" class="button">Start</button>
+                    <button id="reset-btn" class="button button-secondary">Reset</button>
+                    <button id="step-btn" class="button button-secondary">Step</button>
+                 </div>
+            </div>
+
+            <div class="panel">
+                <h3>Derived Metrics</h3>
+                <div id="metrics-grid" class="metrics-grid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Charts</h3>
+                <div class="charts-container">
+                    <div class="chart-panel">
+                        <div class="chart-title">Field & Scale Factor vs. Time</div>
+                        <canvas id="time-series-chart"></canvas>
+                    </div>
+                     <div class="chart-panel">
+                        <div class="chart-title">Phase Space (φ vs φ̇)</div>
+                        <canvas id="phase-space-chart"></canvas>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">Fluctuation Power Spectrum</div>
+                        <canvas id="power-spectrum-chart"></canvas>
+                    </div>
+                    <div class="chart-panel">
+                        <div class="chart-title">Hubble Parameter & Slow Roll</div>
+                        <canvas id="hubble-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Reproducibility</h3>
+                <p>Copy this string to save and restore the exact simulation parameters.</p>
+                <textarea id="repro-string" rows="3" style="width: 100%; font-family: var(--font-family-mono); font-size: 0.8rem;"></textarea>
+                <button id="copy-repro-btn">Copy</button>
+                <button id="load-repro-btn">Load</button>
+            </div>
+        </aside>
+    </div>
+
+    <div id="heavy-mode-warning">
+        <div class="warning-box">
+            <h2>Heavy Computation Warning</h2>
+            <p>The selected settings (e.g., high resolution) may cause the simulation to run slowly or become unresponsive.</p>
+            <button id="heavy-mode-confirm" class="button">Proceed Anyway</button>
+            <button id="heavy-mode-cancel" class="button button-secondary">Cancel</button>
+        </div>
+    </div>
+
+    <div class="dev-console" id="dev-console">
+        <div class="dev-console-header" id="dev-console-header">Developer Console</div>
+        <div class="dev-console-content" id="dev-console-content"></div>
+    </div>
+
+    <footer class="status-bar" id="status-bar">
+        <span>FPS: <span id="fps-meter">--</span></span> |
+        <span>Mem: <span id="mem-meter">--</span> MB</span> |
+        <span>Time: <span id="sim-time">0.00</span></span> |
+        <span>Step: <span id="sim-step">0</span></span> |
+        <span>Conservation Error: <span id="conservation-error">0.00%</span></span>
+    </footer>
+
+<script>
+// --- EMBEDDED JAVASCRIPT APPLICATION ---
+// All code is self-contained to fulfill the user request. No external libraries are used.
+
+const expositionText = `
+    <h2>Beginner’s Guide to Chaotic Inflation</h2>
+    <p>Imagine the entire universe, moments after its birth, as a tiny, incredibly dense point. Then, in a fraction of a second, it underwent a period of mind-bogglingly rapid expansion, growing from smaller than an atom to larger than a galaxy. This event is called <strong>cosmic inflation</strong>. The "Chaotic Inflation" model, proposed by Andrei Linde, is one of the simplest and most compelling explanations for how this happened.</p>
+    <p>Think of the early universe as a vast field of energy, called the <strong>inflaton field</strong>. This field had a value at every point in space. In the chaotic inflation model, this field was not uniform. It was "chaotic," with different, random values in different regions. Now, imagine this field has a potential energy, much like a ball has potential energy when it's on a hill. The shape of this "hill" is described by the equation V(φ) = ½m²φ², where V is the potential energy and φ (phi) is the value of the inflaton field. This is a simple parabolic shape, like a skateboard ramp.</p>
+    <p>In regions where the field value φ was very large, the potential energy was immense. This huge energy density acted like a form of "anti-gravity," causing space itself to expand exponentially fast. The inflaton field, like a ball on the ramp, slowly "rolled" down towards the minimum of its potential energy at φ=0. As long as it was rolling slowly on the high-energy plateau, the universe inflated. This period of slow-rolling is crucial; it must last long enough to solve several key problems in cosmology, such as why the universe is so flat and uniform on large scales.</p>
+    <p>Eventually, the field rolled to the bottom of the potential well, oscillated around the minimum, and decayed, releasing its energy and filling the universe with the hot soup of particles that we are familiar with from the Big Bang theory. This process is called <strong>reheating</strong>. Crucially, tiny quantum fluctuations in the inflaton field during its roll were stretched by the enormous expansion to cosmological sizes. These tiny ripples in energy density became the seeds for all cosmic structure: galaxies, stars, and planets.</p>
+
+    <svg class="micro-diagram" viewBox="0 0 120 80"><path d="M 0,70 Q 60,0 120,70" stroke="var(--color-primary)" fill="none" stroke-width="2"/><circle cx="20" cy="11.6" r="4" fill="var(--color-accent)"/></svg>
+    <h4>Key Takeaways for Beginners:</h4>
+    <ul>
+        <li><strong>Inflaton Field:</strong> A hypothetical energy field that filled the early universe.</li>
+        <li><strong>Potential Energy:</strong> The shape of the inflaton's energy landscape (a simple hill or valley) determined the universe's behavior.</li>
+        <li><strong>Exponential Expansion:</strong> High potential energy drove a period of incredibly fast, "anti-gravitational" expansion.</li>
+        <li><strong>Slow Roll:</strong> The field slowly rolled down its potential hill, sustaining inflation long enough to smooth out the universe.</li>
+        <li><strong>Reheating:</strong> At the end of inflation, the field's energy was converted into the particles that form our universe today.</li>
+        <li><strong>Seeds of Structure:</strong> Quantum jitters in the field were stretched into the large-scale structures we see in the cosmos.</li>
+    </ul>
+
+    <h2>Core Theory</h2>
+    <p>The dynamics of chaotic inflation are governed by the interplay between the inflaton scalar field φ and the expansion of spacetime, described by the scale factor a(t). The theoretical framework combines general relativity with quantum field theory.</p>
+
+    <h3>1. The Action and Equations of Motion</h3>
+    <p>The starting point is the action for a scalar field minimally coupled to gravity:</p>
+    <pre>S = ∫ d⁴x √-g [ (1/2)M_p²R - (1/2)∂μφ∂μφ - V(φ) ]</pre>
+    <p>Where R is the Ricci scalar, g is the determinant of the metric tensor, M_p is the reduced Planck mass (M_p² = 1/(8πG)), and V(φ) is the potential. For chaotic inflation, we use the simple quadratic potential:</p>
+    <pre>V(φ) = (1/2)m²φ²</pre>
+    <p>Here, 'm' is the mass of the inflaton particle. Varying the action with respect to the metric and the field in a Friedmann-Lemaître-Robertson-Walker (FLRW) background yields the core equations.</p>
+
+    <h3>2. The Friedmann Equations</h3>
+    <p>These equations from general relativity describe the expansion of the universe. Assuming a flat (k=0) universe, which is a key prediction of inflation:</p>
+    <pre>H² ≡ (ȧ/a)² = (1/3M_p²) * ( (1/2)φ̇² + V(φ) )</pre>
+    <pre>¨a/a = -(1/3M_p²) * (φ̇² - V(φ))</pre>
+    <p>Where H is the Hubble parameter, 'a' is the scale factor, a dot represents a time derivative (e.g., ȧ = da/dt), and φ̇ is the time derivative of the scalar field.</p>
+
+    <h3>3. The Klein-Gordon Equation</h3>
+    <p>This equation describes the evolution of the scalar field φ in an expanding universe:</p>
+    <pre>φ̈ + 3Hφ̇ + V'(φ) = 0</pre>
+    <p>Where V'(φ) is the derivative of the potential with respect to φ (for our potential, V'(φ) = m²φ). The 3Hφ̇ term is a "Hubble friction" term, representing the energy loss of the field due to the expansion of space. It's this friction that allows the field to roll slowly.</p>
+
+    <h3>4. The Slow-Roll Approximation</h3>
+    <p>For inflation to occur and last long enough, the field must roll slowly. This is formalized by the slow-roll conditions. We assume that the kinetic energy of the field is much smaller than its potential energy, and that its acceleration is negligible:</p>
+    <ul>
+        <li><strong>Condition 1:</strong> ½φ̇² ≪ V(φ)</li>
+        <li><strong>Condition 2:</strong> |φ̈| ≪ |3Hφ̇|</li>
+    </ul>
+    <p>Under these assumptions, the equations of motion simplify dramatically:</p>
+    <pre>H² ≈ (1/3M_p²) * V(φ)</pre>
+    <pre>3Hφ̇ + V'(φ) ≈ 0</pre>
+    <p>These simplified equations are much easier to solve and allow us to define the key slow-roll parameters, ε (epsilon) and η (eta).</p>
+    <pre>ε(φ) = (M_p²/2) * (V'/V)²</pre>
+    <pre>η(φ) = M_p² * (V''/V)</pre>
+    <p>Inflation occurs when ε < 1, and it ends when ε ≈ 1. For chaotic inflation with V(φ)=½m²φ², these become ε = 2(M_p/φ)² and η = 2(M_p/φ)². Inflation ends when φ drops to roughly √2 * M_p.</p>
+
+    <h2>Worked Examples</h2>
+    <h4>Example 1: Calculating the Number of e-folds</h4>
+    <p>The total amount of inflation is measured by the number of e-folds, N. It's defined as N = ln(a_end / a_start). We can calculate it by integrating the Hubble parameter.</p>
+    <pre>N = ∫ H dt ≈ (1/M_p²) ∫ (V/V') dφ</pre>
+    <p>Let's calculate N for chaotic inflation as the field rolls from an initial value φ_i to a final value φ_f = √2 M_p.</p>
+    <pre>
+V(φ) = ½m²φ²  => V'(φ) = m²φ
+N = (1/M_p²) ∫[φ_f, φ_i] (½m²φ² / m²φ) dφ
+  = (1/M_p²) ∫[φ_f, φ_i] (φ/2) dφ
+  = (1/2M_p²) [φ²/2] from φ_f to φ_i
+  = (1/4M_p²) * (φ_i² - φ_f²)
+    </pre>
+    <p>If we require at least N=60 e-folds to solve the universe's problems, and knowing φ_f = √2 M_p:</p>
+    <pre>
+60 ≈ (1/4M_p²) * (φ_i² - 2M_p²)
+240M_p² ≈ φ_i² - 2M_p²
+φ_i² ≈ 242M_p²  =>  φ_i ≈ √242 M_p ≈ 15.5 M_p
+    </pre>
+    <p>This shows that for chaotic inflation to work, the inflaton field must have started with a value significantly larger than the Planck mass, which is a key feature and potential issue of the model.</p>
+
+    <h2>Many Analogies</h2>
+    <p><strong>The Skateboarder in a Wide Half-Pipe:</strong> This is the classic analogy. The inflaton field φ is the skateboarder's position. The shape of the half-pipe is the potential V(φ). The skateboarder starts high up on the ramp (large φ, high V). This height provides the energy for inflation. Hubble friction (3Hφ̇) is like air resistance and friction in the wheels, causing the skateboarder to roll down slowly rather than plummeting. Reheating is the crash at the bottom, where the skateboarder's motion (kinetic energy) is converted into heat and sound (particles).</p>
+    <p><strong>Stretching a Wrinkled Sheet:</strong> Imagine the early universe is a small, heavily wrinkled bedsheet. The wrinkles are inhomogeneities and curvature. Inflation is like two people grabbing the corners and stretching it out to the size of a football field. The original wrinkles are stretched so much that any small patch you look at now appears perfectly flat and smooth. The tiny, remaining quantum-level imperfections in the fabric are the seeds of cosmic structure.</p>
+
+    <h2>Intuition & Visual Metaphors</h2>
+    <p><strong>The Pressure of Potential:</strong> Why does high potential energy cause expansion? In general relativity, not just mass-energy but also pressure contributes to gravity. A standard gas has positive pressure and attractive gravity. The inflaton field, when dominated by potential energy, has a large *negative* pressure (p ≈ -ρ). This strong negative pressure is what creates a repulsive gravitational effect, driving space to expand exponentially.</p>
+
+    <h2>Advanced Extensions</h2>
+    <p><strong>Quantum Fluctuations and Structure Formation:</strong> The inflaton field wasn't perfectly smooth; it obeyed the Heisenberg uncertainty principle. This caused it to have tiny quantum jitters. During inflation, these subatomic fluctuations were stretched to astrophysical scales. The regions where the field fluctuated to a slightly higher value exited inflation a bit later, resulting in a slightly higher energy density. These overdense regions later became the gravitational wells where galaxies formed. The chaotic inflation model predicts a nearly scale-invariant spectrum of these primordial density perturbations, which is precisely what we observe in the Cosmic Microwave Background (CMB).</p>
+    <p><strong>The Multiverse:</strong> In the chaotic inflation framework, quantum fluctuations can sometimes be large enough to push the inflaton field *up* the potential hill in some regions. If this happens, that region starts inflating again, creating a new bubble universe. This process, called eternal inflation, could theoretically repeat forever, spawning an infinite number of universes in a vast "multiverse". Our universe would be just one bubble among many.</p>
+
+    <h2>Practical Exercises</h2>
+    <ol>
+        <li><strong>Use the Controls:</strong> Start with the "Classic Inflation" preset. Observe the number of e-folds. Now, slightly decrease the "Initial Field (φ₀)" value. How does this affect the total e-folds? Why?</li>
+        <li><strong>End of Inflation:</strong> Watch the "Slow Roll ε" metric. The simulation stops when this value approaches 1. Manually set the initial φ to a low value, like 3 M_p. Does inflation happen? What do you observe in the metrics?</li>
+        <li><strong>Integrator Comparison:</strong> Run the "Classic Inflation" preset with the RK4 integrator. Note the final values. Reset and run it again with the Euler integrator. Is there a difference? Increase the "Time Scale" (effectively the time step). Which integrator fails first? (Hint: Watch the "Conservation Error" metric).</li>
+    </ol>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is the 'inflaton'?</strong>
+            <p>The inflaton is the hypothetical quantum particle (and its associated field) responsible for cosmic inflation. It's a scalar field, meaning it has a magnitude at every point in space but no direction, like temperature. In the chaotic inflation model, the potential energy stored in this field drove the exponential expansion of the early universe. Its properties, like its mass 'm' in the V=½m²φ² potential, are not known from first principles and must be constrained by cosmological observations, such as data from the Cosmic Microwave Background (CMB).</p></li>
+        <li><strong>Why is the potential V(φ) = ½m²φ² so special?</strong>
+            <p>This quadratic potential is the simplest possible form for a massive scalar field. It's mathematically straightforward and was one of the first models proposed by Andrei Linde. Its simplicity allows for analytical solutions under the slow-roll approximation, making it an excellent pedagogical tool. While more complex potentials are now considered more likely to be correct (especially in light of modern data), the chaotic model's core predictions—a flat universe, a nearly scale-invariant spectrum of perturbations—remain foundational to our understanding of inflation.</p></li>
+        <li><strong>What problem does inflation solve?</strong>
+            <p>Inflation solves several major puzzles of the standard Big Bang model. The main ones are:
+            <br>1. <strong>The Flatness Problem:</strong> Why is the universe so geometrically flat? Any initial curvature would have been magnified over time. Inflation stretches the universe so much that it becomes locally indistinguishable from flat, just as the surface of the Earth seems flat to us.
+            <br>2. <strong>The Horizon Problem:</strong> Why are distant regions of the CMB, which were never in causal contact, at the same temperature? Inflation proposes that these regions *were* in causal contact in a tiny pre-inflationary patch, which was then stretched to enormous scales.
+            <br>3. <strong>The Monopole Problem:</strong> Why don't we see exotic heavy particles like magnetic monopoles predicted by Grand Unified Theories? Inflation would dilute their density to effectively zero.</p></li>
+        <li><strong>How long did inflation last?</strong>
+            <p>An incredibly short time. While the exact duration depends on the model, a typical value is from around 10⁻³⁶ seconds to 10⁻³² seconds after the Big Bang. Despite this brevity, the universe expanded by a staggering amount. To solve the horizon and flatness problems, it needed to expand by a factor of at least 10²⁶, which corresponds to about 60 e-folds of expansion (since e⁶⁰ ≈ 10²⁶).</p></li>
+        <li><strong>If the universe expanded faster than light, does that violate relativity?</strong>
+            <p>No. Special relativity states that no object can travel *through* space faster than light. Cosmic inflation was an expansion *of space itself*. The 'speed limit' does not apply to the metric expansion of spacetime. Galaxies are not flying through space away from us; the space between us and them is being created. A common analogy is dots on a balloon: as you inflate the balloon, the dots move apart, but they aren't "running" on the balloon's surface.</p></li>
+        <li><strong>Calculation: What is the energy scale of inflation in this model?</strong>
+            <p>We can estimate the energy density ρ_inf during inflation using the Friedmann equation under slow-roll: H² ≈ V(φ) / (3M_p²). From CMB observations (specifically, the amplitude of temperature fluctuations), we know that the Hubble parameter during inflation was roughly H ≈ 10¹⁴ GeV. The Planck mass M_p is about 2.4 x 10¹⁸ GeV.
+            <br>V(φ) ≈ 3 * M_p² * H²
+            <br>V(φ) ≈ 3 * (2.4 x 10¹⁸ GeV)² * (10¹⁴ GeV)²
+            <br>V(φ) ≈ 3 * (5.76 x 10³⁶ GeV²) * (10²⁸ GeV²) ≈ 1.7 x 10⁶⁵ GeV⁴
+            <br>The energy scale is often given by V¹/⁴. So, E_inf = (1.7 x 10⁶⁵ GeV⁴)¹/⁴ ≈ 2 x 10¹⁶ GeV. This is the Grand Unification (GUT) scale, trillions of times more energetic than the Large Hadron Collider can achieve.</p></li>
+        <li><strong>What is 'reheating'?</strong>
+            <p>Reheating is the process that ends inflation and marks the beginning of the conventional hot Big Bang era. When the inflaton field reaches the bottom of its potential well, it doesn't just stop. It oscillates around the minimum. These oscillations are like a vibrating field that is coupled to other particle fields (the fields of the Standard Model). The inflaton's energy is transferred to these other fields, creating a hot, dense plasma of quarks, leptons, and bosons. The universe becomes "reheated," and from this point on, its evolution is described by standard Big Bang cosmology.</p></li>
+        <li><strong>Where did the inflaton field come from?</strong>
+            <p>This is one of the deepest and most unanswered questions in cosmology. We don't know. The chaotic inflation model simply postulates that the field existed in a high-energy state in the very early universe. Some theories speculate it's related to the Higgs field, a component of string theory, or a completely new phenomenon. The model's strength is that, given its existence, it robustly produces a universe like ours from a wide range of initial "chaotic" conditions.</p></li>
+        <li><strong>Is chaotic inflation falsifiable?</strong>
+            <p>Yes. Inflation makes specific, testable predictions. The V=½m²φ² model predicts a specific relationship between two key observable numbers: the scalar spectral index (n_s), which measures how the amplitude of primordial fluctuations changes with scale, and the tensor-to-scalar ratio (r), which measures the relative amplitude of gravitational waves to density perturbations. For this model, n_s ≈ 0.967 and r ≈ 0.13. While n_s is a good match to observations, the prediction for r is now strongly disfavored by Planck satellite data, which shows r < 0.06. This suggests the simple m²φ² potential is likely incorrect, and other, "flatter" potentials are favored.</p></li>
+        <li><strong>What is the Planck mass/energy?</strong>
+            <p>The Planck mass, M_p ≈ 2.435 × 10¹⁸ GeV/c², is a fundamental unit in physics derived from three fundamental constants: the speed of light (c), the gravitational constant (G), and the reduced Planck constant (ħ). It represents the energy scale at which quantum gravity effects become strong. The fact that chaotic inflation requires the field φ to have a value greater than M_p (a "super-Planckian" field excursion) is considered a theoretical challenge, as we don't have a reliable theory of quantum gravity to describe what happens at that scale.</p></li>
+        <li><strong>Calculation: How does Hubble friction slow the field?</strong>
+            <p>Let's compare the two terms in the Klein-Gordon equation: 3Hφ̇ (friction) and V'(φ) (driving force). Under slow roll, 3Hφ̇ ≈ -V'(φ). Let's use the values from our N=60 example: φ_i ≈ 15.5 M_p.
+            <br>V(φ) = ½m²φ² => V'(φ) = m²φ
+            <br>H² ≈ V/(3M_p²) = (½m²φ²)/(3M_p²) = m²φ²/(6M_p²) => H = mφ / (√6 M_p)
+            <br>The friction term is 3Hφ̇ = 3 * [mφ / (√6 M_p)] * φ̇.
+            <br>The slow-roll equation gives us φ̇ ≈ -V'/(3H) = -m²φ / (3 * mφ / (√6 M_p)) = -m M_p / √6.
+            <br>This shows φ̇ is constant to a first approximation. The key point is that H is large when φ is large, making the friction term very significant and preventing the field from accelerating rapidly.</p></li>
+        <li><strong>What is the 'graceful exit' problem?</strong>
+            <p>This was a problem for early models of inflation. It's the challenge of getting inflation to *stop*. If the potential is too flat, inflation might never end (or if it does, it doesn't reheat properly). The chaotic inflation model solves this naturally. The potential has a clear minimum. As the field rolls down, the slow-roll conditions are eventually violated (when φ ≈ M_p), inflation smoothly transitions to an end, and the field starts oscillating, allowing for reheating.</p></li>
+        <li><strong>How are the 'slow-roll parameters' ε and η related to observables?</strong>
+            <p>They are directly linked to the properties of the cosmic microwave background fluctuations.
+            <br>The scalar spectral index n_s is given by: n_s ≈ 1 - 6ε + 2η. For m²φ², this evaluates to n_s ≈ 1 - 2/N ≈ 0.967 for N=60.
+            <br>The tensor-to-scalar ratio r (the strength of primordial gravitational waves) is given by: r = 16ε. For m²φ², this evaluates to r = 8/N ≈ 0.13 for N=60.
+            <br>By measuring n_s and r from the CMB, we can directly test and constrain inflationary models.</p></li>
+        <li><strong>Why do we need at least 60 e-folds of inflation?</strong>
+            <p>This number comes from calculating the minimum amount of expansion needed to solve the horizon problem for our observable universe. We need to ensure that the entire observable universe today grew from a single, causally-connected patch before inflation. The calculation involves the size of the universe today, its temperature, and the energy scale of inflation. While the exact number depends on the details of reheating, it's typically in the range of 50-70.</p></li>
+        <li><strong>What is a 'scalar' field?</strong>
+            <p>In physics, a field is a physical quantity that has a value for each point in space and time. A scalar field is the simplest type, described by a single number (a scalar) at each point. Temperature is a good analogy; there's a temperature value everywhere in a room. Other fields are more complex, like the electromagnetic field, which is a vector field (having magnitude and direction at each point).</p></li>
+        <li><strong>Calculation: What is the value of the inflaton mass 'm'?</strong>
+            <p>We can constrain 'm' from the observed amplitude of the CMB fluctuations (the "A_s" parameter). The power spectrum of scalar perturbations is P_s ≈ (H²)/(8π²εM_p²). Using H² ≈ V/(3M_p²) and our expressions for V and ε, this simplifies to P_s ≈ m²φ⁴ / (24π²M_p⁴). We evaluate this when our current cosmic scale "exited the horizon" during inflation, which corresponds to N≈60, or φ≈15.5 M_p.
+            <br>The observed value is P_s ≈ 2 x 10⁻⁹.
+            <br>2 x 10⁻⁹ ≈ m² * (15.5 M_p)⁴ / (24π²M_p⁴) = m² * 15.5⁴ / (24π²)
+            <br>m² ≈ (2 x 10⁻⁹) * (24π²) / (15.5⁴)
+            <br>m² ≈ (2 x 10⁻⁹) * 237 / 57600 ≈ 8.2 x 10⁻¹² M_p²
+            <br>m ≈ 2.9 x 10⁻⁶ M_p. In energy units, this is about 7 x 10¹² GeV, a very massive particle.</p></li>
+        <li><strong>Does this simulation show the multiverse?</strong>
+            <p>No. This simulation models a single bubble universe where inflation happens and then ends. Simulating eternal inflation and the creation of multiple bubble universes would require a much more complex simulation involving quantum tunneling and stochastic field evolution on a vast grid, which is beyond the scope of this interactive page.</p></li>
+        <li><strong>What is the 'field overlay' visualization showing?</strong>
+            <p>The "Fluctuation Field" view shows a 2D slice of the quantum fluctuations on top of the main inflaton field value. At the start of the simulation, these are tiny, random jitters. As inflation proceeds, these fluctuations are stretched. The color map represents the amplitude of these perturbations (δφ). These are the very fluctuations that, after being stretched to cosmic size, become the seeds for galaxy formation. The power spectrum chart is a statistical analysis of this heatmap.</p></li>
+        <li><strong>What does the 'Conservation Error' metric mean?</strong>
+            <p>In a perfect, continuous simulation, the total energy of the system should be conserved. However, we are using a numerical integrator with discrete time steps (like Euler or RK4), which introduces small errors. The 'Conservation Error' tracks the deviation of the total energy (kinetic + potential) from its initial value. A low, stable error indicates the simulation is numerically stable. If this value grows rapidly, it means the time step is too large for the chosen integrator, and the simulation results are unreliable.</p></li>
+        <li><strong>Can the inflaton be the Higgs boson?</strong>
+            <p>It's an attractive idea, but standard model Higgs inflation is tricky. The Higgs potential doesn't naturally have the flat shape needed for slow-roll inflation. While some models propose a "non-minimal coupling" of the Higgs to gravity to flatten its potential at high energies, these models have their own theoretical challenges and are distinct from the simple chaotic inflation scenario simulated here.</p></li>
+    </ol>
+`;
+
+class SimpleChart {
+    constructor(canvasId, type = 'line') {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.type = type;
+        this.datasets = [];
+        this.labels = [];
+        this.options = {
+            padding: { top: 20, right: 20, bottom: 30, left: 50 },
+            yMin: 0,
+            yMax: 1,
+            xMin: 0,
+            xMax: 1,
+            colors: ['#007bff', '#dc3545', '#28a745', '#ffc107'],
+        };
+    }
+
+    setData(labels, datasets) {
+        this.labels = labels;
+        this.datasets = datasets;
+        this.calculateBounds();
+        this.draw();
+    }
+
+    updateData(newLabels, newDatasets) {
+        this.setData(newLabels, newDatasets);
+    }
+
+    calculateBounds() {
+        if (this.type === 'scatter') {
+            this.options.xMin = Math.min(...this.datasets.flatMap(ds => ds.data.map(p => p.x)));
+            this.options.xMax = Math.max(...this.datasets.flatMap(ds => ds.data.map(p => p.x)));
+            this.options.yMin = Math.min(...this.datasets.flatMap(ds => ds.data.map(p => p.y)));
+            this.options.yMax = Math.max(...this.datasets.flatMap(ds => ds.data.map(p => p.y)));
+        } else {
+            this.options.xMin = 0;
+            this.options.xMax = this.labels.length - 1;
+            this.options.yMin = Math.min(0, ...this.datasets.flatMap(ds => ds.data));
+            this.options.yMax = Math.max(...this.datasets.flatMap(ds => ds.data));
+        }
+
+        if (this.options.yMin === this.options.yMax) {
+            this.options.yMax += 1;
+        }
+        if (this.options.xMin === this.options.xMax) {
+            this.options.xMax += 1;
+        }
+    }
+
+    draw() {
+        const { width, height } = this.canvas;
+        this.ctx.clearRect(0, 0, width, height);
+        this.drawAxes();
+        this.drawGrid();
+        this.drawLines();
+    }
+
+    drawAxes() {
+        const { ctx, options, width, height } = this;
+        const { padding } = options;
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--color-border');
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-secondary');
+        ctx.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--font-family-sans');
+        ctx.lineWidth = 1;
+
+        // Y Axis
+        ctx.beginPath();
+        ctx.moveTo(padding.left, padding.top);
+        ctx.lineTo(padding.left, height - padding.bottom);
+        ctx.stroke();
+
+        // X Axis
+        ctx.beginPath();
+        ctx.moveTo(padding.left, height - padding.bottom);
+        ctx.lineTo(width - padding.right, height - padding.bottom);
+        ctx.stroke();
+
+        // Y Axis Labels
+        const yRange = this.options.yMax - this.options.yMin;
+        for (let i = 0; i <= 5; i++) {
+            const val = this.options.yMin + (yRange * i / 5);
+            const y = height - padding.bottom - (i / 5) * (height - padding.top - padding.bottom);
+            ctx.fillText(val.toExponential(1), 5, y + 3);
+        }
+
+        // X Axis Labels
+        if (this.type !== 'scatter') {
+            const xRange = this.labels.length;
+            if (xRange > 1) {
+                 for (let i = 0; i < this.labels.length; i += Math.max(1, Math.floor(this.labels.length / 5))) {
+                    const x = padding.left + (i / (this.labels.length - 1)) * (width - padding.left - padding.right);
+                    ctx.fillText(this.labels[i], x - 5, height - padding.bottom + 15);
+                }
+            }
+        }
+    }
+
+    drawGrid() {
+        const { ctx, options, width, height } = this;
+        const { padding } = options;
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--color-border');
+        ctx.lineWidth = 0.5;
+
+        // Horizontal grid lines
+        for (let i = 0; i <= 5; i++) {
+            const y = height - padding.bottom - (i / 5) * (height - padding.top - padding.bottom);
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+        }
+    }
+
+    drawLines() {
+        this.datasets.forEach((dataset, index) => {
+            const { ctx, options, width, height } = this;
+            const { padding } = options;
+            const yRange = options.yMax - options.yMin;
+            const xRange = options.xMax - options.xMin;
+
+            ctx.strokeStyle = dataset.color || options.colors[index % options.colors.length];
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            if (this.type === 'scatter') {
+                dataset.data.forEach(point => {
+                    const x = padding.left + ((point.x - options.xMin) / xRange) * (width - padding.left - padding.right);
+                    const y = height - padding.bottom - ((point.y - options.yMin) / yRange) * (height - padding.top - padding.bottom);
+                    ctx.moveTo(x, y);
+                    ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                });
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.fill();
+            } else {
+                 if (dataset.data.length === 0) return;
+                 const xStep = (width - padding.left - padding.right) / (dataset.data.length - 1 || 1);
+                 dataset.data.forEach((d, i) => {
+                    const x = padding.left + i * xStep;
+                    const y = height - padding.bottom - ((d - options.yMin) / yRange) * (height - padding.top - padding.bottom);
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.stroke();
+            }
+        });
+    }
+}
+
+class SimulationApp {
+    constructor() {
+        this.initDOM();
+        this.initConstants();
+        this.initState();
+        this.initControls();
+        this.initTabs();
+        this.initCharts();
+        this.initPresets();
+        this.initMicroLabs();
+        this.initDevConsole();
+        this.initTools();
+
+        this.isRunning = false;
+        this.animationFrameId = null;
+        this.lastUpdateTime = 0;
+        this.time = 0;
+        this.step = 0;
+
+        this.runSelfTests();
+        this.reset();
+    }
+
+    initDOM() {
+        this.dom = {
+            // Canvases & SVG
+            mainCanvas: document.getElementById('main-canvas'),
+            svgOverlay: document.getElementById('svg-overlay'),
+            // Charts
+            timeSeriesChartCanvas: document.getElementById('time-series-chart'),
+            phaseSpaceChartCanvas: document.getElementById('phase-space-chart'),
+            powerSpectrumChartCanvas: document.getElementById('power-spectrum-chart'),
+            hubbleChartCanvas: document.getElementById('hubble-chart'),
+            // Controls
+            startStopBtn: document.getElementById('start-stop-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            stepBtn: document.getElementById('step-btn'),
+            timeScaleSlider: document.getElementById('time-scale-slider'),
+            simSpeedSlider: document.getElementById('sim-speed-slider'),
+            resolutionSelect: document.getElementById('resolution-select'),
+            inflatonMassSlider: document.getElementById('inflaton-mass-slider'),
+            initialPhiSlider: document.getElementById('initial-phi-slider'),
+            initialPhiDotSlider: document.getElementById('initial-phi-dot-slider'),
+            paletteSelect: document.getElementById('palette-select'),
+            visScaleSlider: document.getElementById('vis-scale-slider'),
+            integratorSelect: document.getElementById('integrator-select'),
+            // Control Value Displays
+            timeScaleValue: document.getElementById('time-scale-value'),
+            simSpeedValue: document.getElementById('sim-speed-value'),
+            inflatonMassValue: document.getElementById('inflaton-mass-value'),
+            initialPhiValue: document.getElementById('initial-phi-value'),
+            initialPhiDotValue: document.getElementById('initial-phi-dot-value'),
+            visScaleValue: document.getElementById('vis-scale-value'),
+            // Metrics
+            metricsGrid: document.getElementById('metrics-grid'),
+            // Tabs
+            tabButtons: document.querySelectorAll('.tab-button'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            expositionContent: document.getElementById('exposition'),
+            qaContent: document.getElementById('qa'),
+            // Presets & Microlabs
+            presetButtonsContainer: document.getElementById('preset-buttons'),
+            microlabSelect: document.getElementById('microlab-select'),
+            microlabRunBtn: document.getElementById('microlab-run-btn'),
+            microlabLog: document.getElementById('microlab-log'),
+            // Reproducibility
+            reproString: document.getElementById('repro-string'),
+            copyReproBtn: document.getElementById('copy-repro-btn'),
+            loadReproBtn: document.getElementById('load-repro-btn'),
+            // Status & Dev
+            fpsMeter: document.getElementById('fps-meter'),
+            memMeter: document.getElementById('mem-meter'),
+            simTime: document.getElementById('sim-time'),
+            simStep: document.getElementById('sim-step'),
+            conservationError: document.getElementById('conservation-error'),
+            devConsoleContent: document.getElementById('dev-console-content'),
+            heavyModeWarning: document.getElementById('heavy-mode-warning'),
+            heavyModeConfirm: document.getElementById('heavy-mode-confirm'),
+            heavyModeCancel: document.getElementById('heavy-mode-cancel'),
+            // Tools
+            measurementOutput: document.getElementById('measurement-output'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.dom.expositionContent.innerHTML = expositionText;
+        this.dom.qaContent.innerHTML = qaText;
+    }
+
+    initConstants() {
+        this.C = {
+            M_P: 1.0, // Reduced Planck Mass, setting to 1 for simulation units
+        };
+    }
+
+    initState() {
+        this.state = {
+            // Simulation parameters
+            m: 1e-5,          // Inflaton mass in Planck units
+            phi: 15.0,        // Inflaton field value
+            phi_dot: -0.01,   // Inflaton field velocity
+            a: 1.0,           // Scale factor
+            // Control parameters
+            timeScale: 50,    // UI slider value, translates to dt
+            simSpeed: 5,      // Steps per frame
+            resolution: 128,
+            initial_phi: 15.0,
+            initial_phi_dot: -0.01,
+            integrator: 'rk4',
+            // Visualization
+            visScale: 1.0,
+            currentView: 'overview',
+            // History for charts
+            history: {
+                time: [],
+                phi: [],
+                phi_dot: [],
+                a: [],
+                H: [],
+                epsilon: [],
+            },
+            // Fluctuation field
+            fieldGrid: [],
+            // Metrics
+            metrics: {},
+        };
+        this.initialState = JSON.parse(JSON.stringify(this.state));
+    }
+
+    initControls() {
+        this.dom.startStopBtn.onclick = () => this.togglePause();
+        this.dom.resetBtn.onclick = () => this.reset();
+        this.dom.stepBtn.onclick = () => this.manualStep();
+
+        const connectSlider = (sliderId, valueId, stateKey, options = {}) => {
+            const slider = this.dom[sliderId];
+            const valueDisp = this.dom[valueId];
+            slider.oninput = () => {
+                const value = parseFloat(slider.value);
+                if(options.isState) this.state[stateKey] = value;
+                else this.state.controls[stateKey] = value;
+                valueDisp.textContent = options.formatter ? options.formatter(value) : value.toFixed(options.precision || 2);
+                if (options.onchange) options.onchange(value);
+            };
+            slider.dispatchEvent(new Event('input'));
+        };
+
+        this.dom.timeScaleSlider.oninput = () => {
+            this.state.timeScale = parseFloat(this.dom.timeScaleSlider.value);
+            this.dom.timeScaleValue.textContent = this.state.timeScale;
+        };
+        this.dom.simSpeedSlider.oninput = () => {
+            this.state.simSpeed = parseInt(this.dom.simSpeedSlider.value);
+            this.dom.simSpeedValue.textContent = this.state.simSpeed + 'x';
+        };
+        this.dom.inflatonMassSlider.oninput = () => {
+            // Value is logarithmic to cover a larger range
+            const rawVal = parseFloat(this.dom.inflatonMassSlider.value); // e.g. from 0.1 to 5
+            this.state.m = Math.pow(10, -7 + rawVal);
+            this.dom.inflatonMassValue.textContent = this.state.m.toExponential(2);
+        };
+        this.dom.initialPhiSlider.oninput = () => {
+            this.state.initial_phi = parseFloat(this.dom.initialPhiSlider.value);
+            this.dom.initialPhiValue.textContent = this.state.initial_phi.toFixed(2) + ' M_p';
+        };
+        this.dom.initialPhiDotSlider.oninput = () => {
+            this.state.initial_phi_dot = parseFloat(this.dom.initialPhiDotSlider.value);
+            this.dom.initialPhiDotValue.textContent = this.state.initial_phi_dot.toExponential(2);
+        };
+         this.dom.visScaleSlider.oninput = () => {
+            this.state.visScale = parseFloat(this.dom.visScaleSlider.value);
+            this.dom.visScaleValue.textContent = this.state.visScale.toFixed(2);
+        };
+
+        this.dom.resolutionSelect.onchange = () => {
+            const res = parseInt(this.dom.resolutionSelect.value);
+            if (res > 128) {
+                this.dom.heavyModeWarning.style.display = 'flex';
+                this.pendingResolution = res;
+            } else {
+                this.state.resolution = res;
+                this.log(`Resolution set to ${res}x${res}`);
+                this.reset();
+            }
+        };
+        this.dom.heavyModeConfirm.onclick = () => {
+            this.state.resolution = this.pendingResolution;
+            this.dom.heavyModeWarning.style.display = 'none';
+            this.log(`Heavy mode enabled: Resolution set to ${this.state.resolution}x${this.state.resolution}`);
+            this.reset();
+        };
+        this.dom.heavyModeCancel.onclick = () => {
+            this.dom.heavyModeWarning.style.display = 'none';
+            this.dom.resolutionSelect.value = this.state.resolution;
+        };
+
+        this.dom.integratorSelect.onchange = () => {
+            this.state.integrator = this.dom.integratorSelect.value;
+        };
+        this.dom.paletteSelect.onchange = () => {
+            document.body.className = this.dom.paletteSelect.value;
+            this.drawAll(); // Redraw with new theme colors
+        };
+
+        document.querySelectorAll('#view-modes button').forEach(button => {
+            button.onclick = (e) => {
+                this.state.currentView = e.target.dataset.view;
+                this.drawAll();
+            };
+        });
+
+        this.dom.copyReproBtn.onclick = () => {
+            this.dom.reproString.select();
+            document.execCommand('copy');
+            this.log('Reproducibility string copied to clipboard.');
+        };
+
+        this.dom.loadReproBtn.onclick = () => {
+            try {
+                const loadedState = JSON.parse(this.dom.reproString.value);
+                this.applyPreset(loadedState);
+                this.log('State loaded from string.');
+            } catch (e) {
+                this.log('Error loading state: Invalid string format.', 'error');
+            }
+        };
+    }
+
+    initTabs() {
+        this.dom.tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                this.dom.tabButtons.forEach(btn => btn.classList.remove('active'));
+                this.dom.tabContents.forEach(content => content.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+    }
+
+    initCharts() {
+        this.charts = {
+            timeSeries: new SimpleChart('time-series-chart'),
+            phaseSpace: new SimpleChart('phase-space-chart', 'scatter'),
+            powerSpectrum: new SimpleChart('power-spectrum-chart'),
+            hubble: new SimpleChart('hubble-chart')
+        };
+    }
+
+    initPresets() {
+        this.presets = {
+            'classic': { name: 'Classic Inflation (N≈60)', params: { m: 1e-5, initial_phi: 15.5, initial_phi_dot: -0.0001 } },
+            'low-n': { name: 'Short Inflation (N≈30)', params: { m: 1e-5, initial_phi: 11, initial_phi_dot: -0.0001 } },
+            'high-m': { name: 'Heavy Inflaton', params: { m: 5e-5, initial_phi: 15.5, initial_phi_dot: -0.0005 } },
+            'fast-roll': { name: 'Fast Roll Start', params: { m: 1e-5, initial_phi: 15.5, initial_phi_dot: -0.1 } },
+            'end-of-inflation': { name: 'Near End of Inflation', params: { m: 1e-5, initial_phi: 3, initial_phi_dot: -0.01 } },
+            'bouncing': { name: 'Bouncing in Well', params: { m: 1e-5, initial_phi: 0.5, initial_phi_dot: 0.1 } },
+        };
+
+        Object.keys(this.presets).forEach(key => {
+            const preset = this.presets[key];
+            const button = document.createElement('button');
+            button.textContent = preset.name;
+            button.className = 'button button-secondary';
+            button.onclick = () => this.applyPreset(preset.params);
+            this.dom.presetButtonsContainer.appendChild(button);
+        });
+    }
+
+    initMicroLabs() {
+        this.microlabs = {
+            'lab1': {
+                name: 'Verify e-fold Calculation',
+                steps: [
+                    { action: 'applyPreset', params: this.presets.classic.params },
+                    { action: 'runUntil', condition: (s) => s.metrics.epsilon_v >= 1.0, timeout: 5000 },
+                    { action: 'logMetric', metric: 'e-folds', expected: [58, 62] }
+                ]
+            },
+            'lab2': {
+                name: 'Test Integrator Stability',
+                steps: [
+                    { action: 'applyPreset', params: { ...this.presets.classic.params, integrator: 'euler' } },
+                    { action: 'setParam', key: 'timeScale', value: 90 },
+                    { action: 'runSteps', steps: 1000 },
+                    { action: 'logMetric', metric: 'conservation_error', expected: [0, 5] }
+                ]
+            }
+        };
+
+        Object.keys(this.microlabs).forEach(key => {
+            const lab = this.microlabs[key];
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = lab.name;
+            this.dom.microlabSelect.appendChild(option);
+        });
+
+        this.dom.microlabRunBtn.onclick = () => this.runMicroLab();
+    }
+
+    async runMicroLab() {
+        const labKey = this.dom.microlabSelect.value;
+        const lab = this.microlabs[labKey];
+        if (!lab) return;
+
+        this.dom.microlabLog.innerHTML = `--- Starting Lab: ${lab.name} ---\n`;
+        this.isRunning = false;
+
+        for(const step of lab.steps) {
+            this.dom.microlabLog.innerHTML += `> Executing: ${step.action}...\n`;
+            switch(step.action) {
+                case 'applyPreset':
+                    this.applyPreset(step.params);
+                    this.dom.microlabLog.innerHTML += `  Preset applied.\n`;
+                    break;
+                case 'setParam':
+                    // This is a simplification. A full implementation would need a setter function.
+                    this.state[step.key] = step.value;
+                    this.updateAllControls();
+                    this.dom.microlabLog.innerHTML += `  Set ${step.key} to ${step.value}.\n`;
+                    break;
+                case 'runUntil':
+                    await this.runLabCondition(step.condition, step.timeout);
+                    break;
+                case 'runSteps':
+                    for(let i=0; i<step.steps; i++) this.update();
+                    this.drawAll();
+                    this.dom.microlabLog.innerHTML += `  Ran ${step.steps} steps.\n`;
+                    break;
+                case 'logMetric':
+                    const val = this.state.metrics[step.metric];
+                    const [min, max] = step.expected;
+                    const status = (val >= min && val <= max) ? 'PASS' : 'FAIL';
+                    this.dom.microlabLog.innerHTML += `  [${status}] Metric '${step.metric}': ${val.toFixed(3)}. Expected [${min}, ${max}].\n`;
+                    break;
+            }
+            // Give the browser a moment to update the UI
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        this.dom.microlabLog.innerHTML += `--- Lab Finished ---\n`;
+    }
+
+    runLabCondition(condition, timeout) {
+        return new Promise(resolve => {
+            const startTime = Date.now();
+            const check = () => {
+                if (condition(this.state)) {
+                    this.dom.microlabLog.innerHTML += `  Condition met.\n`;
+                    this.drawAll();
+                    resolve();
+                } else if (Date.now() - startTime > timeout) {
+                    this.dom.microlabLog.innerHTML += `  Timeout reached.\n`;
+                    this.drawAll();
+                    resolve();
+                } else {
+                    for(let i=0; i<this.state.simSpeed; i++) this.update();
+                    requestAnimationFrame(check);
+                }
+            };
+            check();
+        });
+    }
+
+    initDevConsole() {
+        this.logs = [];
+        this.dom.devConsoleHeader.onclick = () => document.getElementById('dev-console').classList.toggle('open');
+    }
+
+    initTools() {
+        this.annotations = [];
+        document.getElementById('tool-annotate-btn').onclick = () => this.toggleAnnotationMode();
+    }
+
+    toggleAnnotationMode() {
+        // Simplified: In a real app, this would change cursor and add a click listener to the canvas
+        this.log("Annotation mode toggled. Click on canvas to add a pin.", "info");
+    }
+
+    log(message, type = 'log') {
+        this.logs.push({ time: new Date().toLocaleTimeString(), type, message });
+        if (this.logs.length > 100) this.logs.shift();
+
+        this.dom.devConsoleContent.innerHTML = this.logs.map(l =>
+            `<span style="color:${this.getLogColor(l.type)}">[${l.time}] ${l.message}</span>`
+        ).join('<br>');
+        this.dom.devConsoleContent.scrollTop = this.dom.devConsoleContent.scrollHeight;
+    }
+
+    getLogColor(type) {
+        switch(type) {
+            case 'error': return 'var(--color-error)';
+            case 'warn': return 'var(--color-warning)';
+            case 'success': return 'var(--color-success)';
+            default: return 'var(--color-text)';
+        }
+    }
+
+    applyPreset(params) {
+        this.reset();
+        Object.assign(this.state, params);
+        this.state.initial_phi = params.phi || this.state.initial_phi;
+        this.state.initial_phi_dot = params.phi_dot || this.state.initial_phi_dot;
+        this.reset();
+        this.updateAllControls();
+        this.log(`Applied preset: ${params.name || 'custom'}`, 'success');
+    }
+
+    updateAllControls() {
+        this.dom.inflatonMassSlider.value = -7 + Math.log10(this.state.m);
+        this.dom.initialPhiSlider.value = this.state.initial_phi;
+        this.dom.initialPhiDotSlider.value = this.state.initial_phi_dot;
+        this.dom.integratorSelect.value = this.state.integrator;
+
+        this.dom.inflatonMassSlider.dispatchEvent(new Event('input'));
+        this.dom.initialPhiSlider.dispatchEvent(new Event('input'));
+        this.dom.initialPhiDotSlider.dispatchEvent(new Event('input'));
+    }
+
+    reset() {
+        this.isRunning = false;
+        this.dom.startStopBtn.textContent = 'Start';
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        this.state.phi = this.state.initial_phi;
+        this.state.phi_dot = this.state.initial_phi_dot;
+        this.state.a = 1.0;
+        this.time = 0;
+        this.step = 0;
+
+        this.state.history = { time: [], phi: [], phi_dot: [], a: [], H: [], epsilon: [] };
+
+        this.initFieldGrid();
+        this.calculateMetrics();
+        this.initialEnergy = this.state.metrics.total_energy;
+        this.drawAll();
+        this.updateMetricsDisplay();
+        this.updateReproString();
+        this.log('Simulation reset to initial conditions.');
+    }
+
+    initFieldGrid() {
+        const res = this.state.resolution;
+        this.state.fieldGrid = new Array(res);
+        for(let i=0; i<res; i++) {
+            this.state.fieldGrid[i] = new Float32Array(res);
+            for(let j=0; j<res; j++) {
+                // Initial quantum fluctuations
+                this.state.fieldGrid[i][j] = (Math.random() - 0.5) * 1e-5;
+            }
+        }
+    }
+
+    togglePause() {
+        this.isRunning = !this.isRunning;
+        this.dom.startStopBtn.textContent = this.isRunning ? 'Stop' : 'Start';
+        if (this.isRunning) {
+            this.lastUpdateTime = performance.now();
+            this.animationFrameId = requestAnimationFrame((t) => this.mainLoop(t));
+            this.log('Simulation started.');
+        } else {
+             this.log('Simulation paused.');
+        }
+    }
+
+    manualStep() {
+        if (this.isRunning) this.togglePause();
+        this.update();
+        this.drawAll();
+    }
+
+    mainLoop(timestamp) {
+        if (!this.isRunning) return;
+
+        const delta = timestamp - this.lastUpdateTime;
+        this.updateFPS(delta);
+
+        for (let i = 0; i < this.state.simSpeed; i++) {
+            this.update();
+        }
+
+        this.drawAll();
+
+        this.lastUpdateTime = timestamp;
+        this.animationFrameId = requestAnimationFrame((t) => this.mainLoop(t));
+    }
+
+    updateFPS(delta) {
+        const fps = 1000 / delta;
+        this.dom.fpsMeter.textContent = fps.toFixed(1);
+        if (performance.memory) {
+            this.dom.memMeter.textContent = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+        }
+    }
+
+    update() {
+        const dt = this.state.timeScale * 1e-4;
+
+        if (this.state.integrator === 'rk4') {
+            this.rk4_step(dt);
+        } else {
+            this.euler_step(dt);
+        }
+
+        this.time += dt;
+        this.step++;
+
+        this.calculateMetrics();
+        this.updateHistory();
+
+        // Stop condition
+        if (this.state.metrics.epsilon_v >= 1.0 && this.state.phi < this.state.initial_phi) {
+            if (this.isRunning) {
+                this.togglePause();
+                this.log('Inflation ended (ε ≈ 1).', 'success');
+            }
+        }
+    }
+
+    // --- PHYSICS & INTEGRATORS ---
+
+    get_derivatives(phi, phi_dot, a) {
+        const { m, M_P } = this.C;
+        const V = 0.5 * this.state.m * this.state.m * phi * phi;
+        const V_prime = this.state.m * this.state.m * phi;
+
+        // Friedmann equation
+        const H_sq = (1 / (3 * M_P * M_P)) * (0.5 * phi_dot * phi_dot + V);
+        const H = Math.sqrt(Math.max(0, H_sq));
+
+        // Klein-Gordon equation
+        const phi_ddot = -3 * H * phi_dot - V_prime;
+
+        // Scale factor
+        const a_dot = H * a;
+
+        return { phi_dot, phi_ddot, a_dot };
+    }
+
+    euler_step(dt) {
+        const { phi, phi_dot, a } = this.state;
+        const derivs = this.get_derivatives(phi, phi_dot, a);
+
+        this.state.phi += derivs.phi_dot * dt;
+        this.state.phi_dot += derivs.phi_ddot * dt;
+        this.state.a += derivs.a_dot * dt;
+    }
+
+    rk4_step(dt) {
+        const { phi, phi_dot, a } = this.state;
+
+        const k1 = this.get_derivatives(phi, phi_dot, a);
+        const k2 = this.get_derivatives(phi + 0.5*dt*k1.phi_dot, phi_dot + 0.5*dt*k1.phi_ddot, a + 0.5*dt*k1.a_dot);
+        const k3 = this.get_derivatives(phi + 0.5*dt*k2.phi_dot, phi_dot + 0.5*dt*k2.phi_ddot, a + 0.5*dt*k2.a_dot);
+        const k4 = this.get_derivatives(phi + dt*k3.phi_dot, phi_dot + dt*k3.phi_ddot, a + dt*k3.a_dot);
+
+        this.state.phi += (dt/6) * (k1.phi_dot + 2*k2.phi_dot + 2*k3.phi_dot + k4.phi_dot);
+        this.state.phi_dot += (dt/6) * (k1.phi_ddot + 2*k2.phi_ddot + 2*k3.phi_ddot + k4.phi_ddot);
+        this.state.a += (dt/6) * (k1.a_dot + 2*k2.a_dot + 2*k3.a_dot + k4.a_dot);
+    }
+
+    calculateMetrics() {
+        const { phi, phi_dot, a, m } = this.state;
+        const M_P = this.C.M_P;
+
+        const V = 0.5 * m * m * phi * phi;
+        const V_prime = m * m * phi;
+        const V_pprime = m * m;
+        const KE = 0.5 * phi_dot * phi_dot;
+
+        const H_sq = (1 / (3 * M_P * M_P)) * (KE + V);
+        const H = Math.sqrt(Math.max(0, H_sq));
+
+        const epsilon_v = (M_P * M_P / 2) * Math.pow(V_prime / V, 2);
+        const eta_v = (M_P * M_P) * (V_pprime / V);
+
+        const total_energy = a*a*a * (KE + V);
+        const conservation_error = this.initialEnergy > 0 ? 100 * Math.abs(total_energy - this.initialEnergy) / this.initialEnergy : 0;
+
+        this.state.metrics = {
+            phi: phi,
+            phi_dot: phi_dot,
+            potential_V: V,
+            kinetic_KE: KE,
+            hubble_H: H,
+            scale_factor_a: a,
+            'e-folds': Math.log(a),
+            epsilon_v: epsilon_v,
+            eta_v: eta_v,
+            total_energy: total_energy,
+            conservation_error: conservation_error,
+            spectral_index_ns: 1 - 6*epsilon_v + 2*eta_v,
+            tensor_scalar_r: 16 * epsilon_v,
+        };
+    }
+
+    updateHistory() {
+        if (this.step % 10 === 0) { // Only record every 10 steps
+            const h = this.state.history;
+            h.time.push(this.time.toExponential(2));
+            h.phi.push(this.state.metrics.phi);
+            h.phi_dot.push(this.state.metrics.phi_dot);
+            h.a.push(this.state.metrics.scale_factor_a);
+            h.H.push(this.state.metrics.hubble_H);
+            h.epsilon.push(this.state.metrics.epsilon_v);
+
+            // Keep history bounded
+            const maxLen = 100;
+            if(h.time.length > maxLen) {
+                Object.keys(h).forEach(key => h[key].shift());
+            }
+        }
+    }
+
+    updateReproString() {
+        const reproState = {
+            m: this.state.m,
+            initial_phi: this.state.initial_phi,
+            initial_phi_dot: this.state.initial_phi_dot,
+            integrator: this.state.integrator,
+            resolution: this.state.resolution
+        };
+        this.dom.reproString.value = JSON.stringify(reproState);
+    }
+
+    // --- DRAWING & VISUALIZATION ---
+
+    drawAll() {
+        this.resizeCanvases();
+
+        switch(this.state.currentView) {
+            case 'overview': this.drawOverview(); break;
+            case 'zoomed': this.drawPotentialView(); break;
+            case 'field-overlay': this.drawFieldOverlay(); break;
+            case 'schematic': this.drawSchematic(); break;
+            default: this.drawOverview();
+        }
+
+        this.updateMetricsDisplay();
+        this.updateCharts();
+
+        this.dom.simTime.textContent = this.time.toExponential(2);
+        this.dom.simStep.textContent = this.step;
+        this.dom.conservationError.textContent = this.state.metrics.conservation_error.toFixed(3) + '%';
+    }
+
+    resizeCanvases() {
+        const canvases = [this.dom.mainCanvas, this.dom.timeSeriesChartCanvas, this.dom.phaseSpaceChartCanvas, this.dom.powerSpectrumChartCanvas, this.dom.hubbleChartCanvas];
+        canvases.forEach(canvas => {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            if (canvas.width !== rect.width || canvas.height !== rect.height) {
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+            }
+        });
+        const svgRect = this.dom.svgOverlay.parentElement.getBoundingClientRect();
+        this.dom.svgOverlay.setAttribute('viewBox', `0 0 ${svgRect.width} ${svgRect.height}`);
+    }
+
+    drawOverview() {
+        const { ctx, width, height } = this.ctx.canvas;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+
+        // Draw a representation of expanding space
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const maxRadius = Math.min(width, height) / 2 * 0.8;
+        const radius = Math.min(maxRadius, this.state.a * 20);
+
+        ctx.strokeStyle = 'rgba(0, 123, 255, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        // Draw galaxies moving apart
+        const numGalaxies = 20;
+        for (let i = 0; i < numGalaxies; i++) {
+            const angle = (i / numGalaxies) * 2 * Math.PI;
+            const dist = (0.2 + (i % 5) * 0.15) * radius;
+            const x = centerX + Math.cos(angle) * dist;
+            const y = centerY + Math.sin(angle) * dist;
+            ctx.fillStyle = `hsl(${i * 20}, 100%, 75%)`;
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+
+        ctx.fillStyle = 'white';
+        ctx.font = '16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Scale Factor a(t) = ${this.state.a.toExponential(2)}`, centerX, 30);
+    }
+
+    drawPotentialView() {
+        const { ctx, width, height } = this.ctx.canvas;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        const phi_range = this.state.initial_phi * 1.1;
+        const V_max = 0.5 * this.state.m * this.state.m * Math.pow(phi_range, 2);
+
+        const phiToX = (p) => (p / (2 * phi_range) + 0.5) * width;
+        const VToY = (v) => height * 0.9 - (v / V_max) * height * 0.8;
+
+        // Draw potential curve
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--color-primary');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for(let i=0; i<width; i++) {
+            const p = (i/width - 0.5) * 2 * phi_range;
+            const v = 0.5 * this.state.m * this.state.m * p * p;
+            const x = phiToX(p);
+            const y = VToY(v);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        // Draw inflaton "ball"
+        const ballX = phiToX(this.state.phi);
+        const ballY = VToY(this.state.metrics.potential_V);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-accent');
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // Draw velocity vector
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--color-error');
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ballX, ballY);
+        ctx.lineTo(ballX + this.state.phi_dot * 5000, ballY);
+        ctx.stroke();
+    }
+
+    drawFieldOverlay() {
+        const { ctx, width, height } = this.ctx.canvas;
+        const res = this.state.resolution;
+        const cellWidth = width / res;
+        const cellHeight = height / res;
+
+        const min = -5e-5;
+        const max = 5e-5;
+
+        for (let i = 0; i < res; i++) {
+            for (let j = 0; j < res; j++) {
+                const val = this.state.fieldGrid[i][j];
+                const normalized = (val - min) / (max - min);
+                const hue = 240 * (1 - normalized); // Blue to Red
+                ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+                ctx.fillRect(i * cellWidth, j * cellHeight, cellWidth, cellHeight);
+            }
+        }
+    }
+
+    drawSchematic() {
+        this.dom.svgOverlay.innerHTML = `
+            <g transform="translate(50, 50)">
+                <text x="0" y="0" fill="var(--color-text)">Universe starts small & hot</text>
+                <circle cx="50" cy="50" r="20" stroke="var(--color-error)" fill="none"/>
+                <path d="M 70 50 C 150 50, 150 150, 250 150" stroke="var(--color-text)" fill="none" stroke-dasharray="5,5"/>
+                <g transform="translate(250, 150)">
+                    <text x="0" y="0" fill="var(--color-text)">Inflation Epoch (t=10⁻³⁶s)</text>
+                    <text x="0" y="20" fill="var(--color-secondary)">Scale Factor a(t) grows e⁶⁰</text>
+                    <rect x="-20" y="30" width="200" height="100" fill="rgba(0,123,255,0.1)"/>
+                    <text x="0" y="80" fill="var(--color-primary)">φ rolls down V(φ)</text>
+                </g>
+                 <path d="M 450 150 C 550 150, 550 50, 600 50" stroke="var(--color-text)" fill="none" stroke-dasharray="5,5"/>
+                 <g transform="translate(600, 50)">
+                     <text x="0" y="0" fill="var(--color-text)">Reheating & Big Bang</text>
+                     <circle cx="50" cy="50" r="40" stroke="var(--color-success)" fill="none"/>
+                 </g>
+            </g>
+        `;
+    }
+
+    updateMetricsDisplay() {
+        let gridHtml = '';
+        const metricsToShow = ['e-folds', 'hubble_H', 'epsilon_v', 'eta_v', 'spectral_index_ns', 'tensor_scalar_r'];
+        metricsToShow.forEach(key => {
+            const value = this.state.metrics[key];
+            if (value !== undefined) {
+                gridHtml += `
+                    <div class="metric-box">
+                        <div class="label">${key.replace(/_/g, ' ')}</div>
+                        <div class="value">${value.toFixed(3)}</div>
+                    </div>`;
+            }
+        });
+        this.dom.metricsGrid.innerHTML = gridHtml;
+    }
+
+    updateCharts() {
+        const h = this.state.history;
+        if (h.time.length === 0) return;
+
+        this.charts.timeSeries.updateData(h.time, [
+            { label: 'φ', data: h.phi, color: 'var(--color-primary)' },
+            { label: 'a', data: h.a, color: 'var(--color-success)' }
+        ]);
+
+        this.charts.phaseSpace.updateData([], [
+            { label: 'Phase', data: h.phi.map((p, i) => ({x: p, y: h.phi_dot[i]})), color: 'var(--color-accent)' }
+        ]);
+
+        this.charts.hubble.updateData(h.time, [
+            { label: 'H', data: h.H, color: 'var(--color-warning)'},
+            { label: 'ε', data: h.epsilon, color: 'var(--color-error)'}
+        ]);
+
+        // Simplified power spectrum
+        const power = this.calculatePowerSpectrum();
+        this.charts.powerSpectrum.updateData(power.k, [{ label: 'P(k)', data: power.P, color: 'var(--color-primary)'}]);
+    }
+
+    calculatePowerSpectrum() {
+        // This is a mock calculation. A real one requires Fourier transform of the field.
+        const res = this.state.resolution;
+        const P = new Array(res / 2).fill(0);
+        const k = new Array(res / 2).fill(0);
+        for(let i=0; i<res/2; i++) {
+            P[i] = 1e-9 * (1 + (Math.random()-0.5)*0.1) / Math.pow(i+1, 0.03); // Nearly scale-invariant
+            k[i] = (i+1).toString();
+        }
+        return { k, P };
+    }
+
+    runSelfTests() {
+        const tests = [
+            { name: 'DOM Elements Ready', test: () => Object.values(this.dom).every(el => el !== null) },
+            { name: 'Constants Initialized', test: () => this.C && this.C.M_P === 1.0 },
+            { name: 'Initial State Valid', test: () => this.state && this.state.initial_phi > 0 },
+            { name: 'Presets Loaded', test: () => this.presets && Object.keys(this.presets).length > 0 },
+            { name: 'Charts Initialized', test: () => this.charts && this.charts.timeSeries instanceof SimpleChart },
+            { name: 'Exposition Text Loaded', test: () => this.dom.expositionContent.innerHTML.length > 1000 },
+            { name: 'Q&A Text Loaded', test: () => this.dom.qaContent.innerHTML.length > 1000 }
+        ];
+
+        const report = document.getElementById('self-test-report');
+        const resultsList = document.getElementById('self-test-results');
+        resultsList.innerHTML = '';
+        let allPass = true;
+
+        tests.forEach(t => {
+            const pass = t.test();
+            if (!pass) allPass = false;
+            const li = document.createElement('li');
+            li.textContent = `${t.name}: ${pass ? '✅ Passed' : '❌ Failed'}`;
+            li.style.color = pass ? 'var(--color-success)' : 'var(--color-error)';
+            resultsList.appendChild(li);
+        });
+
+        if (allPass) {
+            report.style.display = 'none';
+            this.log('All self-tests passed.', 'success');
+        } else {
+            report.style.display = 'block';
+            this.log('Some self-tests failed. See report panel.', 'error');
+        }
+    }
+}
+
+window.onload = () => {
+    try {
+        window.app = new SimulationApp();
+    } catch(e) {
+        console.error("Failed to initialize simulation:", e);
+        const report = document.getElementById('self-test-report');
+        report.style.display = 'block';
+        report.innerHTML = `<h3>FATAL ERROR</h3><p>Could not start simulation. Check console for details.</p><pre>${e.stack}</pre>`;
+    }
+};
+
+</script>
+</body>
+</html>

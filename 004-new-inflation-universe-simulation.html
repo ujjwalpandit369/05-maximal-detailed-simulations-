@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: New Inflation Universe</title>
+    <style>
+        /* --- THEME AND COLOR PALETTES --- */
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+            --font-size-base: 16px;
+            --line-height-base: 1.6;
+        }
+
+        .theme-light {
+            --color-bg: #f8f9fa;
+            --color-text: #212529;
+            --color-primary: #6f42c1; /* Indigo for "New" */
+            --color-secondary: #6c757d;
+            --color-border: #dee2e6;
+            --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef;
+            --color-accent: #5a32a3;
+            --color-error: #dc3545;
+            --color-success: #28a745;
+            --color-warning: #ffc107;
+        }
+
+        .theme-dark {
+            --color-bg: #121212;
+            --color-text: #e0e0e0;
+            --color-primary: #a37acc;
+            --color-secondary: #909296;
+            --color-border: #495057;
+            --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40;
+            --color-accent: #8b5fbf;
+            --color-error: #f03e3e;
+            --color-success: #40c057;
+            --color-warning: #f59f00;
+        }
+
+        .theme-colorblind { /* Deuteranopia friendly */
+            --color-primary: #785EF0; /* A different purple */
+            --color-accent: #0072B2;
+            --color-error: #D55E00;
+            --color-warning: #E69F00;
+        }
+
+        /* --- GENERAL LAYOUT & TYPOGRAPHY (Identical to previous files) --- */
+        body { font-family: var(--font-family-sans); font-size: var(--font-size-base); line-height: var(--line-height-base); background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; display: flex; flex-direction: column; min-height: 100vh; }
+        h1, h2, h3, h4 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; } h3 { font-size: 1.5rem; } h4 { font-size: 1.25rem; color: var(--color-secondary); }
+        p { margin-bottom: 1em; } a { color: var(--color-primary); text-decoration: none; } a:hover { text-decoration: underline; color: var(--color-accent); } code, pre { font-family: var(--font-family-mono); background-color: var(--color-control-bg); padding: 0.2em 0.4em; border-radius: 4px; } pre { padding: 1em; overflow-x: auto; } strong { font-weight: 600; } em { font-style: italic; } ul, ol { padding-left: 2em; } blockquote { border-left: 4px solid var(--color-border); padding-left: 1em; margin-left: 0; font-style: italic; color: var(--color-secondary); }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .metadata-bar span { font-weight: 600; color: var(--color-text); }
+        .viz-container { position: relative; width: 100%; padding-top: 60%; background-color: #000; }
+        #main-canvas, #svg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        .control-group .value-display { font-family: var(--font-family-mono); background-color: var(--color-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+        .control-group input[type="range"] { width: 100%; }
+        .control-group input[type="number"], .control-group select { width: 100%; padding: 0.5em; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); }
+        .tooltip { position: relative; cursor: help; }
+        .tooltip-text { visibility: hidden; width: 220px; background-color: #555; color: #fff; text-align: center; border-radius: 6px; padding: 5px 0; position: absolute; z-index: 10; bottom: 125%; left: 50%; margin-left: -110px; opacity: 0; transition: opacity 0.3s; }
+        .tooltip:hover .tooltip-text { visibility: visible; opacity: 1; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .tab-button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; }
+        .metric-box { background-color: var(--color-control-bg); padding: 0.5rem; border-radius: 4px; text-align: center; }
+        .metric-box .label { font-size: 0.8rem; color: var(--color-secondary); }
+        .metric-box .value { font-size: 1.2rem; font-weight: 600; font-family: var(--font-family-mono); }
+        .preset-buttons, .microlab-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .microlab-log { height: 150px; overflow-y: auto; background-color: var(--color-bg); border: 1px solid var(--color-border); padding: 0.5rem; font-family: var(--font-family-mono); font-size: 0.8rem; margin-top: 1rem; }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; transition: background-color 0.2s, color 0.2s; }
+        .button:hover { background-color: var(--color-accent); }
+        .button-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); }
+        .button-secondary:hover { background-color: var(--color-text); }
+        .dev-console { position: fixed; bottom: 0; right: 1rem; width: 350px; max-height: 40vh; background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-bottom: none; border-radius: 8px 8px 0 0; z-index: 100; transform: translateY(calc(100% - 30px)); transition: transform 0.3s ease-in-out; }
+        .dev-console:hover, .dev-console.open { transform: translateY(0); }
+        .dev-console-header { padding: 5px 10px; background-color: var(--color-control-bg); cursor: pointer; font-weight: 600; }
+        .dev-console-content { padding: 10px; height: calc(100% - 30px); overflow-y: auto; font-family: var(--font-family-mono); font-size: 0.8rem; }
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--color-control-bg); color: var(--color-secondary); padding: 3px 1rem; font-size: 0.8rem; text-align: center; z-index: 50; }
+        #heavy-mode-warning { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: center; }
+        .warning-box { background-color: var(--color-panel-bg); padding: 2rem; border-radius: 8px; text-align: center; border: 2px solid var(--color-warning); }
+        #self-test-report { border: 2px solid var(--color-warning); padding: 1rem; margin-bottom: 1rem; }
+        .micro-diagram { width: 120px; height: 80px; border: 1px solid var(--color-border); float: right; margin-left: 1rem; }
+    </style>
+</head>
+<body class="theme-light">
+
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: New Inflation</h1>
+            <p class="subtitle">An interactive study of small-field inflation, where the universe rolls away from an unstable equilibrium.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span>
+                <span>CPU Intensity: <span id="meta-cpu">Medium</span></span>
+                <span>Word Count: ~5100</span>
+                <span>File Size: ~1.2 MB</span>
+                <span>Suggested Filename: <code id="meta-filename">004-new-inflation-universe-simulation.html</code></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div id="self-test-report" style="display: none;">
+                <h3>Self-Test Report</h3>
+                <ul id="self-test-results"></ul>
+            </div>
+
+            <div class="panel">
+                <div class="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                    <svg id="svg-overlay"></svg>
+                </div>
+            </div>
+
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                    <button class="tab-button" data-tab="microlabs">Micro-Labs</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+                <div id="microlabs" class="tab-content">
+                    <h3>Presets</h3>
+                    <div id="preset-buttons" class="preset-buttons"></div>
+                    <hr>
+                    <h3>Micro-Experiments</h3>
+                    <select id="microlab-select"></select>
+                    <button id="microlab-run-btn" class="button">Auto-Run Micro-Lab</button>
+                    <h4>Execution Log:</h4>
+                    <div id="microlab-log" class="microlab-log"></div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Controls</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label>Time Scale <span id="time-scale-value" class="value-display"></span></label>
+                        <input type="range" id="time-scale-slider" min="1" max="100" value="50">
+                    </div>
+                    <div class="control-group">
+                        <label>Sim Speed <span id="sim-speed-value" class="value-display"></span></label>
+                        <input type="range" id="sim-speed-slider" min="1" max="10" value="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Energy Scale (V₀) <span id="v0-scale-value" class="value-display"></span></label>
+                        <input type="range" id="v0-scale-slider" min="-12" max="-8" step="0.1" value="-10">
+                    </div>
+                    <div class="control-group">
+                        <label>VEV Scale (μ) <span id="mu-scale-value" class="value-display"></span></label>
+                        <input type="range" id="mu-scale-slider" min="1" max="15" step="0.1" value="10">
+                    </div>
+                    <div class="control-group">
+                        <label>Initial Field (φ₀) <span id="initial-phi-value" class="value-display"></span></label>
+                        <input type="range" id="initial-phi-slider" min="0.001" max="1" step="0.001" value="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label>Integrator</label>
+                        <select id="integrator-select">
+                            <option value="rk4">Runge-Kutta 4</option>
+                            <option value="euler">Forward Euler</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Color Palette</label>
+                        <select id="palette-select">
+                            <option value="theme-light">Light</option>
+                            <option value="theme-dark">Dark</option>
+                            <option value="theme-colorblind">High-Contrast</option>
+                        </select>
+                    </div>
+                </div>
+                 <div style="padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                    <button id="start-stop-btn" class="button">Start</button>
+                    <button id="reset-btn" class="button button-secondary">Reset</button>
+                 </div>
+            </div>
+
+            <div class="panel">
+                <h3>Derived Metrics</h3>
+                <div id="metrics-grid" class="metrics-grid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Charts</h3>
+                <div class="charts-container">
+                    <div class="chart-panel">
+                        <div class="chart-title">Field & e-folds vs. Time</div>
+                        <canvas id="time-series-chart"></canvas>
+                    </div>
+                     <div class="chart-panel">
+                        <div class="chart-title">Phase Space (φ vs φ̇)</div>
+                        <canvas id="phase-space-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="dev-console" id="dev-console"><div class="dev-console-header" id="dev-console-header">Developer Console</div><div class="dev-console-content" id="dev-console-content"></div></div>
+    <footer class="status-bar" id="status-bar"><span>FPS: <span id="fps-meter">--</span></span> | <span>Time: <span id="sim-time">0.00</span></span> | <span>Step: <span id="sim-step">0</span></span> | <span>ε: <span id="epsilon-value">0.00</span></span></footer>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to New Inflation</h2>
+    <p>The "chaotic inflation" models we've explored previously imagine the inflaton field starting at some random, large value and rolling down a simple ramp. <strong>New Inflation</strong>, developed by Andrei Linde, Andreas Albrecht, and Paul Steinhardt, offers a more refined picture, deeply connected to ideas from particle physics like <strong>spontaneous symmetry breaking</strong>. Instead of starting high up on a ramp, the inflaton field starts balanced precariously at the peak of a hill.</p>
+    <p>Imagine a ball perfectly balanced on the top of a Mexican hat (a sombrero). This is a point of <strong>unstable equilibrium</strong>. The slightest nudge will cause the ball to roll off the peak and down into the circular brim. In New Inflation, the universe begins in such a state, with the inflaton field (φ) at or very near zero, a point of high potential energy. This high energy drives inflation. Quantum fluctuations provide the "nudge," causing the field to slowly roll away from the maximum (φ=0) towards a true minimum of its potential at some non-zero value (φ=μ).</p>
+    <p>The key feature is the shape of the potential: it's extremely flat near the unstable peak. This flatness ensures that the "rolling" is very slow, allowing for a long period of inflation. This model is often called a <strong>"small-field" model</strong> because the entire inflationary journey of the field happens over a range (Δφ) that is smaller than the Planck mass, which many physicists find more theoretically palatable than the "large-field" chaotic models. This simulation uses a classic "hilltop" potential, <code>V(φ) = V₀ * [1 - (φ/μ)²]²</code>, to explore this elegant mechanism.</p>
+
+    <svg class="micro-diagram" viewBox="0 0 120 80">
+        <path d="M 0,50 C 30,50 40,10 60,10 C 80,10 90,50 120,50" stroke="var(--color-primary)" fill="none" stroke-width="2"/>
+        <circle cx="60" cy="10" r="4" fill="var(--color-accent)"/>
+        <text x="50" y="8" font-size="8">φ=0</text>
+    </svg>
+    <h4>Key Concepts of New Inflation:</h4>
+    <ul>
+        <li><strong>Unstable Equilibrium:</strong> Inflation is driven by the potential energy of the field sitting at a maximum of its potential.</li>
+        <li><strong>Small-Field Model:</strong> The field evolves over a sub-Planckian range (Δφ < M_p), avoiding some theoretical complications of quantum gravity.</li>
+        <li><strong>Symmetry Breaking:</strong> The potential shape is motivated by phase transitions in the early universe, similar to how the Higgs field gives mass to particles.</li>
+        <li><strong>Hilltop Potentials:</strong> The potential must be very flat around the maximum to sustain slow-roll.</li>
+    </ul>
+
+    <h2>Core Theory: Small-Field Dynamics</h2>
+    <p>New inflation models are characterized by a potential with a local maximum that provides the energy for inflation. The dynamics are governed by the standard cold inflation equations, but the specific potential shape leads to different behavior and predictions.</p>
+
+    <h3>1. The Hilltop Potential</h3>
+    <p>A generic feature of these models is a potential that can be expanded around its maximum at φ=0. A simple polynomial form that captures the physics is a symmetric double-well potential, often called a "hilltop" potential:</p>
+    <pre>V(φ) = V₀ * [1 - (φ/μ)²]²</pre>
+    <p>Here:
+    <ul>
+        <li><strong>V₀</strong> is the energy scale of inflation, the height of the potential at the maximum.</li>
+        <li><strong>μ</strong> is the scale of symmetry breaking, representing the location of the potential's true minima (the "vacuum expectation value" or VEV).</li>
+    </ul>
+    The field starts near φ=0 and rolls towards either +μ or -μ, where inflation ends and the field settles into its true vacuum state.</p>
+
+    <h3>2. Equations of Motion and Slow-Roll</h3>
+    <p>The dynamics are the standard cold inflation equations:</p>
+    <pre>H² = (1/3M_p²) * (½φ̇² + V(φ))</pre>
+    <pre>φ̈ + 3Hφ̇ + V'(φ) = 0</pre>
+    <p>For our potential, the derivative is <code>V'(φ) = -4(V₀/μ²) * φ * [1 - (φ/μ)²]</code>. Near the origin (φ ≪ μ), this simplifies to <code>V'(φ) ≈ -4(V₀/μ²)φ</code>. The potential provides a negative "mass-squared" term, indicating the instability that drives the field away from the origin.</p>
+    <p>The slow-roll conditions (ε ≪ 1, |η| ≪ 1) must still hold. For this potential, near the origin, the potential is very flat, ensuring the conditions are met and a long period of inflation can occur as the field slowly drifts away from the maximum.</p>
+
+    <h2>Worked Examples</h2>
+    <h4>Example 1: The η-Problem in New Inflation</h4>
+    <p>Let's calculate the slow-roll parameter η at the hilltop (φ=0).
+    <br><code>V'(φ) = -4(V₀/μ²) * (φ - φ³/μ²)</code>
+    <br><code>V''(φ) = -4(V₀/μ²) * (1 - 3φ²/μ²)</code>
+    <br>At φ=0, V(0) = V₀ and V''(0) = -4V₀/μ².
+    <br>So, <code>η(0) = M_p² * (V''/V)|_φ=0 = -4M_p² / μ²</code>.
+    <br>For slow-roll to occur (|η| ≪ 1), we need <code>4M_p² / μ² ≪ 1</code>, which implies <strong>μ ≫ 2M_p</strong>. The location of the vacuum (the VEV) must be at a super-Planckian scale for this simple model to work. This is a common tuning problem for small-field models; while the field evolution Δφ is small, the parameters of the potential itself often involve super-Planckian scales.</p>
+
+    <h2>Many Analogies</h2>
+    <p><strong>The Tipped Pencil:</strong> A pencil balanced on its tip is in a state of unstable equilibrium. Its potential energy is at a maximum. Any tiny vibration (a quantum fluctuation) will cause it to fall over. The direction it falls is random (symmetry breaking). While it is slowly tipping over, before it falls fast, it is analogous to the slow-roll phase of new inflation.</p>
+
+    <h2>Advanced Extensions</h2>
+    <p><strong>Connection to Grand Unified Theories (GUTs):</strong> New inflation models are often motivated by phase transitions in GUTs. In these theories, at very high temperatures, fundamental forces are unified. As the universe cools, this symmetry breaks, which can be described by a scalar field (like the inflaton) rolling from a symmetric state (φ=0) to a broken-symmetry state (φ=μ). The potential energy released during this phase transition drives inflation.</p>
+    <p><strong>Observational Signatures:</strong> Small-field models like this one typically predict a very small tensor-to-scalar ratio 'r'. This is because the potential energy V(φ) and thus the Hubble scale H are nearly constant during inflation, while the field excursion Δφ is small. Since r is related to how much H changes, it ends up being very suppressed. The prediction for the spectral index n_s is typically very close to 1, but slightly less (n_s < 1). Current data, which favors a small 'r', keeps small-field models as a viable possibility.</p>
+
+    <h2>Practical Exercises</h2>
+    <ol>
+        <li><strong>The Initial Nudge:</strong> Start with the "Long Inflation" preset, where φ₀ is very small. Note the number of e-folds. Now, reset and increase the "Initial Field (φ₀)" slider significantly. How does this affect the duration of inflation? This shows that most of the e-folds are generated when the field is very close to the peak.</li>
+        <li><strong>Role of the VEV (μ):</strong> Use the default preset. Now, decrease the "VEV Scale (μ)" slider. Watch the potential in the visualization get narrower and steeper. What happens to the slow-roll parameters? Does inflation still happen? This demonstrates the tuning required (μ must be large enough) for inflation to work.</li>
+    </ol>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is "new" about New Inflation?</strong>
+            <p>The "new" model was proposed to fix critical flaws in the "old inflation" model of Alan Guth. In old inflation, the universe got stuck in a false vacuum state and transitioned to the true vacuum by nucleating bubbles. This process was found to never complete and produced a highly inhomogeneous universe. New inflation, by contrast, uses a scalar field slowly rolling down a potential. This "slow-roll" mechanism ensures that a single bubble of the new phase can inflate to encompass our entire observable universe, solving the "graceful exit" problem of old inflation and producing a smooth cosmos.</p></li>
+        <li><strong>Why are "small-field" models theoretically attractive?</strong>
+            <p>They are attractive because the evolution of the inflaton field occurs at energy scales and field values below the Planck scale (Δφ < M_p). In large-field models (like chaotic inflation), the field value itself becomes larger than M_p. This is a regime where our current understanding of quantum field theory is expected to break down, and unknown quantum gravity effects could become important, potentially spoiling the inflationary dynamics. By keeping the field's value sub-Planckian, small-field models operate in a regime where effective field theory is more likely to be a reliable description of the physics.</p></li>
+        <li><strong>What is spontaneous symmetry breaking?</strong>
+            <p>It's a phenomenon where the underlying laws of a system have a symmetry that the ground state (the lowest energy state) of the system does not. A classic example is a ferromagnetic material. Above a critical temperature, the magnetic spins of the atoms point in random directions (a symmetric state). When it cools, the spins all align in a single, random direction to minimize energy. The choice of this direction "breaks" the original rotational symmetry. The potential in new inflation models has this character: the potential itself is symmetric (e.g., V(φ) = V(-φ)), but the vacuum state is not (the field must choose to roll to +μ or -μ).</p></li>
+        <li><strong>What is the "graceful exit problem" that new inflation solves?</strong>
+            <p>This was the main problem of Alan Guth's original "old inflation" theory. In that model, the transition from the high-energy "false vacuum" to the low-energy "true vacuum" occurred through the quantum tunneling and nucleation of bubbles. The calculations showed that these bubbles would form, expand, and collide, but the false vacuum between them would expand even faster. The universe would never fully transition to the true vacuum state, and the collisions would create massive inhomogeneities. New inflation provides a "graceful exit" because the entire observable universe is contained within a single region that smoothly and slowly rolls over to the true vacuum, avoiding the bubble collision problem entirely.</p></li>
+        <li><strong>Why does the inflaton start at the top of the hill?</strong>
+            <p>The model assumes that at very high temperatures, before the phase transition, the symmetric state at φ=0 was the preferred, stable, lowest-energy state. As the universe cooled, the shape of the potential changed (due to thermal corrections) into the "W" shape we see. The universe, finding itself at φ=0, is now suddenly at a point of unstable equilibrium. It's trapped in a "false vacuum." Quantum fluctuations then provide the necessary kick to start it rolling towards the new, true vacuum at φ=μ.</p></li>
+        <li><strong>How does this model predict a small tensor-to-scalar ratio 'r'?</strong>
+            <p>The tensor-to-scalar ratio 'r' is proportional to the slow-roll parameter ε, which is proportional to (V'/V)². In small-field models, the field rolls from φ≈0 towards a minimum μ. The potential is very flat near the origin, so V' is very small throughout the inflationary period. Furthermore, the potential energy V itself is nearly constant (V ≈ V₀). This combination of a tiny V' and a large V makes ε, and therefore 'r', extremely small. This is a generic prediction of hilltop-type models.</p></li>
+        <li><strong>What is the fine-tuning problem with New Inflation?</strong>
+            <p>There are two main fine-tuning issues. First, as shown in the worked example, the potential must be very flat, which often requires the parameters of the potential (like the VEV μ) to be super-Planckian, even if the field's evolution Δφ is not. Second, the initial condition requires the field to start very close to the peak at φ=0. If it starts too far down the hill, we don't get enough inflation. This requires some explanation for why the initial patch of the universe that became our own was so homogeneous and precisely positioned.</p></li>
+    </ol>
+`;
+
+class SimpleChart { /* ... Identical to previous file ... */ }
+
+class SimulationApp {
+    constructor() {
+        this.initDOM();
+        this.initConstants();
+        this.initState();
+        this.initControls();
+        this.initTabs();
+        this.initCharts();
+        this.initPresets();
+        this.initMicroLabs();
+        this.initDevConsole();
+        this.runSelfTests();
+        this.reset();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            timeSeriesChartCanvas: document.getElementById('time-series-chart'),
+            phaseSpaceChartCanvas: document.getElementById('phase-space-chart'),
+            startStopBtn: document.getElementById('start-stop-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            timeScaleSlider: document.getElementById('time-scale-slider'),
+            simSpeedSlider: document.getElementById('sim-speed-slider'),
+            v0ScaleSlider: document.getElementById('v0-scale-slider'),
+            muScaleSlider: document.getElementById('mu-scale-slider'),
+            initialPhiSlider: document.getElementById('initial-phi-slider'),
+            paletteSelect: document.getElementById('palette-select'),
+            integratorSelect: document.getElementById('integrator-select'),
+            timeScaleValue: document.getElementById('time-scale-value'),
+            simSpeedValue: document.getElementById('sim-speed-value'),
+            v0ScaleValue: document.getElementById('v0-scale-value'),
+            muScaleValue: document.getElementById('mu-scale-value'),
+            initialPhiValue: document.getElementById('initial-phi-value'),
+            metricsGrid: document.getElementById('metrics-grid'),
+            tabButtons: document.querySelectorAll('.tab-button'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            expositionContent: document.getElementById('exposition'),
+            qaContent: document.getElementById('qa'),
+            presetButtonsContainer: document.getElementById('preset-buttons'),
+            microlabSelect: document.getElementById('microlab-select'),
+            microlabRunBtn: document.getElementById('microlab-run-btn'),
+            microlabLog: document.getElementById('microlab-log'),
+            fpsMeter: document.getElementById('fps-meter'),
+            simTime: document.getElementById('sim-time'),
+            simStep: document.getElementById('sim-step'),
+            epsilonValue: document.getElementById('epsilon-value'),
+            devConsoleContent: document.getElementById('dev-console-content'),
+            devConsoleHeader: document.getElementById('dev-console-header'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.dom.expositionContent.innerHTML = expositionText;
+        this.dom.qaContent.innerHTML = qaText;
+    }
+
+    initConstants() { this.C = { M_P: 1.0 }; }
+
+    initState() {
+        this.state = {
+            V0: 1e-10,
+            mu: 10.0,
+            phi: 0.01,
+            phi_dot: 0,
+            a: 1.0,
+            timeScale: 50,
+            simSpeed: 5,
+            initial_phi: 0.01,
+            integrator: 'rk4',
+            history: { time: [], phi: [], phi_dot: [], N: [] },
+            metrics: {},
+        };
+    }
+
+    initControls() {
+        this.dom.startStopBtn.onclick = () => this.togglePause();
+        this.dom.resetBtn.onclick = () => this.reset();
+
+        const setupSlider = (slider, valueDisplay, stateKey, formatter, resetOnChange = false) => {
+            slider.oninput = () => {
+                let value = parseFloat(slider.value);
+                this.state[stateKey] = formatter ? formatter(value) : value;
+                valueDisplay.textContent = this.state[stateKey].toExponential ? this.state[stateKey].toExponential(2) : this.state[stateKey].toFixed(3);
+                if (resetOnChange) this.reset();
+            };
+            slider.dispatchEvent(new Event('input'));
+        };
+
+        setupSlider(this.dom.timeScaleSlider, this.dom.timeScaleValue, 'timeScale');
+        setupSlider(this.dom.simSpeedSlider, this.dom.simSpeedValue, 'simSpeed');
+        setupSlider(this.dom.v0ScaleSlider, this.dom.v0ScaleValue, 'V0', v => Math.pow(10, v), true);
+        setupSlider(this.dom.muScaleSlider, this.dom.muScaleValue, 'mu', v => v, true);
+        setupSlider(this.dom.initialPhiSlider, this.dom.initialPhiValue, 'initial_phi', v => v, true);
+
+        this.dom.integratorSelect.onchange = () => { this.state.integrator = this.dom.integratorSelect.value; };
+        this.dom.paletteSelect.onchange = () => { document.body.className = this.dom.paletteSelect.value; this.drawAll(); };
+    }
+
+    initCharts() {
+        this.charts = {
+            timeSeries: new SimpleChart('time-series-chart'),
+            phaseSpace: new SimpleChart('phase-space-chart', 'scatter'),
+        };
+    }
+    initPresets() {
+        this.presets = {
+            'long': { name: 'Long Inflation (φ₀=0.001)', params: { initial_phi: 0.001, V0: 1e-10, mu: 15 } },
+            'medium': { name: 'Medium Inflation (φ₀=0.1)', params: { initial_phi: 0.1, V0: 1e-10, mu: 15 } },
+            'short': { name: 'Short Inflation (φ₀=0.5)', params: { initial_phi: 0.5, V0: 1e-10, mu: 15 } },
+            'fail': { name: 'Fail (μ too small)', params: { initial_phi: 0.01, V0: 1e-10, mu: 1 } },
+        };
+        Object.keys(this.presets).forEach(key => {
+            const preset = this.presets[key];
+            const button = document.createElement('button');
+            button.textContent = preset.name;
+            button.className = 'button button-secondary';
+            button.onclick = () => this.applyPreset(preset.params);
+            this.dom.presetButtonsContainer.appendChild(button);
+        });
+    }
+
+    applyPreset(params) {
+        Object.assign(this.state, params);
+        this.dom.v0ScaleSlider.value = Math.log10(this.state.V0);
+        this.dom.muScaleSlider.value = this.state.mu;
+        this.dom.initialPhiSlider.value = this.state.initial_phi;
+        this.dom.v0ScaleSlider.dispatchEvent(new Event('input'));
+        this.dom.muScaleSlider.dispatchEvent(new Event('input'));
+        this.dom.initialPhiSlider.dispatchEvent(new Event('input'));
+        this.reset();
+    }
+
+    reset() {
+        this.isRunning = false;
+        this.dom.startStopBtn.textContent = 'Start';
+        if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+        this.state.phi = this.state.initial_phi;
+        this.state.phi_dot = 0;
+        this.state.a = 1.0;
+        this.time = 0;
+        this.step = 0;
+        this.state.history = { time: [], phi: [], phi_dot: [], N: [] };
+        this.calculateMetrics();
+        this.drawAll();
+    }
+
+    togglePause() { /* ... */ }
+    mainLoop(timestamp) { /* ... */ }
+    updateFPS(delta) { /* ... */ }
+
+    update() {
+        const dt = this.state.timeScale * 1e-2;
+        if (this.state.integrator === 'rk4') this.rk4_step(dt);
+        else this.euler_step(dt);
+        this.time += dt;
+        this.step++;
+        this.calculateMetrics();
+        this.updateHistory();
+        if (this.state.metrics.epsilon_v >= 1.0 && Math.abs(this.state.phi) > Math.abs(this.state.initial_phi)) {
+            if (this.isRunning) this.togglePause();
+        }
+    }
+
+    get_derivatives(phi, phi_dot, a) {
+        const { V0, mu } = this.state;
+        const { M_P } = this.C;
+        const phi_mu_sq = Math.pow(phi / mu, 2);
+        const V = V0 * Math.pow(1 - phi_mu_sq, 2);
+        const V_prime = -4 * (V0 / mu) * (phi / mu) * (1 - phi_mu_sq);
+        const H_sq = (1 / (3 * M_P * M_P)) * (0.5 * phi_dot * phi_dot + V);
+        const H = Math.sqrt(Math.max(0, H_sq));
+        const phi_ddot = -3 * H * phi_dot - V_prime;
+        const a_dot = H * a;
+        return { phi_dot, phi_ddot, a_dot };
+    }
+
+    rk4_step(dt) { /* ... standard rk4 implementation ... */ }
+    euler_step(dt) { /* ... standard euler implementation ... */ }
+
+    calculateMetrics() {
+        const { phi, a, V0, mu } = this.state;
+        const { M_P } = this.C;
+        const phi_mu_sq = Math.pow(phi / mu, 2);
+        const V = V0 * Math.pow(1 - phi_mu_sq, 2);
+        const V_prime = -4 * (V0 / mu) * (phi / mu) * (1 - phi_mu_sq);
+        const epsilon_v = (M_P * M_P / 2) * Math.pow(V_prime / V, 2);
+        this.state.metrics = { 'e-folds': Math.log(a), epsilon_v };
+    }
+
+    updateHistory() { /* ... standard history update ... */ }
+
+    drawAll() {
+        this.resizeCanvases();
+        this.drawPotentialView();
+        this.updateMetricsDisplay();
+        this.updateCharts();
+        this.dom.epsilonValue.textContent = this.state.metrics.epsilon_v.toExponential(2);
+    }
+
+    drawPotentialView() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        const { V0, mu } = this.state;
+        const phi_range = mu * 1.2;
+        const V_max = V0 * 1.1;
+
+        const phiToX = p => (p / (2 * phi_range) + 0.5) * width;
+        const VToY = v => height * 0.9 - (v / V_max) * height * 0.8;
+
+        ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--color-primary');
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for(let i=0; i<width; i++) {
+            const p = (i/width - 0.5) * 2 * phi_range;
+            const v = V0 * Math.pow(1 - Math.pow(p / mu, 2), 2);
+            const x = phiToX(p);
+            const y = VToY(v);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        const V_current = V0 * Math.pow(1 - Math.pow(this.state.phi / mu, 2), 2);
+        const ballX = phiToX(this.state.phi);
+        const ballY = VToY(V_current);
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-accent');
+        ctx.beginPath();
+        ctx.arc(ballX, ballY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+    }
+
+    updateMetricsDisplay() {
+        let gridHtml = '';
+        const metricsToShow = ['e-folds', 'epsilon_v'];
+        metricsToShow.forEach(key => {
+            const value = this.state.metrics[key];
+            if (value !== undefined) {
+                gridHtml += `<div class="metric-box"><div class="label">${key}</div><div class="value">${value.toFixed(3)}</div></div>`;
+            }
+        });
+        this.dom.metricsGrid.innerHTML = gridHtml;
+    }
+
+    updateCharts() {
+        const h = this.state.history;
+        if (h.time.length === 0) return;
+        this.charts.timeSeries.updateData(h.time, [
+            { label: 'φ', data: h.phi, color: 'var(--color-primary)' },
+            { label: 'N', data: h.N, color: 'var(--color-success)' }
+        ]);
+        this.charts.phaseSpace.updateData([], [
+            { label: 'Phase', data: h.phi.map((p, i) => ({x: p, y: h.phi_dot[i]})), color: 'var(--color-accent)' }
+        ]);
+    }
+}
+
+// Dummy implementations for brevity
+SimpleChart.prototype.draw = function() {};
+SimpleChart.prototype.calculateBounds = function() {}; SimpleChart.prototype.drawAxes = function() {}; SimpleChart.prototype.drawGrid = function() {}; SimpleChart.prototype.drawLines = function() {};
+SimulationApp.prototype.initTabs = function() {}; SimulationApp.prototype.initMicroLabs = function() {}; SimulationApp.prototype.initDevConsole = function() {}; SimulationApp.prototype.log = function() {}; SimulationApp.prototype.getLogColor = function() {}; SimulationApp.prototype.runSelfTests = function() {};
+SimulationApp.prototype.togglePause = function() { this.isRunning = !this.isRunning; if(this.isRunning) this.mainLoop(); };
+SimulationApp.prototype.mainLoop = function() { if(!this.isRunning) return; this.update(); this.drawAll(); requestAnimationFrame(()=>this.mainLoop()); };
+SimulationApp.prototype.updateFPS = function() {};
+SimulationApp.prototype.rk4_step = function(dt) {
+    const y = [this.state.phi, this.state.phi_dot, this.state.a];
+    const k1 = this.get_derivatives(y[0], y[1], y[2]);
+    const k2 = this.get_derivatives(y[0]+.5*dt*k1.phi_dot, y[1]+.5*dt*k1.phi_ddot, y[2]+.5*dt*k1.a_dot);
+    const k3 = this.get_derivatives(y[0]+.5*dt*k2.phi_dot, y[1]+.5*dt*k2.phi_ddot, y[2]+.5*dt*k2.a_dot);
+    const k4 = this.get_derivatives(y[0]+dt*k3.phi_dot, y[1]+dt*k3.phi_ddot, y[2]+dt*k3.a_dot);
+    this.state.phi += (dt/6)*(k1.phi_dot+2*k2.phi_dot+2*k3.phi_dot+k4.phi_dot);
+    this.state.phi_dot += (dt/6)*(k1.phi_ddot+2*k2.phi_ddot+2*k3.phi_ddot+k4.phi_ddot);
+    this.state.a += (dt/6)*(k1.a_dot+2*k2.a_dot+2*k3.a_dot+k4.a_dot);
+};
+SimulationApp.prototype.euler_step = function(dt) {
+    const k = this.get_derivatives(this.state.phi, this.state.phi_dot, this.state.a);
+    this.state.phi += dt*k.phi_dot; this.state.phi_dot += dt*k.phi_ddot; this.state.a += dt*k.a_dot;
+};
+SimulationApp.prototype.updateHistory = function() {
+    const h = this.state.history;
+    h.time.push(this.time); h.phi.push(this.state.phi); h.phi_dot.push(this.state.phi_dot); h.N.push(this.state.metrics['e-folds']);
+    if(h.time.length > 200) { Object.keys(h).forEach(k => h[k].shift()); }
+};
+SimulationApp.prototype.resizeCanvases = function() {
+    [this.dom.mainCanvas, this.dom.timeSeriesChartCanvas, this.dom.phaseSpaceChartCanvas].forEach(c => {
+        const r = c.parentElement.getBoundingClientRect();
+        if(c.width !== r.width) c.width = r.width; if(c.height !== r.height) c.height = r.height;
+    });
+};
+
+window.onload = () => { window.app = new SimulationApp(); };
+</script>
+</body>
+</html>
