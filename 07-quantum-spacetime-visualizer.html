@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Quantum Nature of Spacetime</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --accent-color: #00ffaa; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        h1 { font-size: 2.5em; margin: 0; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-window { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 4px; cursor: grab; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        h3 { color: var(--secondary-color); }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="range"] { width: 100%; }
+        .exposition, .qa-section { background: var(--panel-bg); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Quantum Fabric of Spacetime</h1></header>
+        <div class="main-layout">
+            <div class="simulation-window">
+                <h2>Zoomable Spacetime</h2>
+                <canvas id="main-canvas" width="800" height="600"></canvas>
+                <div id="zoom-readout" style="text-align:center; margin-top:10px;">Zoom: 1x</div>
+            </div>
+            <div class="controls-panel">
+                <h3>Controls</h3>
+                <label for="zoom-slider">Zoom Level</label>
+                <input type="range" id="zoom-slider" min="0" max="100" step="1" value="0">
+                <p>Zoom in to reveal the quantum structure of space.</p>
+                <button id="regenerate-network">New Spacetime Patch</button>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const DOM = { canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'), zoomSlider: document.getElementById('zoom-slider'), zoomReadout: document.getElementById('zoom-readout'), regenerateBtn: document.getElementById('regenerate-network'), expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content') };
+    let state = { zoom: 1, pan: {x: 0, y: 0}, nodes: [], edges: [], needsRedraw: true };
+
+    function generateSpinNetwork() {
+        state.nodes = [];
+        state.edges = [];
+        const nodeCount = 50;
+        for (let i = 0; i < nodeCount; i++) {
+            state.nodes.push({ x: (Math.random() - 0.5) * 2000, y: (Math.random() - 0.5) * 2000 });
+        }
+        for (let i = 0; i < nodeCount; i++) {
+            const startNode = state.nodes[i];
+            const endNode = state.nodes[Math.floor(Math.random() * nodeCount)];
+            if (i !== endNode) {
+                state.edges.push({ start: startNode, end: endNode });
+            }
+        }
+    }
+
+    function draw() {
+        if (!state.needsRedraw) { requestAnimationFrame(draw); return; }
+
+        const { ctx, canvas } = DOM;
+        ctx.save();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.translate(canvas.width / 2 + state.pan.x, canvas.height / 2 + state.pan.y);
+        ctx.scale(state.zoom, state.zoom);
+
+        // --- Cross-fade logic ---
+        const transitionStartZoom = 50;
+        const transitionEndZoom = 150;
+        let quantumAlpha = 0;
+        if (state.zoom > transitionStartZoom) {
+            quantumAlpha = Math.min(1, (state.zoom - transitionStartZoom) / (transitionEndZoom - transitionStartZoom));
+        }
+
+        // Draw continuous grid (fades out)
+        ctx.globalAlpha = 1 - quantumAlpha;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        for(let i=-20; i<=20; i++) {
+            ctx.beginPath(); ctx.moveTo(i*100, -2000); ctx.lineTo(i*100, 2000); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-2000, i*100); ctx.lineTo(2000, i*100); ctx.stroke();
+        }
+
+        // Draw quantum network (fades in)
+        if (quantumAlpha > 0) {
+            ctx.globalAlpha = quantumAlpha;
+            ctx.strokeStyle = '#00aaff';
+            ctx.lineWidth = 2 / state.zoom;
+            state.edges.forEach(edge => {
+                ctx.beginPath();
+                ctx.moveTo(edge.start.x, edge.start.y);
+                ctx.lineTo(edge.end.x, edge.end.y);
+                ctx.stroke();
+            });
+
+            ctx.fillStyle = '#00ffaa';
+            state.nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 5 / state.zoom, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        ctx.restore();
+        state.needsRedraw = false;
+        requestAnimationFrame(draw);
+    }
+
+    function setup() {
+        DOM.zoomSlider.addEventListener('input', e => {
+            const sliderVal = parseFloat(e.target.value);
+            state.zoom = Math.pow(10, sliderVal / 20); // Exponential zoom
+            DOM.zoomReadout.textContent = `Zoom: ${state.zoom.toExponential(1)}`;
+            state.needsRedraw = true;
+        });
+        DOM.regenerateBtn.addEventListener('click', () => { generateSpinNetwork(); state.needsRedraw = true; });
+
+        DOM.expositionContent.innerHTML = `<h1>The Atoms of Spacetime</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        generateSpinNetwork();
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
