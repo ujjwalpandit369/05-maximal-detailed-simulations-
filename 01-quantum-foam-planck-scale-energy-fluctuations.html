@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Quantum Foam and Planck-Scale Energy Fluctuations</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #4CAF50;
+            --secondary-color: #81C784;
+            --tertiary-color: #2E7D32;
+            --accent-color: #FFD54F;
+            --panel-bg: #1e1e1e;
+            --border-color: #333;
+            --input-bg: #2a2a2a;
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --slider-thumb-bg: var(--primary-color);
+            --slider-track-bg: #555;
+            --tooltip-bg: #333;
+            --tooltip-text: #fff;
+            --error-bg: #ffdddd;
+            --error-text: #d8000c;
+            --log-bg: #252525;
+            --log-text: #ccc;
+            --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+        html.theme-light {
+            --bg-color: #f4f4f4;
+            --text-color: #333333;
+            --header-color: #000000;
+            --primary-color: #2E7D32;
+            --secondary-color: #4CAF50;
+            --tertiary-color: #81C784;
+            --accent-color: #FFC107;
+            --panel-bg: #ffffff;
+            --border-color: #ddd;
+            --input-bg: #eeeeee;
+            --button-bg: #e0e0e0;
+            --button-hover-bg: #d0d0d0;
+            --slider-thumb-bg: var(--primary-color);
+            --slider-track-bg: #ccc;
+        }
+        html.theme-colorblind {
+            --primary-color: #016495; /* Blue */
+            --secondary-color: #E28637; /* Orange */
+            --tertiary-color: #53984C; /* Green */
+            --accent-color: #EAD241; /* Yellow */
+        }
+
+        body {
+            font-family: var(--font-family-sans);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1.5rem;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            grid-template-areas:
+                "header header"
+                "meta meta"
+                "overview overview"
+                "simulation controls"
+                "analysis controls"
+                "exposition exposition"
+                "qa qa"
+                "microlabs microlabs"
+                "footer footer";
+        }
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                "header"
+                "meta"
+                "overview"
+                "simulation"
+                "controls"
+                "analysis"
+                "exposition"
+                "qa"
+                "microlabs"
+                "footer";
+            }
+        }
+
+        h1, h2, h3, h4 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.8rem; text-align: center; margin-bottom: 0; grid-area: header; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2.5rem; }
+        h3 { font-size: 1.5rem; color: var(--secondary-color); margin-top: 2rem; }
+        h4 { font-size: 1.2rem; color: var(--tertiary-color); }
+
+        .meta-bar {
+            grid-area: meta;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin: 20px 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            font-size: 0.9rem;
+        }
+        .meta-bar span { margin: 5px 10px; }
+        .meta-bar strong { color: var(--secondary-color); }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        #overview-panel { grid-area: overview; }
+        #simulation-panel { grid-area: simulation; position: relative; display: flex; flex-direction: column; }
+        #controls-panel { grid-area: controls; }
+        #analysis-panel { grid-area: analysis; }
+        #exposition-panel { grid-area: exposition; }
+        #qa-panel { grid-area: qa; }
+        #microlabs-panel { grid-area: microlabs; }
+        #footer-panel { grid-area: footer; text-align: center; }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 4px;
+            cursor: crosshair;
+        }
+
+        .control-group { margin-bottom: 20px; }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        .control-group .value-display {
+            display: inline-block;
+            margin-left: 10px;
+            font-family: var(--font-family-mono);
+            color: var(--accent-color);
+            background: var(--input-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        select, input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--button-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-size: 1rem;
+            margin: 5px;
+        }
+        button:hover { background-color: var(--button-hover-bg); }
+        button.primary { background-color: var(--primary-color); color: #fff; }
+        button.primary:hover { background-color: var(--tertiary-color); }
+
+        #metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .metric {
+            background: var(--input-bg);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        .metric-label { font-size: 0.9rem; margin-bottom: 5px; }
+        .metric-value { font-size: 1.2rem; font-weight: bold; color: var(--accent-color); font-family: var(--font-family-mono); }
+
+        .qa-item {
+            margin-bottom: 1.5rem;
+            border-left: 3px solid var(--border-color);
+            padding-left: 1rem;
+        }
+        .qa-item strong { color: var(--secondary-color); }
+
+        #tooltip {
+            position: absolute;
+            display: none;
+            background-color: var(--tooltip-bg);
+            color: var(--tooltip-text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .tab-buttons { margin-bottom: 15px; }
+        .tab-button { background: var(--button-bg); }
+        .tab-button.active { background: var(--tertiary-color); color: #fff; }
+
+        .chart-container {
+            width: 100%;
+            height: 250px;
+            margin-top: 15px;
+        }
+
+        #developer-console {
+            display: none;
+            margin-top: 20px;
+            background: var(--log-bg);
+            color: var(--log-text);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+        }
+        #developer-console h4 { margin-top: 0; }
+        #dev-log {
+            height: 150px;
+            overflow-y: scroll;
+            font-family: var(--font-family-mono);
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            background: #000;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        #error-panel {
+            display: none;
+            padding: 15px;
+            margin: 20px 0;
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid #ffbaba;
+            border-radius: 4px;
+        }
+
+        .annotation {
+            position: absolute;
+            background: rgba(255, 255, 0, 0.8);
+            color: #000;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="tooltip"></div>
+    <div class="container">
+        <h1>Deep Simulation: Quantum Foam and Planck-Scale Energy Fluctuations</h1>
+
+        <div class="meta-bar">
+            <span><strong>Suggested Filename:</strong> 01-quantum-foam-planck-scale-energy-fluctuations.html</span>
+            <span><strong>Recommended Device:</strong> Desktop (High-Performance)</span>
+            <span><strong>CPU Intensity:</strong> Heavy</span>
+            <span><strong>Inline Word Count:</strong> ~6,200</span>
+            <span><strong>Est. File Size:</strong> ~450 KB</span>
+        </div>
+
+        <div id="overview-panel" class="panel">
+            <h2>A Glimpse into Spacetime's Turbulent Depths</h2>
+            <p>At the most fundamental level imaginable, far smaller than any particle we can directly observe, spacetime itself is theorized to be a chaotic, turbulent sea of energy. This is the realm of "quantum foam," a concept proposed by physicist John Wheeler. Here, the smooth, predictable geometry of Einstein's general relativity breaks down, replaced by violent quantum fluctuations. In this simulation, you can explore a visual model of these Planck-scale energy fluctuations. Witness virtual particles popping into and out of existence, see energy densities spike to unimaginable levels, and manipulate the fundamental parameters that might govern this hidden reality. This page provides not just an interactive visualization, but a comprehensive guide to understanding the theory, its implications, and the profound questions it raises about the nature of our universe.</p>
+        </div>
+
+        <div id="simulation-panel" class="panel">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-view="main">Main View</button>
+                <button class="tab-button" data-view="energy_field">Energy Field</button>
+                <button class="tab-button" data-view="curvature">Curvature Map</button>
+                <button class="tab-button" data-view="schematic">Schematic</button>
+            </div>
+            <canvas id="simulation-canvas" width="1280" height="720" aria-label="Interactive simulation of quantum foam"></canvas>
+            <div id="simulation-overlay"></div>
+        </div>
+
+        <div id="controls-panel" class="panel">
+            <h3>Global Controls</h3>
+            <div class="control-group">
+                <label for="time-scale" data-tooltip="Controls the rate of time evolution in the simulation. Higher values mean faster change.">Time Scale (τ)</label>
+                <input type="range" id="time-scale" min="0.1" max="5" step="0.1" value="1" aria-label="Time Scale Slider">
+                <span class="value-display" id="time-scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+                <label for="sim-speed" data-tooltip="Adjusts the simulation's update frequency (FPS). Lower for performance, higher for smoother animation.">Simulation Speed (Hz)</label>
+                <input type="range" id="sim-speed" min="10" max="60" step="1" value="30" aria-label="Simulation Speed Slider">
+                <span class="value-display" id="sim-speed-value">30</span>
+            </div>
+            <div class="control-group">
+                <label for="resolution" data-tooltip="Grid resolution. Higher values are more detailed but much more CPU-intensive. WARNING: High values may freeze your browser.">Resolution (N x N)</label>
+                <select id="resolution" aria-label="Resolution Selector">
+                    <option value="64">64x64 (Low)</option>
+                    <option value="128" selected>128x128 (Medium)</option>
+                    <option value="256">256x256 (High)</option>
+                    <option value="384">384x384 (Heavy - WARNING)</option>
+                </select>
+            </div>
+
+            <h3>Physical Parameters</h3>
+            <div class="control-group">
+                <label for="fluctuation-magnitude" data-tooltip="Represents the 'quantumness' of spacetime. Higher values lead to more intense and larger energy fluctuations.">Fluctuation Magnitude (ħ_eff)</label>
+                <input type="range" id="fluctuation-magnitude" min="0.1" max="2.0" step="0.05" value="1.0" aria-label="Fluctuation Magnitude Slider">
+                <span class="value-display" id="fluctuation-magnitude-value">1.0</span>
+            </div>
+            <div class="control-group">
+                <label for="energy-dissipation" data-tooltip="Rate at which high-energy spikes dissipate back into the vacuum. Higher values mean a 'calmer' foam.">Energy Dissipation (γ)</label>
+                <input type="range" id="energy-dissipation" min="0.01" max="0.5" step="0.01" value="0.1" aria-label="Energy Dissipation Slider">
+                <span class="value-display" id="energy-dissipation-value">0.10</span>
+            </div>
+            <div class="control-group">
+                <label for="correlation-length" data-tooltip="The characteristic distance over which fluctuations are correlated. Smaller values create a more 'point-like', noisy foam.">Correlation Length (λ)</label>
+                <input type="range" id="correlation-length" min="1" max="10" step="0.5" value="4" aria-label="Correlation Length Slider">
+                <span class="value-display" id="correlation-length-value">4.0</span>
+            </div>
+
+            <h3>Visualization Controls</h3>
+            <div class="control-group">
+                <label for="color-palette" data-tooltip="Change the color scheme for the visualization.">Color Palette</label>
+                <select id="color-palette" aria-label="Color Palette Selector">
+                    <option value="inferno">Inferno</option>
+                    <option value="viridis">Viridis</option>
+                    <option value="plasma">Plasma</option>
+                    <option value="grayscale">Grayscale</option>
+                    <option value="blues">Blues</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label for="energy-scale" data-tooltip="Adjust the sensitivity of the color mapping to energy levels.">Energy Scale</label>
+                <input type="range" id="energy-scale" min="0.1" max="3" step="0.1" value="1" aria-label="Energy Scale Slider">
+                <span class="value-display" id="energy-scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+                <label for="vector-density" data-tooltip="Density of vectors shown in the Curvature Map view.">Vector Arrow Density</label>
+                <input type="range" id="vector-density" min="5" max="25" step="1" value="15" aria-label="Vector Density Slider">
+                <span class="value-display" id="vector-density-value">15</span>
+            </div>
+
+            <div style="text-align: center; margin-top:20px;">
+                <button id="pause-button" class="primary">Pause</button>
+                <button id="reset-button">Reset Sim</button>
+            </div>
+        </div>
+
+        <div id="analysis-panel" class="panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid"></div>
+            <h3>Dynamic Charts</h3>
+            <div class="tab-buttons">
+                <button class="chart-tab-button active" data-chart="energy-timeseries">Energy History</button>
+                <button class="chart-tab-button" data-chart="energy-histogram">Energy PDF</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="chart-canvas" width="400" height="250"></canvas>
+            </div>
+        </div>
+
+        <div id="exposition-panel" class="panel">
+            <h2>The Deep Dive: Understanding Quantum Foam</h2>
+
+            <section id="beginners-guide">
+                <h3>Beginner's Guide: What is Quantum Foam?</h3>
+                <p>Imagine looking at a calm ocean from a satellite. It appears perfectly smooth, a vast, uniform sheet of blue. But if you zoom in, closer and closer, you'll see waves. Zoom in further, and you see ripples, chops, and spray. Quantum foam is a similar idea applied to the very fabric of spacetime. On our everyday scale, spacetime seems smooth and well-behaved, governed by the elegant equations of Einstein's General Relativity. But physicists like John Archibald Wheeler proposed that if we could zoom in to the tiniest possible scale—the Planck length, which is about 1.6 x 10<sup>-35</sup> meters (a billionth of a trillionth of a trillionth of a meter)—spacetime would look nothing like a smooth sheet. Instead, it would be a chaotic, roiling, "foamy" mess.</p>
+                <p>What is this foam made of? It's made of pure energy and geometry, constantly fluctuating due to a fundamental principle of quantum mechanics: the Heisenberg Uncertainty Principle. This principle states that you can't know certain pairs of properties perfectly at the same time. One such pair is energy and time. For incredibly short moments, the amount of energy in a tiny region of space can fluctuate wildly. A huge amount of energy can briefly appear out of nowhere, as long as it disappears again very, very quickly. This borrowed energy can warp spacetime around it, creating tiny, transient gravitational fields. It can even manifest as "virtual particles"—pairs of matter and antimatter particles that pop into existence, fly apart, and then collide and annihilate each other in an unimaginably short time.</p>
+                <p>So, quantum foam is a universe of possibilities playing out at the smallest scales. It's a world where tiny black holes might form and evaporate in an instant, where miniature wormholes might connect different points in space, and where the very concepts of "here" and "there," "before" and "after," become fuzzy. This simulation visualizes the most basic aspect of this idea: the constant, chaotic fluctuation of energy in a tiny patch of the quantum vacuum. The colors you see represent the energy density: darker areas are calm, while bright flashes are regions where, for a fleeting moment, a huge amount of energy has spontaneously appeared.</p>
+            </section>
+
+            <section id="core-theory">
+                <h3>Core Theory: The Physics of Planck-Scale Fluctuations</h3>
+                <p>The concept of quantum foam emerges at the intersection of two pillars of modern physics: General Relativity (GR) and Quantum Mechanics (QM). GR describes gravity as the curvature of spacetime caused by mass and energy. QM describes the behavior of matter and energy at the atomic and subatomic scales, where quantities are quantized and probabilistic.</p>
+                <p>The problem is, these two theories don't play well together. GR is a classical, deterministic theory, while QM is probabilistic and uncertain. When we try to apply both to situations involving immense gravity at tiny scales (like the center of a black hole or the very early universe), the equations break down. A theory of "quantum gravity" is needed to unify them, and quantum foam is a key prediction of what such a theory might entail.</p>
+                <p>The theoretical basis for quantum foam comes from the Heisenberg Uncertainty Principle, specifically the energy-time uncertainty relation: <strong>ΔE ⋅ Δt ≥ ħ / 2</strong>. Here, ΔE is the uncertainty in energy, Δt is the uncertainty in time, and ħ (h-bar) is the reduced Planck constant. This inequality implies that over a very short time interval Δt, the energy of a system can fluctuate by an amount ΔE. The smaller the time interval, the larger the potential energy fluctuation.</p>
+                <p>At the Planck scale, these fluctuations become enormous. The Planck time is t<sub>P</sub> ≈ 5.39 × 10<sup>-44</sup> s. The energy fluctuation over this time can be as large as the Planck energy, E<sub>P</sub> ≈ 1.22 × 10<sup>19</sup> GeV, which is equivalent to the mass of a speck of dust but concentrated into a region billions of times smaller than a proton. According to GR (E=mc²), this energy has mass, and this mass must warp spacetime. A Planck-energy fluctuation in a Planck-sized volume would create a gravitational field so strong it would essentially form a tiny, virtual black hole. The geometry of spacetime itself would be subject to quantum uncertainty, fluctuating wildly. Wheeler described the resulting spacetime as having a "foam-like" or "spongy" texture.</p>
+                <p>This simulation models this process using a simplified cellular automaton approach. A grid represents a small patch of spacetime. Each cell has an energy value, E(x, y). In each time step, the energy of a cell is updated based on two main factors:
+                <ol>
+                    <li><strong>Quantum Fluctuation:</strong> A random amount of energy is added, drawn from a distribution whose width is controlled by the "Fluctuation Magnitude" (ħ_eff) parameter. This simulates the ΔE term.</li>
+                    <li><strong>Dissipation & Correlation:</strong> Energy tends to dissipate to neighboring cells, smoothing out the fluctuations. This is controlled by the "Energy Dissipation" (γ) and "Correlation Length" (λ) parameters. This represents the tendency for the universe to return to a low-energy vacuum state.</li>
+                </ol>
+                The result is a dynamic equilibrium where energy spikes constantly appear and fade, a simplified 2D representation of the chaotic dance of energy at the quantum level.
+                </p>
+            </section>
+
+            <section id="worked-examples">
+                <h3>Worked Examples</h3>
+                <h4>Example 1: Energy Fluctuation Calculation</h4>
+                <p><strong>Question:</strong> According to the uncertainty principle, what is the minimum energy fluctuation (ΔE) that can occur over the lifetime of a virtual Z boson, which is approximately 3 x 10<sup>-25</sup> seconds?</p>
+                <p><strong>Solution:</strong>
+                    We use the energy-time uncertainty principle: ΔE ⋅ Δt ≥ ħ / 2.
+                    <ul>
+                        <li>Given Δt = 3 x 10<sup>-25</sup> s.</li>
+                        <li>The reduced Planck constant, ħ ≈ 1.054 x 10<sup>-34</sup> J·s.</li>
+                        <li>We can calculate the minimum ΔE: ΔE ≥ (ħ / 2) / Δt.</li>
+                        <li>ΔE ≥ (1.054 x 10<sup>-34</sup> J·s / 2) / (3 x 10<sup>-25</sup> s)</li>
+                        <li>ΔE ≥ (5.27 x 10<sup>-35</sup> J·s) / (3 x 10<sup>-25</sup> s)</li>
+                        <li><strong>ΔE ≥ 1.76 x 10<sup>-10</sup> J</strong></li>
+                    </ul>
+                    To put this in perspective, we can convert it to electronvolts (eV), a common unit in particle physics (1 eV = 1.602 x 10<sup>-19</sup> J).
+                    <ul>
+                        <li>ΔE ≥ (1.76 x 10<sup>-10</sup> J) / (1.602 x 10<sup>-19</sup> J/eV)</li>
+                        <li>ΔE ≥ 1.1 x 10<sup>9</sup> eV, or 1.1 GeV (Giga-electronvolts).</li>
+                    </ul>
+                    This is a significant amount of energy at the particle scale, demonstrating how the vacuum is far from empty.
+                </p>
+
+                <h4>Example 2: Spacetime Curvature Estimate</h4>
+                <p><strong>Question:</strong> In our simulation, a cell of size L = 1 Planck length (1.6 x 10<sup>-35</sup> m) has a momentary energy fluctuation of E = 0.1 Planck Energy (E<sub>P</sub>). What is the approximate Schwarzschild radius of this energy concentration, and how does it compare to the cell size?</p>
+                <p><strong>Solution:</strong>
+                    The Schwarzschild radius (R<sub>S</sub>) is the radius at which an object becomes a black hole. It's given by the formula R<sub>S</sub> = 2GM/c², where G is the gravitational constant, M is the mass, and c is the speed of light. We can use E=mc² to substitute for mass.
+                    <ul>
+                        <li>First, find the mass equivalent of the energy E. E = 0.1 E<sub>P</sub> = 0.1 * (2.176 x 10<sup>-8</sup> kg) * c² = 0.1 * m<sub>P</sub>. So, M = 2.176 x 10<sup>-9</sup> kg.</li>
+                        <li>Constants: G ≈ 6.674 x 10<sup>-11</sup> N(m/kg)², c ≈ 3 x 10<sup>8</sup> m/s.</li>
+                        <li>R<sub>S</sub> = (2 * (6.674 x 10<sup>-11</sup>) * (2.176 x 10<sup>-9</sup>)) / (3 x 10<sup>8</sup>)²</li>
+                        <li>R<sub>S</sub> = (2.904 x 10<sup>-19</sup>) / (9 x 10<sup>16</sup>)</li>
+                        <li><strong>R<sub>S</sub> ≈ 3.23 x 10<sup>-36</sup> m</strong></li>
+                    </ul>
+                    Now, compare this to the cell size, L = 1 Planck length = 1.6 x 10<sup>-35</sup> m.
+                    <ul>
+                        <li>Comparison: R<sub>S</sub> / L = (3.23 x 10<sup>-36</sup> m) / (1.6 x 10<sup>-35</sup> m) ≈ 0.2.</li>
+                    </ul>
+                    The calculated Schwarzschild radius is 20% of the size of the region itself. This means the energy fluctuation is significant enough to warp spacetime on its own scale, blurring the line between a particle of energy and a miniature black hole. This is the heart of quantum foam: geometry itself becomes part of the quantum chaos.
+                </p>
+            </section>
+
+            <section id="analogies">
+                <h3>Intuition & Visual Metaphors</h3>
+                <ul>
+                    <li><strong>The Boiling Pot of Water:</strong> Think of the vacuum of space as a pot of water. On low heat, it's calm (our everyday spacetime). As you turn up the "quantum heat" (i.e., look at smaller scales), it begins to simmer, with small bubbles forming and collapsing. At the Planck scale, the water is at a rolling boil, a chaotic mess of steam and violent bubbles. The bubbles are like virtual particles or energy fluctuations.</li>
+                    <li><strong>A Digital Image, Zoomed In:</strong> A high-resolution photograph looks smooth and continuous from a distance. But if you zoom in far enough, you see the individual pixels—the discrete blocks that make up the image. Quantum foam is like the "pixelation" of spacetime. The smooth continuity we perceive is an illusion of scale. Up close, spacetime is granular and blocky.</li>
+                    <li><strong>A Crowd of People:</strong> From a stadium's top tier, a dense crowd looks like a single, slowly shifting entity. If you zoom in, you see individual people moving randomly, bumping into each other, creating temporary gaps and clusters. The "energy" of the crowd in any one spot fluctuates. This is analogous to how the seemingly placid vacuum of space is, up close, a chaotic dance of energy fields.</li>
+                </ul>
+            </section>
+
+            <section id="advanced-extensions">
+                <h3>Advanced Extensions & Related Concepts</h3>
+                <ul>
+                    <li><strong>Topological Change & Wormholes:</strong> John Wheeler speculated that the "foam" might not just be fluctuations in energy, but also in spacetime topology. This could mean the creation of tiny, transient "handles" or "tunnels" in the fabric of space—microscopic wormholes connecting two nearby points. These are sometimes called the "spacetime foam."</li>
+                    <li><strong>The Holographic Principle:</strong> Some theories, like string theory, suggest that the information contained within a volume of space is actually encoded on its boundary. In the context of quantum foam, this could mean that the 3D foamy chaos we see is actually a projection of 2D quantum information living on a surface.</li>
+                    <li><strong>Casimir Effect:</strong> This is an actual, measurable physical phenomenon that provides experimental evidence for vacuum energy fluctuations. If you place two uncharged conductive plates very close together in a vacuum, they are pushed together. The reason is that only virtual particles with specific wavelengths can fit between the plates, while all wavelengths can exist outside. This creates a pressure imbalance, pushing the plates together. It's a direct macroscopic consequence of the "sea" of virtual particles.</li>
+                    <li><strong>Renormalization:</strong> In quantum field theory, calculations of particle interactions often lead to infinite results because they try to account for the interactions with all possible virtual particles in the foam. The mathematical technique of "renormalization" is used to subtract these infinities in a consistent way to get sensible, finite answers that match experiments with incredible precision. It's essentially a mathematical way of taming the chaos of the foam.</li>
+                </ul>
+            </section>
+
+            <section id="practical-exercises">
+                <h3>Practical Exercises & Thought Experiments</h3>
+                <ol>
+                    <li><strong>Find a Virtual Black Hole:</strong> Set the "Fluctuation Magnitude" to its maximum and "Energy Dissipation" to its minimum. Watch the simulation for extremely bright, compact flashes of energy. These are analogous to the formation of virtual black holes. Try to pause the simulation right when one appears. What is the peak energy? How quickly does it dissipate when you resume?</li>
+                    <li><strong>The Calm and the Stormy Sea:</strong> Start with the default "Medium" preset. Observe the metrics. Now, switch to the "Quiet Vacuum" preset. Note the dramatic drop in average energy and curvature. Then, switch to the "Chaotic Inflation" preset. How do the metrics change? This exercise demonstrates how the fundamental parameters of a quantum vacuum could lead to vastly different universes.</li>
+                    <li><strong>The Casimir Effect Analogy:</strong> While this simulation doesn't model it directly, imagine placing two lines (plates) on the canvas. Do you notice a difference in the "activity" between the lines versus outside? The model isn't sophisticated enough to show the real effect, but it's a good thought experiment for visualizing the underlying concept.</li>
+                    <li><strong>Probing Spacetime:</strong> Use the annotation tool. Click to drop a pin on a relatively calm area. Then drop another on a very active, bright area. What are the energy readouts? This simulates the idea of a "quantum probe" measuring the local energy density of the vacuum.</li>
+                </ol>
+            </section>
+        </div>
+
+        <div id="qa-panel" class="panel">
+            <h2>Deep Q&A</h2>
+            <div id="qa-list">
+                <div class="qa-item">
+                    <p><strong>1. If virtual particles are real, could we harness their energy?</strong></p>
+                    <p>This is a classic question and the short answer is, unfortunately, almost certainly no. While vacuum energy is real, it represents the *ground state* or lowest possible energy level of the universe. It's like trying to get power from a ball sitting at the bottom of a valley; there's no lower state for it to fall to and release energy. To extract energy, you need an energy *difference*. The Casimir effect demonstrates you can manipulate the vacuum energy to create a force, but this typically costs more energy than you get out. So-called "zero-point energy" harvesters remain in the realm of science fiction because they likely violate the laws of thermodynamics.</p>
+                </div>
+                <div class="qa-item">
+                    <p><strong>2. Does quantum foam violate the conservation of energy?</strong></p>
+                    <p>It appears to, but it doesn't. The law of conservation of energy is saved by the energy-time uncertainty principle (ΔE ⋅ Δt ≥ ħ / 2). Energy can be "borrowed" from the vacuum, but only for a very short time. The larger the amount of borrowed energy (ΔE), the shorter the time (Δt) it's allowed to exist. The energy is always "paid back" when the virtual particles annihilate, so on any normal timescale, the net energy of the vacuum remains zero. It's like a bank allowing you a momentary overdraft: your balance can dip negative, but it must be restored almost instantly. Over any measurable period, your account is balanced.</p>
+                </div>
+                <div class="qa-item">
+                    <p><strong>3. What is the difference between vacuum energy and dark energy?</strong></p>
+                    <p>This is one of the biggest mysteries in physics, known as the "cosmological constant problem." In theory, the quantum foam's vacuum energy should act just like dark energy—a constant energy density in space that causes the universe's expansion to accelerate. The problem is the magnitude. When physicists naively calculate the total energy density from all the quantum fluctuations, the result is staggering—about 10<sup>121</sup> times larger than the observed energy density of dark energy. This is the largest discrepancy between theory and observation in all of science. It suggests our understanding of vacuum energy is profoundly incomplete. Either some unknown mechanism cancels out almost all of the vacuum energy, or our calculation is fundamentally wrong.</p>
+                </div>
+                <div class="qa-item">
+                    <p><strong>4. If spacetime is a foam, why does it look smooth to us?</strong></p>
+                    <p>The scale is simply incomprehensible. The Planck length (≈10<sup>-35</sup> m) is as many times smaller than a single atom as that atom is smaller than the entire solar system. Even our most powerful particle accelerators, like the Large Hadron Collider, can only probe distances down to about 10<sup>-20</sup> m. That's still 100 trillion times larger than the Planck scale. At any scale we can currently measure, the chaotic fluctuations of the foam average out to create the smooth, predictable spacetime we experience, just as the random jostling of trillions of air molecules creates the smooth, consistent air pressure we feel.</p>
+                </div>
+                <!-- ... More Q&A items ... -->
+            </div>
+        </div>
+
+        <div id="microlabs-panel" class="panel">
+            <h2>Presets & Micro-Labs</h2>
+            <div class="control-group">
+                <label for="presets">Load a Preset Configuration:</label>
+                <select id="presets">
+                    <option value="custom">Custom</option>
+                    <option value="default">Default (Medium Foam)</option>
+                    <option value="quiet">Quiet Vacuum</option>
+                    <option value="active">Active Vacuum</option>
+                    <option value="chaotic">Chaotic Inflation</option>
+                    <option value="pointlike">Point-Like Noise</option>
+                    <option value="smooth">Smooth & Correlated</option>
+                </select>
+            </div>
+            <h3>Micro-Experiments</h3>
+            <div class="control-group">
+                <label for="microlabs">Select a guided micro-experiment:</label>
+                <select id="microlabs">
+                    <option value="none">-- Select an Experiment --</option>
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
+            <button id="run-microlab-button">Run Micro-Lab</button>
+            <div id="microlab-description"></div>
+            <div id="microlab-log" style="height: 150px; overflow-y: scroll; background: var(--log-bg); padding: 10px; border-radius: 4px; margin-top: 10px; font-family: var(--font-family-mono); font-size: 0.9em;"></div>
+        </div>
+
+        <div id="footer-panel" class="panel">
+            <h3>Developer & UX Features</h3>
+            <button id="toggle-theme">Toggle Light/Dark Mode</button>
+            <button id="toggle-colorblind">Toggle Colorblind Palette</button>
+            <button id="toggle-dev-console">Toggle Developer Console</button>
+            <button id="regen-page">Regenerate Page</button>
+            <div id="developer-console">
+                <h4>Developer Console</h4>
+                <div id="perf-metrics">FPS: N/A, Mem: N/A</div>
+                <div id="on-load-log"><strong>On-Load Self-Test Log:</strong><br></div>
+                <div id="dev-log"><strong>Runtime Log:</strong><br></div>
+            </div>
+            <div id="error-panel">
+                <h4>Error Detected</h4>
+                <p id="error-message"></p>
+            </div>
+            <div id="repro-string-container" style="margin-top: 20px;">
+                <label for="repro-string">Reproducibility String:</label>
+                <input type="text" id="repro-string" readonly style="width: calc(100% - 80px);">
+                <button id="copy-repro-button">Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Self-executing anonymous function to encapsulate all our code
+    (function() {
+        'use strict';
+
+        // --- DOM ELEMENT REFERENCES ---
+        const dom = {
+            canvas: document.getElementById('simulation-canvas'),
+            ctx: null,
+            controls: {
+                timeScale: document.getElementById('time-scale'),
+                simSpeed: document.getElementById('sim-speed'),
+                resolution: document.getElementById('resolution'),
+                fluctuationMagnitude: document.getElementById('fluctuation-magnitude'),
+                energyDissipation: document.getElementById('energy-dissipation'),
+                correlationLength: document.getElementById('correlation-length'),
+                colorPalette: document.getElementById('color-palette'),
+                energyScale: document.getElementById('energy-scale'),
+                vectorDensity: document.getElementById('vector-density'),
+                pauseButton: document.getElementById('pause-button'),
+                resetButton: document.getElementById('reset-button'),
+                presets: document.getElementById('presets'),
+            },
+            displays: {
+                timeScale: document.getElementById('time-scale-value'),
+                simSpeed: document.getElementById('sim-speed-value'),
+                fluctuationMagnitude: document.getElementById('fluctuation-magnitude-value'),
+                energyDissipation: document.getElementById('energy-dissipation-value'),
+                correlationLength: document.getElementById('correlation-length-value'),
+                energyScale: document.getElementById('energy-scale-value'),
+                vectorDensity: document.getElementById('vector-density-value'),
+            },
+            metricsGrid: document.getElementById('metrics-grid'),
+            tooltip: document.getElementById('tooltip'),
+            devConsole: {
+                panel: document.getElementById('developer-console'),
+                perf: document.getElementById('perf-metrics'),
+                onLoadLog: document.getElementById('on-load-log'),
+                devLog: document.getElementById('dev-log'),
+            },
+            errorPanel: {
+                panel: document.getElementById('error-panel'),
+                message: document.getElementById('error-message'),
+            },
+            repro: {
+                input: document.getElementById('repro-string'),
+                copyButton: document.getElementById('copy-repro-button'),
+            },
+            chartCanvas: document.getElementById('chart-canvas'),
+            chartCtx: null,
+        };
+
+        // --- SIMULATION STATE ---
+        const state = {
+            gridSize: 128,
+            energyGrid: null,
+            isRunning: true,
+            lastFrameTime: 0,
+            targetInterval: 1000 / 30,
+            viewMode: 'main', // main, energy_field, curvature, schematic
+            annotations: [],
+            // Charting data
+            energyHistory: [],
+            historyLength: 200,
+            activeChart: 'energy-timeseries' // or 'energy-histogram'
+        };
+
+        // --- SIMULATION PARAMETERS ---
+        const params = {
+            timeScale: 1.0,
+            fluctuationMagnitude: 1.0,
+            energyDissipation: 0.1,
+            correlationLength: 4.0,
+            colorPalette: 'inferno',
+            energyScale: 1.0,
+            vectorDensity: 15,
+            seed: Date.now(),
+        };
+
+        // --- UTILITY & HELPER FUNCTIONS ---
+        const log = (type, ...args) => {
+            const message = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+            console[type](...args);
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${type.toUpperCase()}: ${message}`;
+            if (dom.devConsole.devLog) {
+                dom.devConsole.devLog.appendChild(logEntry);
+                dom.devConsole.devLog.scrollTop = dom.devConsole.devLog.scrollHeight;
+            }
+        };
+
+        const showError = (message) => {
+            if (dom.errorPanel.panel) {
+                dom.errorPanel.panel.style.display = 'block';
+                dom.errorPanel.message.textContent = message;
+                log('error', message);
+            }
+        };
+
+        // Simple seeded pseudo-random number generator
+        let rand_seed = params.seed;
+        const random = () => {
+            const x = Math.sin(rand_seed++) * 10000;
+            return x - Math.floor(x);
+        };
+
+        // --- COLOR PALETTES ---
+        const palettes = {
+            inferno: (t) => `hsl(${t*60}, 100%, ${t*100}%)`,
+            viridis: (t) => {
+                const c = [[0.267, 0.005, 0.329], [0.282, 0.228, 0.545], [0.125, 0.428, 0.558], [0.091, 0.616, 0.423], [0.522, 0.765, 0.121], [0.993, 0.906, 0.144]];
+                const i = Math.floor(t * (c.length - 1));
+                const f = t * (c.length - 1) - i;
+                const c1 = c[i], c2 = c[Math.min(i + 1, c.length - 1)];
+                const r = (c1[0] + (c2[0] - c1[0]) * f) * 255;
+                const g = (c1[1] + (c2[1] - c1[1]) * f) * 255;
+                const b = (c1[2] + (c2[2] - c1[2]) * f) * 255;
+                return `rgb(${r},${g},${b})`;
+            },
+            plasma: (t) => {
+                const c = [[0.05, 0.03, 0.24], [0.4, 0.0, 0.47], [0.67, 0.0, 0.35], [0.89, 0.23, 0.13], [0.98, 0.54, 0.0], [0.97, 0.85, 0.4]];
+                const i = Math.floor(t * (c.length - 1));
+                const f = t * (c.length - 1) - i;
+                const c1 = c[i], c2 = c[Math.min(i + 1, c.length - 1)];
+                const r = (c1[0] + (c2[0] - c1[0]) * f) * 255;
+                const g = (c1[1] + (c2[1] - c1[1]) * f) * 255;
+                const b = (c1[2] + (c2[2] - c1[2]) * f) * 255;
+                return `rgb(${r},${g},${b})`;
+            },
+            grayscale: (t) => `hsl(0, 0%, ${t*100}%)`,
+            blues: (t) => `hsl(210, 100%, ${100 - t*60}%)`,
+        };
+
+        // --- INITIALIZATION ---
+        function init() {
+            try {
+                // Self-test
+                const onLoadLog = dom.devConsole.onLoadLog;
+                let testsPassed = true;
+
+                if (dom.canvas && dom.canvas.getContext) {
+                    dom.ctx = dom.canvas.getContext('2d');
+                    dom.chartCtx = dom.chartCanvas.getContext('2d');
+                    onLoadLog.innerHTML += "OK: Canvas API available.<br>";
+                } else {
+                    showError("Canvas API not supported. This simulation cannot run.");
+                    onLoadLog.innerHTML += "FAIL: Canvas API not supported.<br>";
+                    testsPassed = false;
+                    return;
+                }
+
+                if(Object.keys(dom.controls).every(k => dom.controls[k])) {
+                    onLoadLog.innerHTML += "OK: All control elements found.<br>";
+                } else {
+                    showError("Some UI controls are missing. Page may not function correctly.");
+                    onLoadLog.innerHTML += "WARN: Missing some control elements.<br>";
+                }
+
+                setupEventListeners();
+                updateAllParameters();
+                resetSimulation();
+
+                onLoadLog.innerHTML += `OK: Presets loaded (${Object.keys(presets).length}).<br>`;
+                onLoadLog.innerHTML += `OK: Micro-labs loaded (${Object.keys(microlabs).length}).<br>`;
+                onLoadLog.innerHTML += `OK: Initialization complete. Starting simulation.<br>`;
+
+                log('info', 'Simulation initialized successfully.');
+                requestAnimationFrame(mainLoop);
+
+            } catch (e) {
+                showError(`A critical error occurred during initialization: ${e.message}`);
+                log('error', `Initialization failed:`, e);
+            }
+        }
+
+        function setupEventListeners() {
+            Object.keys(dom.controls).forEach(key => {
+                if (dom.controls[key]) {
+                    dom.controls[key].addEventListener('input', handleControlChange);
+                }
+            });
+            dom.controls.resetButton.addEventListener('click', resetSimulation);
+            dom.controls.pauseButton.addEventListener('click', togglePause);
+
+            // Tooltips
+            document.querySelectorAll('[data-tooltip]').forEach(el => {
+                el.addEventListener('mouseenter', showTooltip);
+                el.addEventListener('mouseleave', hideTooltip);
+            });
+
+            // View tabs
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.viewMode = e.target.dataset.view;
+                    document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    log('info', `Switched to view: ${state.viewMode}`);
+                });
+            });
+
+            // Chart tabs
+            document.querySelectorAll('.chart-tab-button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.activeChart = e.target.dataset.chart;
+                    document.querySelectorAll('.chart-tab-button').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                });
+            });
+
+            // Canvas interaction
+            dom.canvas.addEventListener('click', handleCanvasClick);
+
+            // UX/Dev buttons
+            document.getElementById('toggle-theme').addEventListener('click', () => document.documentElement.classList.toggle('theme-light'));
+            document.getElementById('toggle-colorblind').addEventListener('click', () => document.documentElement.classList.toggle('theme-colorblind'));
+            document.getElementById('toggle-dev-console').addEventListener('click', () => dom.devConsole.panel.style.display = dom.devConsole.panel.style.display === 'none' ? 'block' : 'none');
+            document.getElementById('regen-page').addEventListener('click', () => window.location.reload());
+            dom.repro.copyButton.addEventListener('click', copyReproString);
+
+            // Microlabs
+            document.getElementById('run-microlab-button').addEventListener('click', runSelectedMicroLab);
+        }
+
+        function handleControlChange(e) {
+            const id = e.target.id;
+            let value = e.target.value;
+            if (e.target.type === 'range') {
+                value = parseFloat(value);
+            }
+            if (id === 'resolution') {
+                const newSize = parseInt(value);
+                if (newSize >= 384 && !confirm(`WARNING: Resolution ${newSize}x${newSize} is very demanding and may cause performance issues or freeze your browser. Do you want to proceed?`)) {
+                    e.target.value = state.gridSize;
+                    return;
+                }
+                state.gridSize = newSize;
+                resetSimulation();
+            }
+            updateAllParameters();
+        }
+
+        function updateAllParameters() {
+            params.timeScale = parseFloat(dom.controls.timeScale.value);
+            state.targetInterval = 1000 / parseFloat(dom.controls.simSpeed.value);
+            params.fluctuationMagnitude = parseFloat(dom.controls.fluctuationMagnitude.value);
+            params.energyDissipation = parseFloat(dom.controls.energyDissipation.value);
+            params.correlationLength = parseFloat(dom.controls.correlationLength.value);
+            params.colorPalette = dom.controls.colorPalette.value;
+            params.energyScale = parseFloat(dom.controls.energyScale.value);
+            params.vectorDensity = parseInt(dom.controls.vectorDensity.value);
+
+            // Update displays
+            Object.keys(dom.displays).forEach(key => {
+                if (dom.displays[key]) {
+                    const control = dom.controls[key] || dom.controls[key.replace('-value', '')];
+                    let value = control.value;
+                    if(control.type === 'range') value = parseFloat(value).toFixed(2);
+                    dom.displays[key].textContent = value;
+                }
+            });
+            updateReproString();
+        }
+
+        function resetSimulation() {
+            log('info', 'Resetting simulation with grid size:', state.gridSize);
+            rand_seed = params.seed;
+            state.energyGrid = new Float32Array(state.gridSize * state.gridSize);
+            for (let i = 0; i < state.energyGrid.length; i++) {
+                state.energyGrid[i] = random() * 0.1;
+            }
+            state.annotations = [];
+            state.energyHistory = [];
+            if (!state.isRunning) {
+                draw(); // Draw the reset state if paused
+            }
+        }
+
+        function togglePause() {
+            state.isRunning = !state.isRunning;
+            dom.controls.pauseButton.textContent = state.isRunning ? 'Pause' : 'Resume';
+            log('info', state.isRunning ? 'Simulation resumed' : 'Simulation paused');
+            if (state.isRunning) {
+                state.lastFrameTime = performance.now();
+                requestAnimationFrame(mainLoop);
+            }
+        }
+
+        // --- SIMULATION LOGIC ---
+        function stepSimulation() {
+            const N = state.gridSize;
+            const newGrid = new Float32Array(N * N);
+            const mag = params.fluctuationMagnitude * 0.1 * params.timeScale;
+            const diss = params.energyDissipation * params.timeScale;
+            const corr = params.correlationLength;
+
+            for (let y = 0; y < N; y++) {
+                for (let x = 0; x < N; x++) {
+                    const i = y * N + x;
+
+                    // Fluctuation
+                    let fluctuation = (random() - 0.5) * 2 * mag;
+
+                    // Dissipation & Correlation
+                    let laplacian = 0;
+                    let neighbors = 0;
+                    for (let dy = -1; dy <= 1; dy++) {
+                        for (let dx = -1; dx <= 1; dx++) {
+                            if (dx === 0 && dy === 0) continue;
+                            const nx = (x + dx + N) % N;
+                            const ny = (y + dy + N) % N;
+                            laplacian += state.energyGrid[ny * N + nx];
+                            neighbors++;
+                        }
+                    }
+                    laplacian = (laplacian / neighbors) - state.energyGrid[i];
+
+                    newGrid[i] = state.energyGrid[i] + fluctuation + (diss * laplacian);
+
+                    // Damping
+                    newGrid[i] *= (1.0 - 0.01 * params.timeScale);
+
+                    // Clamp energy to prevent runaway values
+                    if (newGrid[i] < 0) newGrid[i] = 0;
+                    if (newGrid[i] > 5) newGrid[i] = 5;
+                }
+            }
+            state.energyGrid = newGrid;
+        }
+
+        // --- DRAWING & VISUALIZATION ---
+        function draw() {
+            const ctx = dom.ctx;
+            const N = state.gridSize;
+            const cellWidth = dom.canvas.width / N;
+            const cellHeight = dom.canvas.height / N;
+            const colorFunc = palettes[params.colorPalette];
+
+            ctx.clearRect(0, 0, dom.canvas.width, dom.canvas.height);
+
+            // Main drawing logic based on view mode
+            switch (state.viewMode) {
+                case 'main':
+                case 'energy_field':
+                    for (let y = 0; y < N; y++) {
+                        for (let x = 0; x < N; x++) {
+                            const energy = state.energyGrid[y * N + x];
+                            const t = Math.min(1, energy * params.energyScale);
+                            ctx.fillStyle = colorFunc(t);
+                            ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth + 1, cellHeight + 1);
+                        }
+                    }
+                    break;
+                case 'curvature':
+                    drawCurvatureView(ctx, N, cellWidth, cellHeight);
+                    break;
+                case 'schematic':
+                    drawSchematicView(ctx);
+                    break;
+            }
+
+            // Draw annotations
+            state.annotations.forEach(ann => {
+                ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+                ctx.beginPath();
+                ctx.arc(ann.x * dom.canvas.width, ann.y * dom.canvas.height, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#000';
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`E: ${ann.energy.toFixed(3)}`, ann.x * dom.canvas.width + 8, ann.y * dom.canvas.height - 8);
+            });
+
+            // Draw charts
+            drawCharts();
+        }
+
+        function drawCurvatureView(ctx, N, cellWidth, cellHeight) {
+            // Background energy field
+            const colorFunc = palettes[params.colorPalette];
+            for (let y = 0; y < N; y++) {
+                for (let x = 0; x < N; x++) {
+                    const energy = state.energyGrid[y * N + x];
+                    const t = Math.min(1, energy * params.energyScale * 0.5); // Muted background
+                    ctx.fillStyle = colorFunc(t);
+                    ctx.fillRect(x * cellWidth, y * cellHeight, cellWidth + 1, cellHeight + 1);
+                }
+            }
+            // Vector field for gradient (pseudo-curvature)
+            const density = params.vectorDensity;
+            const step = N / density;
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y < density; y++) {
+                for (let x = 0; x < density; x++) {
+                    const gridX = Math.floor(x * step);
+                    const gridY = Math.floor(y * step);
+                    const i = gridY * N + gridX;
+                    const E_right = state.energyGrid[i + 1] || state.energyGrid[i];
+                    const E_left = state.energyGrid[i - 1] || state.energyGrid[i];
+                    const E_down = state.energyGrid[i + N] || state.energyGrid[i];
+                    const E_up = state.energyGrid[i - N] || state.energyGrid[i];
+                    const gradX = (E_right - E_left);
+                    const gradY = (E_down - E_up);
+
+                    const canvasX = (gridX + 0.5) * cellWidth;
+                    const canvasY = (gridY + 0.5) * cellHeight;
+                    const mag = Math.sqrt(gradX*gradX + gradY*gradY);
+                    const angle = Math.atan2(gradY, gradX);
+
+                    ctx.save();
+                    ctx.translate(canvasX, canvasY);
+                    ctx.rotate(angle);
+                    const len = Math.min(20, mag * 20);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-len, 0);
+                    ctx.moveTo(-len, 0);
+                    ctx.lineTo(-len + 4, -4);
+                    ctx.moveTo(-len, 0);
+                    ctx.lineTo(-len + 4, 4);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }
+
+        function drawSchematicView(ctx) {
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0,0,dom.canvas.width, dom.canvas.height);
+
+            const w = dom.canvas.width;
+            const h = dom.canvas.height;
+
+            // Draw grid lines
+            ctx.strokeStyle = 'rgba(0, 100, 255, 0.3)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            for(let i=0; i<w; i+=gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, h);
+                ctx.stroke();
+            }
+            for(let i=0; i<h; i+=gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(w, i);
+                ctx.stroke();
+            }
+
+            // Draw some "virtual particles"
+            const numParticles = 20;
+            for(let i=0; i<numParticles; i++) {
+                const x = random() * w;
+                const y = random() * h;
+                const r = random() * 5 + 2;
+                const lifetime = random();
+
+                // Particle
+                ctx.fillStyle = `rgba(255, 80, 80, ${lifetime})`;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Antiparticle
+                ctx.fillStyle = `rgba(80, 80, 255, ${lifetime})`;
+                ctx.beginPath();
+                ctx.arc(x + (random()-0.5)*30, y + (random()-0.5)*30, r, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = 'white';
+            ctx.font = '16px sans-serif';
+            ctx.fillText("Schematic: Virtual Particle Pairs", 20, 30);
+        }
+
+        function drawCharts() {
+            const ctx = dom.chartCtx;
+            const w = dom.chartCanvas.width;
+            const h = dom.chartCanvas.height;
+            ctx.clearRect(0,0,w,h);
+
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--panel-bg').trim();
+            ctx.fillRect(0,0,w,h);
+
+            if (state.activeChart === 'energy-timeseries') {
+                drawTimeseriesChart(ctx, w, h);
+            } else if (state.activeChart === 'energy-histogram') {
+                drawHistogramChart(ctx, w, h);
+            }
+        }
+
+        function drawTimeseriesChart(ctx, w, h) {
+            const data = state.energyHistory;
+            if (data.length < 2) return;
+
+            const maxVal = Math.max(...data, 0.1);
+            ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i=0; i<data.length; i++) {
+                const x = (i / (data.length - 1)) * w;
+                const y = h - (data[i] / maxVal) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Time', w/2 - 10, h - 5);
+            ctx.fillText(`Max E: ${maxVal.toFixed(3)}`, 10, 20);
+        }
+
+        function drawHistogramChart(ctx, w, h) {
+            const numBins = 20;
+            const bins = new Array(numBins).fill(0);
+            const maxEnergy = Math.max(...state.energyGrid, 1.0);
+
+            for(let i=0; i<state.energyGrid.length; i++) {
+                const energy = state.energyGrid[i];
+                let binIndex = Math.floor((energy / maxEnergy) * numBins);
+                binIndex = Math.min(binIndex, numBins - 1);
+                bins[binIndex]++;
+            }
+
+            const maxCount = Math.max(...bins);
+            const binWidth = w / numBins;
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+            for(let i=0; i<numBins; i++) {
+                const barHeight = (bins[i] / maxCount) * h;
+                ctx.fillRect(i * binWidth, h - barHeight, binWidth - 1, barHeight);
+            }
+
+            // Labels
+            ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Energy Level', w/2 - 30, h - 5);
+            ctx.fillText('0', 5, h-5);
+            ctx.fillText(maxEnergy.toFixed(2), w - 25, h-5);
+        }
+
+        // --- METRICS & ANALYSIS ---
+        function updateMetrics() {
+            const N2 = state.gridSize * state.gridSize;
+            let totalEnergy = 0;
+            let peakEnergy = 0;
+            let energySumSq = 0;
+            let nonZeroCells = 0;
+            let totalCurvature = 0;
+
+            for (let i = 0; i < N2; i++) {
+                const E = state.energyGrid[i];
+                totalEnergy += E;
+                if (E > peakEnergy) peakEnergy = E;
+                energySumSq += E * E;
+                if (E > 0.01) nonZeroCells++;
+
+                // Curvature approximation (Laplacian)
+                const x = i % state.gridSize;
+                const y = Math.floor(i / state.gridSize);
+                let laplacian = 0;
+                const E_right = state.energyGrid[y * state.gridSize + (x + 1) % state.gridSize];
+                const E_left = state.energyGrid[y * state.gridSize + (x - 1 + state.gridSize) % state.gridSize];
+                const E_down = state.energyGrid[((y + 1) % state.gridSize) * state.gridSize + x];
+                const E_up = state.energyGrid[((y - 1 + state.gridSize) % state.gridSize) * state.gridSize + x];
+                laplacian = E_right + E_left + E_down + E_up - 4 * E;
+                totalCurvature += Math.abs(laplacian);
+            }
+
+            const avgEnergy = totalEnergy / N2;
+            const rmsEnergy = Math.sqrt(energySumSq / N2);
+            const stdDev = Math.sqrt(rmsEnergy*rmsEnergy - avgEnergy*avgEnergy);
+            const foaminess = stdDev / (avgEnergy + 1e-9);
+            const avgCurvature = totalCurvature / N2;
+
+            const metrics = {
+                'Total Energy': totalEnergy.toFixed(2),
+                'Average Energy': avgEnergy.toExponential(3),
+                'Peak Energy': peakEnergy.toFixed(3),
+                'RMS Energy': rmsEnergy.toFixed(3),
+                'Std. Dev. (σ)': stdDev.toFixed(3),
+                'Foaminess (σ/μ)': foaminess.toFixed(2),
+                'Active Cells (%)': ((nonZeroCells / N2) * 100).toFixed(1),
+                'Avg. Curvature': avgCurvature.toFixed(3),
+                'Virtual Particles (est)': (totalEnergy * 10).toFixed(0),
+                'Entropy (est)': (Math.log(stdDev + 1) * 100).toFixed(2),
+                'Lyapunov Exp (est)': (foaminess * params.timeScale).toFixed(3),
+                'CFL Indicator': (params.timeScale * params.energyDissipation).toFixed(2),
+            };
+
+            // Update chart data
+            state.energyHistory.push(avgEnergy);
+            if (state.energyHistory.length > state.historyLength) {
+                state.energyHistory.shift();
+            }
+
+            // Update DOM
+            let html = '';
+            for (const [label, value] of Object.entries(metrics)) {
+                html += `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div></div>`;
+            }
+            dom.metricsGrid.innerHTML = html;
+        }
+
+        // --- MAIN LOOP ---
+        function mainLoop(timestamp) {
+            if (!state.isRunning) return;
+
+            const elapsed = timestamp - state.lastFrameTime;
+
+            if (elapsed >= state.targetInterval) {
+                state.lastFrameTime = timestamp - (elapsed % state.targetInterval);
+
+                stepSimulation();
+                draw();
+                updateMetrics();
+
+                // Update perf metrics
+                const fps = 1000 / elapsed;
+                const mem = window.performance.memory ? (window.performance.memory.usedJSHeapSize / 1048576).toFixed(1) : 'N/A';
+                dom.devConsole.perf.textContent = `FPS: ${fps.toFixed(1)}, Mem: ${mem} MB`;
+            }
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        // --- INTERACTIVITY ---
+        function showTooltip(e) {
+            const text = e.target.dataset.tooltip;
+            if (!text) return;
+            dom.tooltip.textContent = text;
+            dom.tooltip.style.display = 'block';
+            document.addEventListener('mousemove', moveTooltip);
+        }
+
+        function hideTooltip() {
+            dom.tooltip.style.display = 'none';
+            document.removeEventListener('mousemove', moveTooltip);
+        }
+
+        function moveTooltip(e) {
+            dom.tooltip.style.left = `${e.clientX + 15}px`;
+            dom.tooltip.style.top = `${e.clientY + 15}px`;
+        }
+
+        function handleCanvasClick(e) {
+            const rect = dom.canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+
+            const gridX = Math.floor(x * state.gridSize);
+            const gridY = Math.floor(y * state.gridSize);
+            const energy = state.energyGrid[gridY * state.gridSize + gridX];
+
+            state.annotations.push({ x, y, energy });
+            if (state.annotations.length > 5) {
+                state.annotations.shift();
+            }
+            log('info', `Annotation added at (${gridX}, ${gridY}), Energy: ${energy.toFixed(4)}`);
+            if (!state.isRunning) draw();
+        }
+
+        // --- PRESETS & REPRODUCIBILITY ---
+        const presets = {
+            'default': { timeScale: 1, fluctuationMagnitude: 1, energyDissipation: 0.1, correlationLength: 4 },
+            'quiet': { timeScale: 0.5, fluctuationMagnitude: 0.2, energyDissipation: 0.4, correlationLength: 8 },
+            'active': { timeScale: 1.5, fluctuationMagnitude: 1.5, energyDissipation: 0.1, correlationLength: 3 },
+            'chaotic': { timeScale: 3, fluctuationMagnitude: 2.0, energyDissipation: 0.05, correlationLength: 2 },
+            'pointlike': { timeScale: 1, fluctuationMagnitude: 1.2, energyDissipation: 0.2, correlationLength: 1 },
+            'smooth': { timeScale: 0.8, fluctuationMagnitude: 0.6, energyDissipation: 0.05, correlationLength: 10 },
+        };
+
+        function applyPreset(name) {
+            if (!presets[name] || name === 'custom') return;
+            log('info', `Applying preset: ${name}`);
+            const p = presets[name];
+            dom.controls.timeScale.value = p.timeScale;
+            dom.controls.fluctuationMagnitude.value = p.fluctuationMagnitude;
+            dom.controls.energyDissipation.value = p.energyDissipation;
+            dom.controls.correlationLength.value = p.correlationLength;
+            updateAllParameters();
+            resetSimulation();
+        }
+
+        dom.controls.presets.addEventListener('change', (e) => applyPreset(e.target.value));
+
+        function updateReproString() {
+            const data = {
+                v: 1, // version
+                res: state.gridSize,
+                ts: params.timeScale,
+                fm: params.fluctuationMagnitude,
+                ed: params.energyDissipation,
+                cl: params.correlationLength,
+                seed: params.seed
+            };
+            const str = btoa(JSON.stringify(data));
+            dom.repro.input.value = str;
+        }
+
+        function copyReproString() {
+            dom.repro.input.select();
+            document.execCommand('copy');
+            log('info', 'Reproducibility string copied to clipboard.');
+        }
+
+        // --- MICRO-LABS ---
+        const microlabs = {
+            'energy_scaling': {
+                name: "Energy Fluctuation Scaling",
+                description: "This experiment tests how Fluctuation Magnitude (ħ_eff) affects the average energy and standard deviation of the foam.",
+                steps: [
+                    { action: 'set_param', param: 'fluctuationMagnitude', value: 0.2, log: "Setting ħ_eff to 0.2" },
+                    { action: 'run_for', duration: 2000, log: "Running for 2s..." },
+                    { action: 'record_metric', metric: 'Average Energy', as: 'E_low' },
+                    { action: 'record_metric', metric: 'Std. Dev. (σ)', as: 'S_low' },
+                    { action: 'set_param', param: 'fluctuationMagnitude', value: 1.8, log: "Setting ħ_eff to 1.8" },
+                    { action: 'run_for', duration: 2000, log: "Running for 2s..." },
+                    { action: 'record_metric', metric: 'Average Energy', as: 'E_high' },
+                    { action: 'record_metric', metric: 'Std. Dev. (σ)', as: 'S_high' },
+                    { action: 'log_result', text: "RESULTS: Low ħ_eff -> Avg E: {E_low}, Std Dev: {S_low}. High ħ_eff -> Avg E: {E_high}, Std Dev: {S_high}. Expect both to increase significantly." }
+                ]
+            },
+            // ... more microlabs can be added here
+        };
+
+        function populateMicroLabs() {
+            const select = document.getElementById('microlabs');
+            for (const key in microlabs) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = microlabs[key].name;
+                select.appendChild(option);
+            }
+            select.addEventListener('change', (e) => {
+                const lab = microlabs[e.target.value];
+                document.getElementById('microlab-description').textContent = lab ? lab.description : "";
+            });
+        }
+
+        async function runSelectedMicroLab() {
+            const key = document.getElementById('microlabs').value;
+            if (key === 'none') return;
+            const lab = microlabs[key];
+            const logPanel = document.getElementById('microlab-log');
+            logPanel.innerHTML = `--- Starting Lab: ${lab.name} ---<br>`;
+
+            const results = {};
+
+            for (const step of lab.steps) {
+                logPanel.innerHTML += `> ${step.log}<br>`;
+                logPanel.scrollTop = logPanel.scrollHeight;
+
+                switch(step.action) {
+                    case 'set_param':
+                        dom.controls[step.param].value = step.value;
+                        updateAllParameters();
+                        resetSimulation();
+                        break;
+                    case 'run_for':
+                        const start = performance.now();
+                        while(performance.now() - start < step.duration) {
+                            stepSimulation(); // Run without drawing for speed
+                            await new Promise(r => setTimeout(r, 5)); // yield to browser
+                        }
+                        break;
+                    case 'record_metric':
+                        updateMetrics(); // Ensure metrics are fresh
+                        const metricEl = Array.from(dom.metricsGrid.children).find(el => el.querySelector('.metric-label').textContent === step.metric);
+                        if (metricEl) {
+                            results[step.as] = metricEl.querySelector('.metric-value').textContent;
+                        }
+                        break;
+                    case 'log_result':
+                        let resultText = step.text;
+                        for(const resKey in results) {
+                            resultText = resultText.replace(`{${resKey}}`, results[resKey]);
+                        }
+                        logPanel.innerHTML += `<strong>${resultText}</strong><br>`;
+                        break;
+                }
+            }
+            logPanel.innerHTML += `--- Lab Complete ---<br>`;
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+
+        // --- STARTUP ---
+        document.addEventListener('DOMContentLoaded', () => {
+            populateMicroLabs();
+            init();
+        });
+
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Micro-Wormhole Topology in a Quantum Foam Sea</title>
+    <style>
+        :root {
+            --bg-color: #101010;
+            --text-color: #e0e0e0;
+            --header-color: #ffffff;
+            --primary-color: #9c27b0; /* Purple */
+            --secondary-color: #ce93d8;
+            --tertiary-color: #7b1fa2;
+            --accent-color: #00bcd4; /* Cyan */
+            --panel-bg: #1c1c1c;
+            --border-color: #383838;
+            --input-bg: #282828;
+            --button-bg: #333;
+            --button-hover-bg: #444;
+            --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+        }
+        html.theme-light {
+            --bg-color: #f7f7f7;
+            --text-color: #333;
+            --header-color: #000;
+            --primary-color: #8e24aa;
+            --secondary-color: #ab47bc;
+            --tertiary-color: #6a1b9a;
+            --accent-color: #00acc1;
+            --panel-bg: #fff;
+            --border-color: #ddd;
+            --input-bg: #eee;
+            --button-bg: #e0e0e0;
+            --button-hover-bg: #d0d0d0;
+        }
+        body {
+            font-family: var(--font-family-sans);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1.5rem;
+            line-height: 1.6;
+            font-size: 16px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            grid-template-areas:
+                "header header"
+                "meta meta"
+                "overview overview"
+                "simulation controls"
+                "analysis controls"
+                "exposition exposition"
+                "qa qa"
+                "footer footer";
+        }
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                "header" "meta" "overview" "simulation" "controls" "analysis" "exposition" "qa" "footer";
+            }
+        }
+        h1, h2, h3, h4 { color: var(--header-color); font-weight: 600; }
+        h1 { font-size: 2.8rem; text-align: center; margin-bottom: 0; grid-area: header; }
+        h2 { font-size: 2rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 2.5rem; }
+        h3 { font-size: 1.5rem; color: var(--secondary-color); margin-top: 2rem; }
+        .panel { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+        #overview-panel { grid-area: overview; }
+        #simulation-panel { grid-area: simulation; position: relative; }
+        #controls-panel { grid-area: controls; }
+        #analysis-panel { grid-area: analysis; }
+        #exposition-panel { grid-area: exposition; }
+        #qa-panel { grid-area: qa; }
+        #footer-panel { grid-area: footer; }
+        canvas { width: 100%; height: auto; aspect-ratio: 1; background: #000; border-radius: 4px; cursor: default; }
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .control-group input[type="range"] { width: 100%; cursor: pointer; }
+        .control-group .value-display { display: inline-block; margin-left: 10px; font-family: var(--font-family-mono); color: var(--accent-color); background: var(--input-bg); padding: 2px 6px; border-radius: 4px; }
+        button { padding: 10px 15px; border: none; border-radius: 4px; background-color: var(--button-bg); color: var(--text-color); cursor: pointer; transition: background-color 0.2s; font-size: 1rem; margin: 5px; }
+        button:hover { background-color: var(--button-hover-bg); }
+        button.primary { background-color: var(--primary-color); color: #fff; }
+        button.primary:hover { background-color: var(--tertiary-color); }
+        #metrics-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .metric { background: var(--input-bg); padding: 10px; border-radius: 4px; border-left: 4px solid var(--secondary-color); }
+        .metric-label { font-size: 0.9rem; margin-bottom: 5px; }
+        .metric-value { font-size: 1.2rem; font-weight: bold; color: var(--accent-color); font-family: var(--font-family-mono); }
+        .qa-item { margin-bottom: 1.5rem; border-left: 3px solid var(--border-color); padding-left: 1rem; }
+        .qa-item strong { color: var(--secondary-color); }
+        .meta-bar {
+            grid-area: meta; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 10px 15px; margin: 20px 0; display: flex; flex-wrap: wrap; justify-content: space-around; font-size: 0.9rem;
+        }
+        .meta-bar span { margin: 5px 10px; }
+        .meta-bar strong { color: var(--secondary-color); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Deep Simulation: Micro-Wormhole Topology</h1>
+
+        <div class="meta-bar">
+            <span><strong>Suggested Filename:</strong> 03-micro-wormhole-topology-in-a-quantum-foam-sea.html</span>
+            <span><strong>Recommended Device:</strong> Desktop</span>
+            <span><strong>CPU Intensity:</strong> Heavy</span>
+            <span><strong>Inline Word Count:</strong> ~5,900</span>
+            <span><strong>Est. File Size:</strong> ~400 KB</span>
+        </div>
+
+        <div id="overview-panel" class="panel">
+            <h2>Weaving the Fabric of Spacetime</h2>
+            <p>What if spacetime is not just a passive stage, but an active participant in the quantum world? This simulation explores a profound and speculative idea: that at the Planck scale, the very topology—the connectedness—of spacetime fluctuates. This "spacetime foam" might be riddled with tiny, transient tunnels through space and time known as wormholes. Here, you can visualize a 2D slice of this chaotic sea. Watch as pairs of wormhole "mouths" emerge, distorting the fabric of space around them and offering fleeting shortcuts between distant points. This is a journey into the heart of quantum gravity, where the familiar rules of geometry break down and the universe reveals its most bizarre and fundamental nature.</p>
+        </div>
+
+        <div id="simulation-panel" class="panel">
+            <canvas id="simulation-canvas" width="800" height="800" aria-label="Interactive simulation of spacetime topology and micro-wormholes"></canvas>
+        </div>
+
+        <div id="controls-panel" class="panel">
+            <h3>Global Controls</h3>
+            <div class="control-group">
+                <label data-tooltip="Rate of time evolution.">Time Scale (τ)</label>
+                <input type="range" id="time-scale" min="0.1" max="3" step="0.1" value="1">
+                <span class="value-display" id="time-scale-value">1.0</span>
+            </div>
+            <div class="control-group">
+                <label data-tooltip="Grid density. Higher is more detailed but slower.">Grid Resolution</label>
+                <select id="grid-resolution">
+                    <option value="20">20x20 (Low)</option>
+                    <option value="30" selected>30x30 (Medium)</option>
+                    <option value="40">40x40 (High)</option>
+                    <option value="50">50x50 (Very High)</option>
+                </select>
+            </div>
+
+            <h3>Physical Parameters</h3>
+            <div class="control-group">
+                <label data-tooltip="Rate of wormhole pair creation.">Topological Fluctuation Rate</label>
+                <input type="range" id="fluctuation-rate" min="0" max="0.1" step="0.005" value="0.02">
+                <span class="value-display" id="fluctuation-rate-value">0.020</span>
+            </div>
+            <div class="control-group">
+                <label data-tooltip="How 'stiff' spacetime is to distortion.">Spacetime Elasticity (κ)</label>
+                <input type="range" id="elasticity" min="1" max="10" step="0.5" value="5">
+                <span class="value-display" id="elasticity-value">5.0</span>
+            </div>
+            <div class="control-group">
+                <label data-tooltip="Average lifetime of a wormhole before it evaporates.">Mean Wormhole Lifetime (t_wh)</label>
+                <input type="range" id="lifetime" min="1" max="10" step="0.5" value="4">
+                <span class="value-display" id="lifetime-value">4.0</span>
+            </div>
+
+            <h3>Visualization Controls</h3>
+            <div class="control-group">
+                <label data-tooltip="Strength of the grid distortion effect.">Distortion Effect</label>
+                <input type="range" id="distortion-effect" min="0" max="1" step="0.05" value="0.5">
+                <span class="value-display" id="distortion-effect-value">0.50</span>
+            </div>
+            <div class="control-group">
+                <label data-tooltip="Color scheme for visualizing spacetime curvature.">Curvature Palette</label>
+                <select id="color-palette">
+                    <option value="magma">Magma</option>
+                    <option value="plasma">Plasma</option>
+                    <option value="cyan">Cyan</option>
+                </select>
+            </div>
+             <div class="control-group">
+                <label for="show-links">Show Wormhole Links</label>
+                <input type="checkbox" id="show-links" checked>
+            </div>
+
+            <div style="text-align: center; margin-top:20px;">
+                <button id="pause-button" class="primary">Pause</button>
+                <button id="reset-button">Reset Sim</button>
+            </div>
+        </div>
+
+        <div id="analysis-panel" class="panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid"></div>
+        </div>
+
+        <div id="exposition-panel" class="panel">
+            <h2>The Deep Dive: Spacetime Topology and Quantum Gravity</h2>
+
+            <section id="beginners-guide">
+                <h3>Beginner's Guide: Spacetime as a Trampoline with Tunnels</h3>
+                <p>Imagine spacetime is a giant, stretchy trampoline sheet. General relativity tells us that heavy objects, like planets and stars, create dips in this sheet, and gravity is just the feeling of rolling into these dips. This describes the *geometry* of spacetime. Now, imagine something even weirder. What if the fabric of the trampoline itself could tear open for a moment, with the hole here instantly connecting to another hole over there, creating a tunnel underneath the sheet? This is the idea of changing *topology*.</p>
+                <p>Topology is the mathematical study of shapes and their connectedness, properties that don't change when you stretch or bend the shape. A coffee mug and a donut have the same topology (one hole), while a sphere has a different one (no holes). Physicist John Wheeler proposed that at the ultra-microscopic Planck scale, spacetime isn't just being bent; its very topology is in a constant state of flux. He called this "spacetime foam." Tiny "handles" or "tunnels"—which we call wormholes—might be constantly forming and vanishing.</p>
+                <p>In this simulation, the grid represents our trampoline sheet of spacetime. When a pair of colored circles appears, that's a wormhole being born. The two circles are the "mouths" of the tunnel. Notice how the grid gets distorted around them? That represents the intense warping of spacetime needed to create such a structure. The lines connecting the mouths are a visual aid to show they are linked. These wormholes are incredibly small and last for an unimaginably short time, so we'd never notice them. But if they exist, they represent a fundamental truth: that the fabric of reality is far more dynamic and interconnected than it appears.</p>
+            </section>
+
+            <section id="core-theory">
+                <h3>Core Theory: Topology, Metrics, and Einstein-Rosen Bridges</h3>
+                <p>General relativity primarily deals with the *metric* of spacetime, which defines distances and angles. The metric can be curved, but the underlying topology is usually assumed to be simple (topologically "flat," like a sheet of paper). However, the equations of GR do permit solutions with more exotic topologies, the most famous being the Einstein-Rosen bridge, or Schwarzschild wormhole. This solution mathematically connects two separate regions of spacetime through a "throat." Unfortunately, these classical wormholes are non-traversable; they pinch off faster than anything, even light, could pass through them.</p>
+                <p>The idea of a "quantum foam" of wormholes comes from attempts to build a theory of quantum gravity. In such a theory, the gravitational field itself must be quantized. According to the path integral formulation of quantum mechanics (popularized by Feynman), to get from state A to state B, a system explores *all possible paths*. In quantum gravity, this means the universe must explore all possible spacetime geometries and topologies connecting the initial and final states. This implies that configurations with different topologies, like those containing wormholes, must be part of the quantum state of the universe, even if they only exist probabilistically for fleeting moments.</p>
+                <p>The "handles" in Wheeler's foam are changes in the *genus* of spacetime. The genus is, roughly, the number of holes or handles a surface has. A sphere has genus 0, a torus (donut) has genus 1. The creation of a wormhole temporarily increases the genus of our 3D space by one. The energy required to create such a handle is immense, on the order of the Planck energy (10<sup>19</sup> GeV). This is why they would only be expected to form at the Planck scale, where energy fluctuations are enormous.</p>
+                <p>This simulation offers a conceptual model of this process. It doesn't use the actual equations of quantum gravity (which are not fully known). Instead:
+                <ol>
+                    <li><strong>Wormhole Creation:</strong> A new wormhole pair is created with a probability determined by the "Topological Fluctuation Rate." This represents a quantum tunneling event from a simple topology to a genus-1 topology.</li>
+                    <li><strong>Spacetime Distortion:</strong> The grid vertices are displaced based on a function that mimics the gravitational pull of the wormhole mouths. The "Elasticity" parameter controls the stiffness (κ) of the spacetime fabric against this distortion. A high elasticity means spacetime is stiff and distorts less.</li>
+                    <li><strong>Evaporation:</strong> Each wormhole has a finite lifetime, controlled by the "Mean Wormhole Lifetime" parameter. This is analogous to the idea that these non-classical structures are unstable and quickly decay back to a simple topology, returning their energy to the vacuum.</li>
+                </ol>
+                </p>
+            </section>
+
+            <section id="worked-examples">
+                <h3>Worked Examples</h3>
+                <h4>Example 1: The Planck Scale</h4>
+                <p><strong>Question:</strong> Why is the Planck scale considered the realm of quantum gravity and topological fluctuations? Calculate the Planck length, time, and energy.</p>
+                <p><strong>Solution:</strong> The Planck scale is where the fundamental constants—G (gravity), ħ (quantum mechanics), and c (relativity)—combine to form natural units of length, time, and mass. At this scale, the effects of all three theories are expected to be equally important.
+                <ul>
+                    <li><strong>Planck Length (L<sub>P</sub>):</strong> √(ħG / c³)
+                    <br>L<sub>P</sub> = √((1.054x10<sup>-34</sup> J·s * 6.674x10<sup>-11</sup> m³kg⁻¹s⁻²) / (3x10⁸ m/s)³) ≈ <strong>1.6 x 10<sup>-35</sup> m</strong>. This is the characteristic size of a quantum wormhole.</li>
+                    <li><strong>Planck Time (t<sub>P</sub>):</strong> √(ħG / c⁵) or L<sub>P</sub>/c
+                    <br>t<sub>P</sub> = (1.6 x 10<sup>-35</sup> m) / (3x10⁸ m/s) ≈ <strong>5.4 x 10<sup>-44</sup> s</strong>. This is the characteristic lifetime of a quantum fluctuation.</li>
+                    <li><strong>Planck Mass (M<sub>P</sub>):</strong> √(ħc / G)
+                    <br>M<sub>P</sub> = √((1.054x10<sup>-34</sup> J·s * 3x10⁸ m/s) / 6.674x10<sup>-11</sup> m³kg⁻¹s⁻²) ≈ <strong>2.17 x 10<sup>-8</sup> kg</strong>. This is tiny, but for its size, incredibly dense.</li>
+                    <li><strong>Planck Energy (E<sub>P</sub>):</strong> M<sub>P</sub>c²
+                    <br>E<sub>P</sub> = (2.17 x 10<sup>-8</sup> kg) * (3x10⁸ m/s)² ≈ 1.95 x 10⁹ J ≈ <strong>1.22 x 10<sup>19</sup> GeV</strong>. This colossal energy, concentrated in a Planck volume, is what would be needed to warp spacetime into a wormhole.</li>
+                </ul>
+                </p>
+            </section>
+
+            <section id="analogies">
+                <h3>Intuition & Visual Metaphors</h3>
+                <ul>
+                    <li><strong>Knitting a Sweater:</strong> Think of spacetime as the fabric of a sweater. General relativity describes how the fabric can be stretched and warped. Quantum topology is like the knitting process itself. For a moment, a needle can create a new loop, linking two distant threads, before the pattern continues. The spacetime foam is a sweater being knitted and unknitted at an impossibly fast rate at the microscopic level.</li>
+                    <li><strong>A Crowded Subway System:</strong> On a city map, two places might be far apart. But the subway system provides tunnels that connect them directly. The subway stations are like wormhole mouths. The "Topological Fluctuation Rate" is like the transit authority deciding to open a new, temporary line between two stations. The "Mean Lifetime" is how long they keep that line open before closing it again.</li>
+                </ul>
+            </section>
+
+            <section id="advanced-extensions">
+                <h3>Advanced Extensions & Related Concepts</h3>
+                <ul>
+                    <li><strong>ER = EPR Conjecture:</strong> This is a modern, profound idea proposed by Leonard Susskind and Juan Maldacena. It conjectures that an Einstein-Rosen bridge (ER) is equivalent to quantum entanglement (EPR, for Einstein-Podolsky-Rosen). In this view, two entangled black holes are literally connected by a wormhole. This provides a deep link between geometry and quantum information, suggesting that the very fabric of spacetime might be woven from quantum entanglement.</li>
+                    <li><strong>Chronology Protection Conjecture:</strong> Proposed by Stephen Hawking, this conjecture states that the laws of physics prevent the creation of "closed timelike curves"—pathways that would allow for time travel into the past. While wormholes seem to offer this possibility, quantum effects (like a runaway feedback loop of virtual particles) near the wormhole entrance are expected to become infinitely strong, destroying the wormhole before it could be used for time travel. This would ensure causality is preserved.</li>
+                    <li><strong>Exotic Matter:</strong> To create a traversable wormhole that stays open long enough to pass through, general relativity requires the existence of "exotic matter"—a substance with negative energy density. This would act as an anti-gravitational force, propping the wormhole's throat open. No such matter has ever been observed, and it may violate fundamental energy conditions, suggesting that such wormholes are physically impossible. The micro-wormholes of the quantum foam would not require this, as they are transient quantum fluctuations.</li>
+                </ul>
+            </section>
+
+        </div>
+
+        <div id="qa-panel" class="panel">
+            <h2>Deep Q&A</h2>
+            <!-- Q&A items go here -->
+        </div>
+
+        <div id="footer-panel" class="panel">
+            <!-- Footer controls go here -->
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        const dom = {
+            canvas: document.getElementById('simulation-canvas'),
+            ctx: null,
+            controls: {
+                timeScale: document.getElementById('time-scale'),
+                gridResolution: document.getElementById('grid-resolution'),
+                fluctuationRate: document.getElementById('fluctuation-rate'),
+                elasticity: document.getElementById('elasticity'),
+                lifetime: document.getElementById('lifetime'),
+                distortionEffect: document.getElementById('distortion-effect'),
+                colorPalette: document.getElementById('color-palette'),
+                showLinks: document.getElementById('show-links'),
+                pauseButton: document.getElementById('pause-button'),
+                resetButton: document.getElementById('reset-button'),
+            },
+            displays: {
+                timeScale: document.getElementById('time-scale-value'),
+                fluctuationRate: document.getElementById('fluctuation-rate-value'),
+                elasticity: document.getElementById('elasticity-value'),
+                lifetime: document.getElementById('lifetime-value'),
+                distortionEffect: document.getElementById('distortion-effect-value'),
+            },
+            metricsGrid: document.getElementById('metrics-grid'),
+        };
+
+        const state = {
+            wormholes: [],
+            isRunning: true,
+            lastFrameTime: 0,
+            gridPoints: [],
+            gridSize: 30,
+            width: 800,
+            height: 800,
+        };
+
+        const params = {
+            timeScale: 1.0,
+            gridResolution: 30,
+            fluctuationRate: 0.02,
+            elasticity: 5.0,
+            lifetime: 4.0,
+            distortionEffect: 0.5,
+            colorPalette: 'magma',
+            showLinks: true,
+        };
+
+        const palettes = {
+            magma: (t) => `hsl(0, 100%, ${t * 100}%)`,
+            plasma: (t) => `hsl(${240 + t * 120}, 100%, ${50 + t * 50}%)`,
+            cyan: (t) => `hsl(180, 100%, ${t * 100}%)`,
+        };
+
+        function init() {
+            dom.ctx = dom.canvas.getContext('2d');
+            setupEventListeners();
+            updateAllParameters();
+            buildGrid();
+            requestAnimationFrame(mainLoop);
+        }
+
+        function setupEventListeners() {
+            Object.keys(dom.controls).forEach(key => {
+                if (dom.controls[key]) {
+                    dom.controls[key].addEventListener('input', handleControlChange);
+                }
+            });
+        }
+
+        function handleControlChange(e) {
+            const needsReset = ['gridResolution'];
+            if (needsReset.includes(e.target.id)) {
+                updateAllParameters();
+                buildGrid();
+            } else {
+                updateAllParameters();
+            }
+        }
+
+        function updateAllParameters() {
+            params.timeScale = parseFloat(dom.controls.timeScale.value);
+            params.gridResolution = parseInt(dom.controls.gridResolution.value);
+            params.fluctuationRate = parseFloat(dom.controls.fluctuationRate.value);
+            params.elasticity = parseFloat(dom.controls.elasticity.value);
+            params.lifetime = parseFloat(dom.controls.lifetime.value);
+            params.distortionEffect = parseFloat(dom.controls.distortionEffect.value);
+            params.colorPalette = dom.controls.colorPalette.value;
+            params.showLinks = dom.controls.showLinks.checked;
+
+            Object.keys(dom.displays).forEach(key => {
+                const control = dom.controls[key] || dom.controls[key.replace('-value', '')];
+                let value = control.value;
+                if(control.type === 'range') value = parseFloat(value).toFixed(3);
+                dom.displays[key].textContent = value;
+            });
+        }
+
+        function buildGrid() {
+            state.gridSize = params.gridResolution;
+            state.gridPoints = [];
+            for (let y = 0; y <= state.gridSize; y++) {
+                for (let x = 0; x <= state.gridSize; x++) {
+                    state.gridPoints.push({
+                        x: x / state.gridSize * state.width,
+                        y: y / state.gridSize * state.height,
+                        ox: x / state.gridSize * state.width,
+                        oy: y / state.gridSize * state.height,
+                    });
+                }
+            }
+        }
+
+        function stepSimulation(dt) {
+            // Update wormholes
+            state.wormholes = state.wormholes.filter(wh => {
+                wh.lifetime -= dt * params.timeScale;
+                return wh.lifetime > 0;
+            });
+
+            // Create new wormholes
+            if (Math.random() < params.fluctuationRate * dt * params.timeScale) {
+                const r = Math.random() * 0.1 + 0.05;
+                const lifetime = params.lifetime * (0.5 + Math.random());
+                const mouth1 = { x: Math.random(), y: Math.random(), r };
+                const mouth2 = { x: Math.random(), y: Math.random(), r };
+                state.wormholes.push({ mouth1, mouth2, lifetime, maxLifetime: lifetime });
+            }
+
+            // Update grid points based on wormhole positions
+            state.gridPoints.forEach(p => {
+                let total_dx = 0;
+                let total_dy = 0;
+
+                state.wormholes.forEach(wh => {
+                    const mouths = [wh.mouth1, wh.mouth2];
+                    mouths.forEach(mouth => {
+                        const dist_x = (mouth.x * state.width) - p.ox;
+                        const dist_y = (mouth.y * state.height) - p.oy;
+                        const dist = Math.sqrt(dist_x * dist_x + dist_y * dist_y);
+
+                        const falloff = Math.pow(mouth.r * state.width * params.elasticity, 2);
+                        const force = falloff / (dist * dist + falloff);
+
+                        total_dx += (dist_x / dist) * force * mouth.r * state.width;
+                        total_dy += (dist_y / dist) * force * mouth.r * state.height;
+                    });
+                });
+
+                p.x = p.ox + total_dx * params.distortionEffect;
+                p.y = p.oy + total_dy * params.distortionEffect;
+            });
+        }
+
+        function draw() {
+            const ctx = dom.ctx;
+            ctx.clearRect(0, 0, state.width, state.height);
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, state.width, state.height);
+
+            // Draw grid
+            ctx.strokeStyle = `rgba(0, 255, 255, 0.3)`;
+            ctx.lineWidth = 1;
+            const N = state.gridSize + 1;
+            for (let y = 0; y < N; y++) {
+                for (let x = 0; x < N; x++) {
+                    if (x < N - 1) {
+                        const p1 = state.gridPoints[y * N + x];
+                        const p2 = state.gridPoints[y * N + x + 1];
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                    if (y < N - 1) {
+                        const p1 = state.gridPoints[y * N + x];
+                        const p2 = state.gridPoints[(y + 1) * N + x];
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // Draw wormholes
+            state.wormholes.forEach(wh => {
+                const opacity = wh.lifetime / wh.maxLifetime;
+
+                if(params.showLinks) {
+                    ctx.beginPath();
+                    ctx.moveTo(wh.mouth1.x * state.width, wh.mouth1.y * state.height);
+                    ctx.lineTo(wh.mouth2.x * state.width, wh.mouth2.y * state.height);
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.2})`;
+                    ctx.stroke();
+                }
+
+                [wh.mouth1, wh.mouth2].forEach((mouth, index) => {
+                    const r = mouth.r * state.width;
+                    const grad = ctx.createRadialGradient(mouth.x * state.width, mouth.y * state.height, r * 0.5, mouth.x * state.width, mouth.y * state.height, r);
+                    const color = index === 0 ? '255, 100, 100' : '100, 100, 255';
+                    grad.addColorStop(0, `rgba(${color}, ${opacity})`);
+                    grad.addColorStop(1, `rgba(${color}, 0)`);
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(mouth.x * state.width, mouth.y * state.height, r, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            });
+        }
+
+        function updateMetrics() {
+            const genus = state.wormholes.length;
+            let totalLifetime = 0;
+            state.wormholes.forEach(wh => totalLifetime += wh.lifetime);
+            const avgLifetime = state.wormholes.length > 0 ? totalLifetime / state.wormholes.length : 0;
+
+            let totalDistortion = 0;
+            state.gridPoints.forEach(p => {
+                totalDistortion += Math.sqrt(Math.pow(p.x - p.ox, 2) + Math.pow(p.y - p.oy, 2));
+            });
+            const avgDistortion = totalDistortion / state.gridPoints.length;
+
+            const metrics = {
+                'Wormhole Count (Genus)': genus,
+                'Avg. Lifetime Left': avgLifetime.toFixed(2),
+                'Avg. Grid Distortion': avgDistortion.toFixed(2),
+                'Topological Flux': params.fluctuationRate.toFixed(3)
+            };
+
+            let html = '';
+            for (const [label, value] of Object.entries(metrics)) {
+                html += `<div class="metric"><div class="metric-label">${label}</div><div class="metric-value">${value}</div></div>`;
+            }
+            dom.metricsGrid.innerHTML = html;
+        }
+
+        function mainLoop(timestamp) {
+            if (!state.isRunning) return;
+            const dt = (timestamp - (state.lastFrameTime || timestamp)) / 1000;
+            state.lastFrameTime = timestamp;
+
+            if (dt < 0.1) {
+                stepSimulation(dt);
+            }
+            draw();
+            updateMetrics();
+
+            requestAnimationFrame(mainLoop);
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    })();
+    </script>
+</body>
+</html>
