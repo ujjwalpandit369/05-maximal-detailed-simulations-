@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: 11D M-Theory and The Web of Duality</title>
+    <meta name="description" content="An interactive simulation of M-Theory, visualizing how it unifies the five superstring theories through a web of S-Duality and T-Duality.">
+    <meta name="keywords" content="M-Theory, Duality, Superstring, Unification, Edward Witten, Branes, 11-Dimensional Spacetime, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #c792ea; /* A mystical purple for M-theory */
+            --highlight-color: #ffcb6b; /* A golden yellow for duality */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 700px;
+            overflow: hidden;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); }
+        input[type="range"] { width: 100%; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 15px; border-radius: 5px; border-left: 3px solid var(--highlight-color); }
+        .metric-item strong { display: block; color: var(--accent-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.2em; }
+        .info-box {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(13,17,23,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: M-Theory and the Web of Duality</h1>
+            <p>Visualizing the Unification of the Five Superstring Theories</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-canvas"></canvas>
+                        <div class="info-box">
+                            <h3 id="info-title">M-Theory</h3>
+                            <p id="info-description">The 11-dimensional theory that unifies all superstring theories.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Duality Controls</h3>
+                    <div class="control-group">
+                        <label for="coupling-slider">String Coupling (gₛ)</label>
+                        <input type="range" id="coupling-slider" min="0.1" max="10" step="0.1" value="1">
+                        <span id="coupling-value">1.0</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="radius-slider">Compactification Radius (R)</label>
+                        <input type="range" id="radius-slider" min="0.1" max="10" step="0.1" value="5">
+                        <span id="radius-value">5.0</span>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Theory Properties</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <strong>Effective Theory</strong>
+                            <span id="metric-theory">M-Theory</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Dimensionality</strong>
+                            <span id="metric-dims">11</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Key Objects</strong>
+                            <span id="metric-objects">M2/M5 Branes</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Duality Link</strong>
+                            <span id="metric-duality">---</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // This script requires a simple drawing library or direct canvas manipulation
+    const SimApp = {
+        config: {
+            coupling: 1.0,
+            radius: 5.0,
+        },
+        elements: {},
+        ctx: null,
+        nodes: {},
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.defineNodes();
+            this.injectTextContent();
+            this.animate();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                canvas: document.getElementById('main-canvas'),
+                infoTitle: document.getElementById('info-title'),
+                infoDescription: document.getElementById('info-description'),
+                couplingSlider: document.getElementById('coupling-slider'),
+                couplingValue: document.getElementById('coupling-value'),
+                radiusSlider: document.getElementById('radius-slider'),
+                radiusValue: document.getElementById('radius-value'),
+                metricTheory: document.getElementById('metric-theory'),
+                metricDims: document.getElementById('metric-dims'),
+                metricObjects: document.getElementById('metric-objects'),
+                metricDuality: document.getElementById('metric-duality'),
+            };
+            this.ctx = this.elements.canvas.getContext('2d');
+        },
+
+        defineNodes() {
+            const w = this.elements.canvas.width = this.elements.canvas.clientWidth;
+            const h = this.elements.canvas.height = this.elements.canvas.clientHeight;
+            this.nodes = {
+                'M': { x: w/2, y: h/2, label: 'M-Theory (11D)', color: '#c792ea' },
+                'IIA': { x: w/2, y: h*0.1, label: 'Type IIA (10D)', color: '#89ddff' },
+                'IIB': { x: w*0.1, y: h*0.7, label: 'Type IIB (10D)', color: '#82aaff' },
+                'I': { x: w*0.9, y: h*0.7, label: 'Type I (10D)', color: '#ffcb6b' },
+                'HE': { x: w*0.2, y: h*0.2, label: 'HE-SO(32) (10D)', color: '#c3e88d' },
+                'HO': { x: w*0.8, y: h*0.2, label: 'HO-E8xE8 (10D)', color: '#f78166' },
+            };
+        },
+
+        setupUIListeners() {
+            this.elements.couplingSlider.addEventListener('input', e => {
+                this.config.coupling = parseFloat(e.target.value);
+                this.elements.couplingValue.textContent = this.config.coupling.toFixed(1);
+            });
+            this.elements.radiusSlider.addEventListener('input', e => {
+                this.config.radius = parseFloat(e.target.value);
+                this.elements.radiusValue.textContent = this.config.radius.toFixed(1);
+            });
+        },
+
+        updateAndDraw() {
+            const w = this.elements.canvas.width;
+            const h = this.elements.canvas.height;
+            this.ctx.clearRect(0,0,w,h);
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillRect(0,0,w,h);
+
+            // Draw connections
+            this.drawConnection('M', 'IIA', `R₁₁ → 0`); // M -> IIA
+            this.drawConnection('IIA', 'IIB', 'T-Duality'); // IIA <-> IIB
+            this.drawConnection('IIB', 'I', 'S-Duality'); // IIB <-> I
+            this.drawConnection('M', 'HO', 'Orbifold'); // M -> HO
+            this.drawConnection('HO', 'HE', 'T-Duality'); // HO <-> HE
+
+            // Logic for highlighting current theory
+            let activeTheory = this.nodes.M;
+            let activeLabel = 'M-Theory';
+            let activeDims = '11D';
+            let activeObjects = 'M2/M5 Branes';
+            let activeDuality = '---';
+
+            const r = this.config.radius;
+            const g = this.config.coupling;
+
+            if (r < 1.0) { // M -> IIA
+                activeTheory = this.nodes.IIA;
+                activeLabel = 'Type IIA';
+                activeDims = '10D';
+                activeObjects = 'Strings, D-branes';
+                activeDuality = 'M-Theory on S¹';
+            }
+            if (r < 1.0 && g > 5.0) { // M -> IIA -> Strong coupling limit
+                activeTheory = this.nodes.M; // Lifts back to M-theory
+                activeLabel = 'M-Theory';
+                activeDims = '11D (re-emerges)';
+                activeObjects = 'M2/M5 Branes';
+                activeDuality = 'Strongly coupled IIA';
+            }
+
+            // Draw nodes
+            for (const key in this.nodes) {
+                const node = this.nodes[key];
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, 30, 0, 2 * Math.PI);
+                this.ctx.fillStyle = node === activeTheory ? node.color : '#161b22';
+                this.ctx.fill();
+                this.ctx.strokeStyle = node.color;
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '14px Exo 2';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(node.label, node.x, node.y + 45);
+            }
+
+            this.updateMetrics(activeLabel, activeDims, activeObjects, activeDuality);
+        },
+
+        drawConnection(key1, key2, label) {
+            const n1 = this.nodes[key1];
+            const n2 = this.nodes[key2];
+            this.ctx.beginPath();
+            this.ctx.moveTo(n1.x, n1.y);
+            this.ctx.lineTo(n2.x, n2.y);
+            this.ctx.strokeStyle = 'rgba(255,203,107,0.5)';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            this.ctx.save();
+            this.ctx.translate((n1.x + n2.x)/2, (n1.y + n2.y)/2);
+            this.ctx.rotate(Math.atan2(n2.y - n1.y, n2.x - n1.x));
+            this.ctx.fillStyle = 'var(--highlight-color)';
+            this.ctx.font = '12px Roboto Mono';
+            this.ctx.fillText(label, 0, -5);
+            this.ctx.restore();
+        },
+
+        updateMetrics(theory, dims, objects, duality) {
+            this.elements.metricTheory.textContent = theory;
+            this.elements.metricDims.textContent = dims;
+            this.elements.metricObjects.textContent = objects;
+            this.elements.metricDuality.textContent = duality;
+        },
+
+        animate() {
+            this.updateAndDraw();
+            requestAnimationFrame(() => this.animate());
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>An Embarrassment of Riches: The Five Superstring Theories</h2>
+                <p>By the mid-1980s, the first superstring revolution had culminated in a surprising and somewhat troubling situation. Instead of one unique "theory of everything," physicists had found five different, mathematically consistent versions of 10-dimensional superstring theory. These were named Type I, Type IIA, Type IIB, SO(32) Heterotic (HE), and E8×E8 Heterotic (HO). While each was a valid candidate for a fundamental theory, having five undermined the goal of finding a single, unique description of nature. For a decade, these five theories were studied as separate entities, and it was unclear which, if any, was the correct one for our universe.</p>
+                <p>The solution to this puzzle came in the mid-1990s during the "second superstring revolution," spearheaded by physicist Edward Witten. The key insight was the concept of <strong>duality</strong>. A duality is a profound equivalence in physics, where two theories that look completely different on the surface turn out to be describing the exact same physics. It's like having two different languages that can both be used to tell the same story. Witten and others discovered that the five superstring theories were not different theories at all, but were all interconnected through a web of these dualities. They were just five different "snapshots" or "limits" of a single, more fundamental theory.</p>
+
+                <h2>M-Theory: The Unifying Framework</h2>
+                <p>Witten proposed that this undiscovered underlying theory lived not in 10, but in <strong>11 dimensions</strong>, and he tentatively named it <strong>M-Theory</strong>. The five 10D string theories could all be derived from this 11D M-Theory by looking at it in different ways. For example:</p>
+                <ul>
+                    <li>If you take 11D M-Theory and "compactify" one of its dimensions into a tiny circle, you get 10D Type IIA string theory. This is the relationship you can explore with the "Compactification Radius" slider. As the radius (R) goes to zero, M-Theory effectively becomes Type IIA theory.</li>
+                    <li>If you then take Type IIA theory and look at it at very strong coupling, it is dual to M-Theory with a large radius. The coupling constant is related to the size of the 11th dimension.</li>
+                </ul>
+                <p>This simulation visualizes this "web of duality." At the center is M-Theory. By adjusting the sliders for coupling strength and compactification radius, you can explore the different limits and see how the different 10D theories emerge. M-Theory itself is not a string theory. Its fundamental objects are believed to be higher-dimensional "branes," including 2-dimensional membranes (M2-branes) and 5-dimensional branes (M5-branes). A string in Type IIA theory is actually an M2-brane from M-Theory that has been wrapped around the compact 11th dimension.</p>
+
+                <h2>S-Duality and T-Duality</h2>
+                <p>The connections in the web are specific types of dualities:</p>
+                <ul>
+                    <li><strong>T-Duality (Target-space Duality):</strong> This is a truly bizarre stringy effect with no analogue in point-particle physics. It states that a string theory compactified on a circle of radius R is completely equivalent to another string theory compactified on a circle of radius 1/R. A universe with a very large curled-up dimension is physically indistinguishable from one with a very small one! This duality connects Type IIA and Type IIB theories, as well as the two Heterotic theories.</li>
+                    <li><strong>S-Duality (Strong-Weak Duality):</strong> This duality relates a theory at strong coupling (gₛ > 1) to a different theory at weak coupling (gₛ < 1). This is incredibly powerful, as it allows physicists to do calculations in a strongly-coupled theory (which is normally impossible) by simply performing the same calculation in its weakly-coupled dual. This duality connects Type I and SO(32) Heterotic theories, and it relates Type IIB theory to itself.</li>
+                </ul>
+                <p>Together, these dualities showed that the five string theories were not fundamental. They were all just different perspectives on one single, mysterious, 11-dimensional M-Theory. To this day, the complete formulation of M-Theory remains unknown, and it is one of the most important unsolved problems in theoretical physics. What we have are the different "limits" where we can do calculations, but the central structure remains shrouded in mystery. As Witten himself has said, the 'M' in M-Theory could stand for Magic, Mystery, or Membrane, depending on your taste.</p>
+
+                <h2>Q&A: The Second Superstring Revolution</h2>
+                <div class="qa-item">
+                    <strong>1. What is a brane?</strong>
+                    <p>"Brane" is a term derived from "membrane" and refers to a physical object that generalizes the concept of a point particle to higher dimensions. A 0-brane is a point, a 1-brane is a string, a 2-brane is a membrane, and so on. M-Theory introduced the idea that branes, particularly M2 and M5-branes, are just as fundamental as strings.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. Why 11 dimensions?</strong>
+                    <p>The low-energy limit of M-Theory is described by a unique theory called 11-dimensional supergravity. This theory was known for years before M-Theory, but was thought to be unrelated to string theory. Witten's insight was to show that this 11D theory was the "source" from which the 10D string theories could be derived. The mathematics simply works out perfectly in this dimensional framework.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

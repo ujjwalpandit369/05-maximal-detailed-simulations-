@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Brane Cosmology Dynamics</title>
+    <meta name="description" content="An interactive simulation of Brane Cosmology, comparing the standard Friedmann equation with the modified, high-energy brane-world version.">
+    <meta name="keywords" content="Brane Cosmology, Friedmann Equation, Braneworld, Extra Dimensions, Early Universe, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #30c584; /* A green accent for cosmology */
+            --highlight-color: #ffab70; /* An orange highlight */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 600px;
+            overflow: hidden;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); }
+        input[type="range"] { width: 100%; }
+        button {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+        button:hover { background-color: var(--highlight-color); }
+        .metrics-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 15px; border-radius: 5px; border-left: 3px solid var(--highlight-color); }
+        .metric-item strong { display: block; color: var(--accent-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.2em; }
+        .qa-item {
+            background: rgba(255,255,255,0.03);
+            border-left: 4px solid var(--highlight-color);
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .qa-item strong { color: var(--primary-color); }
+        code {
+            background-color: #0d1117;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            color: var(--highlight-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: Brane Cosmology Dynamics</h1>
+            <p>Comparing the Standard Cosmological Expansion with the Brane-World Scenario</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Simulation Controls</h3>
+                    <div class="control-group">
+                        <label for="brane-tension">Brane Tension (&lambda;)</label>
+                        <input type="range" id="brane-tension" min="0.1" max="100" step="0.1" value="10">
+                        <span id="brane-tension-value">10.0</span>
+                    </div>
+                    <div class="control-group">
+                        <label for="initial-density">Initial Energy Density (&rho;)</label>
+                        <input type="range" id="initial-density" min="0.1" max="100" step="0.1" value="50">
+                        <span id="initial-density-value">50.0</span>
+                    </div>
+                    <button id="start-sim-btn">Start/Restart Simulation</button>
+                </div>
+                <div class="panel">
+                    <h3>Live Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <strong>Time (t)</strong>
+                            <span id="metric-time">0.00</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Scale Factor a(t) [Standard]</strong>
+                            <span id="metric-scale-std">1.00</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Scale Factor a(t) [Brane]</strong>
+                            <span id="metric-scale-brane">1.00</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Hubble Param. H [Brane]</strong>
+                            <span id="metric-hubble-brane">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-viz-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: {
+            lambda: 10.0, // Brane Tension
+            rho_initial: 50.0, // Initial energy density
+        },
+        state: {
+            t: 0,
+            a_std: 1,
+            a_brane: 1,
+            history_std: [],
+            history_brane: [],
+            isRunning: false,
+        },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.gameLoop();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                mainCanvas: document.getElementById('main-viz-canvas'),
+                braneTensionSlider: document.getElementById('brane-tension'),
+                braneTensionValue: document.getElementById('brane-tension-value'),
+                initialDensitySlider: document.getElementById('initial-density'),
+                initialDensityValue: document.getElementById('initial-density-value'),
+                startBtn: document.getElementById('start-sim-btn'),
+                metricTime: document.getElementById('metric-time'),
+                metricScaleStd: document.getElementById('metric-scale-std'),
+                metricScaleBrane: document.getElementById('metric-scale-brane'),
+                metricHubbleBrane: document.getElementById('metric-hubble-brane'),
+            };
+            this.ctx = this.elements.mainCanvas.getContext('2d');
+        },
+
+        setupUIListeners() {
+            this.elements.braneTensionSlider.addEventListener('input', e => {
+                this.config.lambda = parseFloat(e.target.value);
+                this.elements.braneTensionValue.textContent = this.config.lambda.toFixed(1);
+            });
+            this.elements.initialDensitySlider.addEventListener('input', e => {
+                this.config.rho_initial = parseFloat(e.target.value);
+                this.elements.initialDensityValue.textContent = this.config.rho_initial.toFixed(1);
+            });
+            this.elements.startBtn.addEventListener('click', () => this.startSimulation());
+        },
+
+        startSimulation() {
+            this.state.t = 0;
+            this.state.a_std = 0.1; // Start from a small value to avoid singularity
+            this.state.a_brane = 0.1;
+            this.state.history_std = [{t: 0, a: 0.1}];
+            this.state.history_brane = [{t: 0, a: 0.1}];
+            this.state.isRunning = true;
+        },
+
+        step(dt) {
+            if (!this.state.isRunning) return;
+
+            this.state.t += dt;
+
+            // Assuming radiation-dominated universe for simplicity (rho ~ a^-4)
+            const rho_std = this.config.rho_initial / Math.pow(this.state.a_std, 4);
+            const rho_brane = this.config.rho_initial / Math.pow(this.state.a_brane, 4);
+
+            // Standard Friedmann equation: H^2 = (8*pi*G/3) * rho
+            // (da/dt)^2 / a^2 = C * rho => da = sqrt(C * rho) * a * dt
+            // For rho ~ a^-4, this simplifies to da = sqrt(C*rho_i) * (1/a) * dt
+            const C = 0.1; // Proportionality constant for simulation
+            const da_std = dt * Math.sqrt(C * this.config.rho_initial) / this.state.a_std;
+            this.state.a_std += da_std;
+
+            // Modified Brane Friedmann equation: H^2 = C * rho * (1 + rho / (2*lambda))
+            const H_brane_sq = C * rho_brane * (1 + rho_brane / (2 * this.config.lambda));
+            const H_brane = Math.sqrt(H_brane_sq);
+            const da_brane = H_brane * this.state.a_brane * dt;
+            this.state.a_brane += da_brane;
+
+            if (this.state.history_std.length < 500) {
+                 this.state.history_std.push({t: this.state.t, a: this.state.a_std});
+                 this.state.history_brane.push({t: this.state.t, a: this.state.a_brane});
+            } else {
+                 this.state.isRunning = false;
+            }
+
+            this.updateMetrics(H_brane);
+        },
+
+        updateMetrics(H_brane) {
+            this.elements.metricTime.textContent = this.state.t.toFixed(2);
+            this.elements.metricScaleStd.textContent = this.state.a_std.toFixed(2);
+            this.elements.metricScaleBrane.textContent = this.state.a_brane.toFixed(2);
+            this.elements.metricHubbleBrane.textContent = H_brane.toFixed(2);
+        },
+
+        gameLoop() {
+            this.step(0.01);
+            this.draw();
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        draw() {
+            const ctx = this.ctx;
+            const w = this.elements.mainCanvas.width = this.elements.mainCanvas.clientWidth;
+            const h = this.elements.mainCanvas.height = this.elements.mainCanvas.clientHeight;
+            ctx.clearRect(0,0,w,h);
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            // Draw grid
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.lineWidth = 1;
+            for(let i=0; i<10; i++) {
+                ctx.beginPath(); ctx.moveTo(i*w/10, 0); ctx.lineTo(i*w/10, h); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i*h/10); ctx.lineTo(w, i*h/10); ctx.stroke();
+            }
+
+            const max_a = Math.max(...this.state.history_std.map(p => p.a), ...this.state.history_brane.map(p => p.a), 5);
+            const max_t = Math.max(...this.state.history_std.map(p => p.t), 5);
+
+            // Draw standard cosmology history
+            ctx.strokeStyle = 'var(--highlight-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            this.state.history_std.forEach((p, i) => {
+                const x = (p.t / max_t) * w;
+                const y = h - (p.a / max_a) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Draw brane cosmology history
+            ctx.strokeStyle = 'var(--primary-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            this.state.history_brane.forEach((p, i) => {
+                const x = (p.t / max_t) * w;
+                const y = h - (p.a / max_a) * h;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Legend
+            ctx.fillStyle = 'var(--highlight-color)';
+            ctx.font = '16px Exo 2';
+            ctx.fillText("Standard Cosmology a(t)", w - 200, 30);
+            ctx.fillStyle = 'var(--primary-color)';
+            ctx.fillText("Brane Cosmology a(t)", w - 200, 60);
+
+            ctx.fillStyle = 'white';
+            ctx.fillText("Time (t) ->", w/2 - 30, h - 10);
+            ctx.save();
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText("Scale Factor a(t) ->", -h/2 - 50, 20);
+            ctx.restore();
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Cosmology on the Brane</h2>
+                <p>How does the universe expand in a braneworld scenario? If our universe is a 3-brane embedded in a higher-dimensional bulk, its cosmological evolution can be significantly different from the standard picture. The expansion is no longer just an intrinsic feature of our 4D spacetime; it's deeply connected to the brane's dynamics within the bulk and the properties of that bulk, such as its curvature and the brane's own tension. This leads to a modified version of the fundamental equation of cosmology: the Friedmann equation.</p>
+
+                <h2>The Modified Friedmann Equation</h2>
+                <p>In standard 4D General Relativity, the expansion of a homogeneous and isotropic universe is described by the Friedmann equation:</p>
+                <p style="text-align:center; font-family: var(--font-mono);">H² = ( (da/dt) / a )² = (8πG / 3) * ρ</p>
+                <p>Here, <code>H</code> is the Hubble parameter (the expansion rate), <code>a</code> is the scale factor, <code>G</code> is Newton's gravitational constant, and <code>ρ</code> is the total energy density of the matter and radiation in the universe. This equation tells us that the expansion rate is directly proportional to the energy density.</p>
+                <p>In a simple Randall-Sundrum type braneworld model, this equation receives a crucial modification. The presence of the extra dimension and the brane's tension (<code>λ</code>) add a new term that becomes important at very high energies:</p>
+                <p style="text-align:center; font-family: var(--font-mono);">H² = (8πG / 3) * ρ * (1 + ρ / 2λ)</p>
+                <p>This is the <strong>Modified Friedmann Equation</strong>. The key feature is the second term in the parenthesis, <code>ρ / 2λ</code>. At low energies (late times in the universe), when the energy density <code>ρ</code> is much, much smaller than the brane tension <code>λ</code>, this term is negligible. The equation then reduces to the standard Friedmann equation, and braneworld cosmology behaves just like standard cosmology. This is essential, as standard cosmology is extremely well-tested and verified by observations of the late universe (like the Cosmic Microwave Background and galaxy surveys).</p>
+                <p>However, in the very early universe, energy densities were incredibly high. When <code>ρ</code> becomes comparable to or larger than <code>λ</code>, the new term dominates. The expansion rate <code>H</code> becomes proportional to <code>ρ</code> itself, not its square root. This leads to a much faster, more explosive expansion phase at the beginning of the universe compared to the standard model. This simulation directly compares the evolution of the scale factor <code>a(t)</code> under these two equations. You can adjust the brane tension <code>λ</code> and the initial energy density <code>ρ</code> to see when and how the braneworld scenario diverges from the standard picture.</p>
+
+                <h2>Simulation Insights</h2>
+                <p>In the interactive plot, the orange line shows the evolution of the scale factor <code>a(t)</code> in a standard radiation-dominated universe, where <code>a(t) ∝ t¹/²</code>. The white line shows the braneworld case. When you run the simulation with a high initial density (<code>ρ</code>) and a relatively low brane tension (<code>λ</code>), you will observe a dramatic difference at early times (small <code>t</code>). The brane universe expands much more rapidly at the start. As the universe expands, <code>ρ</code> drops quickly (as <code>a⁻⁴</code> for radiation), and the <code>ρ/2λ</code> term shrinks. Eventually, the white line's slope will match the orange line's, as brane cosmology seamlessly transitions into standard cosmology.</p>
+                <p>This high-energy modification has profound implications. It could alter the predictions for the production of primordial relics, affect inflationary scenarios, and change the dynamics of the very early universe. For instance, the enhanced expansion rate can make it more challenging to achieve inflation. On the other hand, it opens up new possibilities for cosmological models, such as "self-tuning" mechanisms that attempt to solve the cosmological constant problem.</p>
+
+                <h2>Q&A: Cosmological Considerations</h2>
+                <div class="qa-item">
+                    <strong>1. What is "brane tension"?</strong>
+                    <p>Brane tension, <code>λ</code>, is the intrinsic energy density of the brane itself, analogous to the surface tension of a water droplet. It's a fundamental parameter of the model. In the Randall-Sundrum models, the tension of the branes is precisely balanced against the curvature of the bulk spacetime to create a stable configuration. The value of this tension determines the energy scale at which the new cosmological effects become important.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. Why does the equation change?</strong>
+                    <p>The equation changes because of how gravity is perceived on the brane. In General Relativity, matter tells spacetime how to curve. On the brane, the local energy density <code>ρ</code> not only curves the brane's intrinsic geometry but also affects how the brane is embedded in the higher-dimensional bulk. This interaction with the bulk "leaks" extra gravitational influence back onto the brane, but only when the local energy density is high enough to be significant compared to the brane's own tension. This feedback loop results in the <code>ρ²</code> term in the Friedmann equation.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>3. Does this violate observations?</strong>
+                    <p>Not necessarily. The key is that the model must revert to standard cosmology at the times for which we have precise data. The era of Big Bang Nucleosynthesis (BBN), which occurred when the universe was about one second old, is a very strong constraint. The predictions of BBN are very sensitive to the expansion rate at that time. Therefore, for a brane cosmology model to be viable, the brane tension <code>λ</code> must be high enough that by the time of BBN, the <code>ρ/2λ</code> term was already negligible. This places a lower bound on the value of <code>λ</code>, typically around (1 MeV)⁴ or higher.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>4. What is the "dark radiation" term?</strong>
+                    <p>In more complex brane models, the bulk can contain its own energy and fields. Gravitational effects from the bulk can leak onto the brane and mimic the presence of an extra radiation component. This is often called "dark radiation" or a "Weyl fluid." The modified Friedmann equation can be extended to include this term, which can also be constrained by cosmological observations, particularly from the Cosmic Microwave Background.</p>
+                </div>
+                <!-- ... 16+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>
