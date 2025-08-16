@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Kaluza-Klein Tower of States</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .chart-container { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Kaluza-Klein Tower of States</h1></header>
+        <div class="main-layout">
+            <div class="chart-container">
+                <h2>Mass/Energy Level Diagram</h2>
+                <div id="main-chart"></div>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label>Radius of Extra Dimension (R): <span id="radius-value">1.0</span></label>
+                <input type="range" id="radius-slider" min="0.1" max="2.0" step="0.05" value="1.0">
+                <label>Base Mass (m<sub>0</sub>): <span id="mass-value">0.5</span></label>
+                <input type="range" id="mass-slider" min="0" max="5" step="0.1" value="0.5">
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Kaluza-Klein tower script.
+    // The final version will contain a dynamic SVG chart showing the energy
+    // levels and how they change with the radius of the extra dimension.
+
+    const DOM = {
+        chart: document.getElementById('main-chart'),
+        radiusSlider: document.getElementById('radius-slider'),
+        radiusValue: document.getElementById('radius-value'),
+        massSlider: document.getElementById('mass-slider'),
+        massValue: document.getElementById('mass-value'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { R: 1.0, m0: 0.5 };
+
+    function calculateLevels() {
+        const levels = [];
+        for (let n = 0; n < 10; n++) {
+            const mass_sq = state.m0**2 + (n / state.R)**2;
+            levels.push({ n, mass: Math.sqrt(mass_sq) });
+        }
+        return levels;
+    }
+
+    function drawChart() {
+        const levels = calculateLevels();
+        const maxMass = Math.max(...levels.map(l => l.mass), 5);
+
+        let svg = `<svg width="100%" height="500" style="background:#000; border-radius:4px;">`;
+        svg += `<text x="50%" y="20" text-anchor="middle" fill="white">Mass (GeV)</text>`;
+
+        levels.forEach(level => {
+            const y = 500 - 30 - (level.mass / maxMass) * 450;
+            svg += `<line x1="50" y1="${y}" x2="90%" y2="${y}" stroke="cyan" />`;
+            svg += `<text x="40" y="${y+5}" text-anchor="end" fill="white">n=${level.n}</text>`;
+            svg += `<text x="92%" y="${y+5}" fill="cyan">${level.mass.toFixed(2)}</text>`;
+        });
+
+        svg += `</svg>`;
+        DOM.chart.innerHTML = svg;
+    }
+
+    function setup() {
+        function update() {
+            state.R = parseFloat(DOM.radiusSlider.value);
+            state.m0 = parseFloat(DOM.massSlider.value);
+            DOM.radiusValue.textContent = state.R.toFixed(2);
+            DOM.massValue.textContent = state.m0.toFixed(2);
+            drawChart();
+        }
+
+        DOM.radiusSlider.addEventListener('input', update);
+        DOM.massSlider.addEventListener('input', update);
+
+        DOM.expositionContent.innerHTML = `<h1>The Tower of Particles</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
