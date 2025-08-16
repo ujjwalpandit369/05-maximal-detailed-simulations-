@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Janus Point Time-Symmetric Universe</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 400px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { text-align: center; background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .exposition, .qa-section { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Janus Point: A Time-Symmetric Universe</h1></header>
+        <div class="simulation-panel">
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-panel">
+            <button id="play-pause-btn">Play</button>
+            <button id="reset-btn">Reset</button>
+            <input type="range" id="time-slider" min="0" max="100" step="1" value="0">
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Janus Point script.
+    // The final version will contain a synchronized animation of two
+    // universes expanding away from a central t=0 point.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        playPauseBtn: document.getElementById('play-pause-btn'),
+        resetBtn: document.getElementById('reset-btn'),
+        timeSlider: document.getElementById('time-slider'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { time: 0, isRunning: false };
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, w, h);
+
+        // Draw Big Bang line
+        ctx.strokeStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(w/2, 0);
+        ctx.lineTo(w/2, h);
+        ctx.stroke();
+
+        const scale = Math.sqrt(state.time * 0.1);
+
+        // Draw our universe (t > 0)
+        ctx.fillStyle = 'cyan';
+        for(let i=0; i<5; i++) {
+            for(let j=0; j<10; j++) {
+                ctx.beginPath();
+                ctx.arc(w/2 + 20*i*scale, h*0.1 + j*40, 2, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+
+        // Draw anti-universe (t < 0)
+        ctx.fillStyle = '#ffaa00';
+         for(let i=0; i<5; i++) {
+            for(let j=0; j<10; j++) {
+                ctx.beginPath();
+                ctx.arc(w/2 - 20*i*scale, h*0.1 + j*40, 2, 0, 2*Math.PI);
+                ctx.fill();
+            }
+        }
+    }
+
+    function update() {
+        if (state.isRunning) {
+            state.time += 0.5;
+            if (state.time > 100) state.time = 100;
+            DOM.timeSlider.value = state.time;
+        }
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function setup() {
+        DOM.playPauseBtn.onclick = () => { state.isRunning = !state.isRunning; DOM.playPauseBtn.textContent = state.isRunning ? 'Pause' : 'Play'; };
+        DOM.resetBtn.onclick = () => { state.time = 0; state.isRunning = false; DOM.timeSlider.value = 0; DOM.playPauseBtn.textContent = 'Play'; };
+        DOM.timeSlider.oninput = (e) => { state.time = parseFloat(e.target.value); };
+
+        DOM.expositionContent.innerHTML = `<h1>The Two-Sided Universe</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: CPT Symmetry Visualizer</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr 350px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 400px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 4; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>CPT Symmetry Visualizer</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Base Interaction</h2>
+                <canvas id="base-canvas"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>Transformed Interaction</h2>
+                <canvas id="transformed-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label><input type="checkbox" id="c-check"> Apply C (Charge)</label>
+                <label><input type="checkbox" id="p-check"> Apply P (Parity)</label>
+                <label><input type="checkbox" id="t-check"> Apply T (Time)</label>
+                <button id="play-btn">Play Animation</button>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full CPT Symmetry script.
+    // The final version will render a base interaction and a transformed
+    // interaction based on the user's C, P, and T selections.
+
+    const DOM = {
+        baseCanvas: document.getElementById('base-canvas'), baseCtx: document.getElementById('base-canvas').getContext('2d'),
+        transformedCanvas: document.getElementById('transformed-canvas'), transformedCtx: document.getElementById('transformed-canvas').getContext('2d'),
+        cCheck: document.getElementById('c-check'), pCheck: document.getElementById('p-check'), tCheck: document.getElementById('t-check'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { C: false, P: false, T: false };
+
+    const baseInteraction = {
+        p1_initial: { x: 100, y: 180, charge: -1, label: 'e⁻' },
+        p2_initial: { x: 100, y: 220, charge: -1, label: 'e⁻' },
+        p1_final: { x: 300, y: 150 },
+        p2_final: { x: 300, y: 250 }
+    };
+
+    function transform(particle, initialState) {
+        let p = { ...particle };
+        let finalState = initialState ? baseInteraction.p1_final : baseInteraction.p2_final;
+        if(initialState) finalState = particle === baseInteraction.p1_initial ? baseInteraction.p1_final : baseInteraction.p2_final;
+        else finalState = particle;
+
+        let initialPos = initialState ? particle : finalState;
+        let finalPos = initialState ? finalState : particle;
+
+        if (state.C) { p.charge *= -1; p.label = 'e⁺'; }
+        if (state.P) {
+            initialPos = {x: 400 - initialPos.x, y: 400 - initialPos.y};
+            finalPos = {x: 400 - finalPos.x, y: 400 - finalPos.y};
+        }
+        if (state.T) { [initialPos, finalPos] = [finalPos, initialPos]; }
+
+        return { ...p, initialPos, finalPos };
+    }
+
+    function drawInteraction(ctx, p1_data, p2_data) {
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,400,400);
+        // Draw paths and labels
+        // ...
+        ctx.fillStyle = 'white';
+        ctx.fillText("Interaction will be drawn here", 100, 200);
+    }
+
+    function draw() {
+        const p1_transformed = transform(baseInteraction.p1_initial, true);
+        const p2_transformed = transform(baseInteraction.p2_initial, true);
+
+        drawInteraction(DOM.baseCtx, baseInteraction.p1_initial, baseInteraction.p2_initial);
+        drawInteraction(DOM.transformedCtx, p1_transformed, p2_transformed);
+    }
+
+    function setup() {
+        [DOM.cCheck, DOM.pCheck, DOM.tCheck].forEach(el => {
+            el.addEventListener('change', () => {
+                state.C = DOM.cCheck.checked;
+                state.P = DOM.pCheck.checked;
+                state.T = DOM.tCheck.checked;
+                draw();
+            });
+        });
+
+        DOM.expositionContent.innerHTML = `<h1>CPT Symmetry</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
