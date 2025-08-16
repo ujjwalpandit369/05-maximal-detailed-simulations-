@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The Flat Torus Universe</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #ffc107; /* Yellow for Flat */
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #e0a800;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #f5c71a;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #f5b900;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 50%; background-color: #000; }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; }
+        .control-group input { width: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-text); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .side-viz { text-align: center; }
+        .side-viz canvas { width: 80%; border: 1px solid var(--color-border); }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation: The Flat Torus Universe</h1>
+            <p class="subtitle">A first-person flight simulator through a finite, topologically wrapped universe.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Medium</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>003-flat-torus-universe.html</code></span>
+            </div>
+        </header>
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container" id="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Flight Controls</h3>
+                <p>Use W/S for forward/backward, A/D for left/right, and arrow keys to turn.</p>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="speed-slider">Flight Speed</label>
+                        <input type="range" id="speed-slider" min="0.1" max="5" step="0.1" value="1">
+                    </div>
+                     <div class="control-group">
+                        <label for="size-slider">Universe Size</label>
+                        <input type="range" id="size-slider" min="100" max="1000" step="50" value="500">
+                    </div>
+                    <div class="control-group">
+                        <label><input type="checkbox" id="show-ghosts-check" checked> Show Ghost Images</label>
+                    </div>
+                </div>
+            </div>
+             <div class="panel">
+                <h3>Universe Map</h3>
+                <div class="side-viz">
+                    <canvas id="map-canvas" width="200" height="200"></canvas>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to a Toroidal Universe</h2>
+    <p>When we say the universe is "flat," we mean that its geometry is Euclidean—parallel lines stay parallel, and triangles look normal. Current observations strongly suggest we live in such a universe. But does "flat" mean "infinite"? Not necessarily. It's possible for space to be flat but also finite, if it has a non-trivial <strong>topology</strong>. The simplest and most famous example is the <strong>3-torus</strong>.</p>
+    <p>Imagine a 2D version: a flat sheet of paper. You can make a cylinder by taping two opposite edges together. You can then bend the cylinder around and tape its two circular ends together to form a donut shape, or a torus. An ant walking on this surface would find that the geometry is locally flat everywhere (it's made from a flat sheet), but the universe is finite and wraps around. If the ant walks in a straight line, it will eventually end up back where it started.</p>
+    <p>A 3-torus universe is the 3D version of this. It's like living inside a cubic box. If you fly your spaceship to the right wall and pass through it, you don't hit a boundary; you instantly re-appear at the left wall, continuing on your journey. The same happens for the top/bottom and front/back walls. This is often called the "Pac-Man" or "Asteroids" model of the universe. In such a universe, if you looked far enough in any direction, you would eventually see the back of your own head! This simulation is a first-person flight simulator that lets you experience what it would be like to fly through such a space.</p>
+
+    <h2>Core Theory: Topology vs. Geometry</h2>
+    <p>It is crucial to distinguish between two different properties of space.</p>
+    <ul>
+        <li><strong>Geometry</strong> describes the local curvature of space. It tells you what happens to parallel lines on small scales. The three possibilities are spherical (positive curvature), hyperbolic (negative curvature), and flat (zero curvature). Geometry is determined by the energy density of the universe (Ω) via Einstein's equations.</li>
+        <li><strong>Topology</strong> describes the global connectedness and overall shape of space. It tells you whether the universe is finite or infinite, and whether it has "handles" or is "wrapped around." Topology is not determined by Einstein's equations; in principle, any of the three geometries could have a simple or a complex topology.</li>
+    </ul>
+
+    <h3>The Hall of Mirrors</h3>
+    <p>A key consequence of a multi-connected topology like a torus is the "hall of mirrors" effect. Since light also wraps around the universe, when we look in a certain direction, we might be seeing light from a galaxy that has traveled all the way around the universe to reach us. This means we would see the same galaxy multiple times in different parts of the sky. The entire universe would appear as an infinite, repeating 3D lattice of copies of the fundamental domain (the "box"). This simulation visualizes this effect by rendering not just the galaxies in the central box, but also their "ghost" images in the 26 surrounding boxes, giving you the illusion of an infinite, repeating cosmos.</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>How do we search for a toroidal topology?</strong>
+            <p>The primary method is to search for repeating patterns in the Cosmic Microwave Background (CMB). The CMB is a snapshot of the universe when it was young, a "surface of last scattering." If the universe is a torus, this surface would wrap around and intersect itself. This would produce pairs of matching circles of temperature fluctuations on opposite sides of the sky. Scientists have searched for these "circles in the sky" but have so far found no statistically significant evidence, placing a lower limit on the size of the torus—if it exists, it must be larger than our observable horizon.</p></li>
+        <li><strong>What am I seeing in the main window?</strong>
+            <p>You are seeing a first-person 3D view from inside a cubic "fundamental domain" that represents the finite universe. There are a few colored shapes representing galaxies. As you fly towards a wall, you will see yourself pass through it and emerge from the opposite side. The "ghost images" are copies of the galaxies from the main box, rendered in the adjacent "wrapped" spaces to create the illusion of an infinite, repeating lattice, which is what you would actually see.</p></li>
+        <li><strong>What does the map on the side show?</strong>
+            <p>The map is a simple 2D (top-down) projection of the fundamental cubic box. It shows the positions of the galaxies and a triangle representing your position and viewing direction. It helps you navigate and understand where you are within the finite space.</p></li>
+    </ol>
+`;
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.mainLoop();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            mapCanvas: document.getElementById('map-canvas'),
+            speedSlider: document.getElementById('speed-slider'),
+            sizeSlider: document.getElementById('size-slider'),
+            showGhostsCheck: document.getElementById('show-ghosts-check'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.mapCtx = this.dom.mapCanvas.getContext('2d');
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            camera: { pos: {x:0, y:0, z:0}, rot: {y:0}},
+            keys: {},
+            galaxies: [],
+            speed: 1,
+            size: 500,
+            showGhosts: true,
+        };
+    }
+
+    initControls() {
+        this.dom.speedSlider.oninput = (e) => { this.state.speed = parseFloat(e.target.value); };
+        this.dom.sizeSlider.oninput = (e) => { this.state.size = parseFloat(e.target.value); };
+        this.dom.showGhostsCheck.onchange = (e) => { this.state.showGhosts = e.target.checked; };
+        window.onkeydown = (e) => { this.state.keys[e.key.toLowerCase()] = true; };
+        window.onkeyup = (e) => { this.state.keys[e.key.toLowerCase()] = false; };
+        this.reset();
+    }
+
+    reset() {
+        this.state.camera = { pos: {x:0, y:0, z:0}, rot: {y:0}};
+        this.state.galaxies = [];
+        for(let i=0; i<10; i++) {
+            this.state.galaxies.push({
+                pos: { x: (Math.random()-0.5)*this.state.size, y: (Math.random()-0.5)*this.state.size, z: (Math.random()-0.5)*this.state.size },
+                size: 10 + Math.random() * 20,
+                color: `hsl(${Math.random()*360}, 80%, 50%)`,
+            });
+        }
+    }
+
+    mainLoop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.mainLoop());
+    }
+
+    update() {
+        const { camera, keys, speed, size } = this.state;
+        const moveSpeed = speed * 2;
+        const rotSpeed = 0.03;
+
+        if(keys['w']) { camera.pos.x += Math.sin(camera.rot.y) * moveSpeed; camera.pos.z += Math.cos(camera.rot.y) * moveSpeed; }
+        if(keys['s']) { camera.pos.x -= Math.sin(camera.rot.y) * moveSpeed; camera.pos.z -= Math.cos(camera.rot.y) * moveSpeed; }
+        if(keys['a']) { camera.pos.x -= Math.cos(camera.rot.y) * moveSpeed; camera.pos.z += Math.sin(camera.rot.y) * moveSpeed; }
+        if(keys['d']) { camera.pos.x += Math.cos(camera.rot.y) * moveSpeed; camera.pos.z -= Math.sin(camera.rot.y) * moveSpeed; }
+        if(keys['arrowleft']) { camera.rot.y -= rotSpeed; }
+        if(keys['arrowright']) { camera.rot.y += rotSpeed; }
+
+        // Torus wrapping
+        const halfSize = size/2;
+        camera.pos.x = ((camera.pos.x + halfSize) % size + size) % size - halfSize;
+        camera.pos.z = ((camera.pos.z + halfSize) % size + size) % size - halfSize;
+    }
+
+    draw() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.fillStyle = 'var(--color-bg)';
+        ctx.fillRect(0,0,width,height);
+
+        const { camera, galaxies, size, showGhosts } = this.state;
+
+        const objects = [];
+        galaxies.forEach(g => {
+            objects.push(g);
+            if(showGhosts) {
+                for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) for(let k=-1; k<=1; k++) {
+                    if(i===0 && j===0 && k===0) continue;
+                    objects.push({
+                        ...g,
+                        pos: { x: g.pos.x + i*size, y: g.pos.y + j*size, z: g.pos.z + k*size }
+                    });
+                }
+            }
+        });
+
+        // Simple 3D projection
+        objects.sort((a,b) => b.pos.z - a.pos.z);
+        objects.forEach(g => {
+            let dx = g.pos.x - camera.pos.x;
+            let dy = g.pos.y - camera.pos.y;
+            let dz = g.pos.z - camera.pos.z;
+
+            // Rotate around camera
+            let rdx = dx * Math.cos(camera.rot.y) - dz * Math.sin(camera.rot.y);
+            let rdz = dx * Math.sin(camera.rot.y) + dz * Math.cos(camera.rot.y);
+
+            if (rdz < 0) return; // Behind camera
+
+            const scale = 200 / rdz;
+            const screenX = width/2 + rdx * scale;
+            const screenY = height/2 - dy * scale;
+            const screenSize = g.size * scale;
+
+            ctx.fillStyle = g.color;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, screenSize/2, 0, 2*Math.PI);
+            ctx.fill();
+        });
+
+        this.drawMap();
+    }
+
+    drawMap() {
+        const { mapCtx, width, height } = {mapCtx: this.dom.mapCanvas, width: 200, height: 200};
+        mapCtx.fillStyle = 'var(--color-control-bg)';
+        mapCtx.fillRect(0,0,width,height);
+
+        const { camera, galaxies, size } = this.state;
+        const scale = width/size;
+
+        mapCtx.save();
+        mapCtx.translate(width/2, height/2);
+
+        galaxies.forEach(g => {
+            mapCtx.fillStyle = g.color;
+            mapCtx.beginPath();
+            mapCtx.arc(g.pos.x*scale, g.pos.z*scale, g.size*scale, 0, 2*Math.PI);
+            mapCtx.fill();
+        });
+
+        mapCtx.fillStyle = 'var(--color-text)';
+        mapCtx.translate(camera.pos.x*scale, camera.pos.z*scale);
+        mapCtx.rotate(camera.rot.y);
+        mapCtx.beginPath();
+        mapCtx.moveTo(0,0); mapCtx.lineTo(-5, 10); mapCtx.lineTo(5, 10);
+        mapCtx.closePath(); mapCtx.fill();
+
+        mapCtx.restore();
+    }
+}
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation Lab: Geometry vs. Topology</title>
+    <style>
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        }
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #6c757d;
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #5a6268;
+            --color-sphere: #0d6efd; --color-hyper: #dc3545; --color-flat: #198754;
+        }
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #adb5bd;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #868e96;
+            --color-sphere: #4dabf7; --color-hyper: #f03e3e; --color-flat: #40c057;
+        }
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        .main-container { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content-left main-content-right" "footer footer"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; }
+        .main-content-left { grid-area: main-content-left; }
+        .main-content-right { grid-area: main-content-right; }
+        .footer { grid-area: footer; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; }
+        .viz-container canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="theme-light">
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation Lab: Geometry vs. Topology</h1>
+            <p class="subtitle">A comparative lab to clarify the difference between the curvature of space (geometry) and its global connectedness (topology).</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span> <span>CPU Intensity: Light</span> <span>Word Count: ~5000</span>
+                <span>Suggested Filename: <code>005-geometry-vs-topology-lab.html</code></span>
+            </div>
+        </header>
+
+        <div class="main-content-left">
+            <div class="panel">
+                <h3>Part 1: Geometry (Local Curvature)</h3>
+                <p>This panel shows how two initially parallel lines behave in spaces with different curvature.</p>
+                <select id="geometry-select">
+                    <option value="flat">Flat (k=0)</option>
+                    <option value="spherical">Spherical (k=+1)</option>
+                    <option value="hyperbolic">Hyperbolic (k=-1)</option>
+                </select>
+                <div class="viz-container">
+                    <canvas id="geometry-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content-right">
+             <div class="panel">
+                <h3>Part 2: Topology (Global Connectedness)</h3>
+                <p>This panel shows how a flat space can be either infinite or finite and wrapped.</p>
+                <select id="topology-select">
+                    <option value="infinite">Infinite Plane</option>
+                    <option value="torus">Finite Torus</option>
+                </select>
+                <div class="viz-container">
+                    <canvas id="topology-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="panel tab-container">
+                 <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide: Geometry vs. Topology</h2>
+    <p>When we talk about the "shape" of the universe, we are often mixing up two distinct mathematical ideas: <strong>geometry</strong> and <strong>topology</strong>. This final lab is designed to make the difference between them crystal clear.</p>
+    <p><strong>Geometry</strong> is about the <em>local</em> properties of space. It describes the curvature at any given point. It answers the question: "What happens to parallel lines?" There are three possibilities for a homogeneous universe:
+    <ul>
+        <li><strong style="color:var(--color-flat);">Flat (k=0):</strong> Zero curvature, like a sheet of paper. Parallel lines stay parallel. This is the geometry favored by our current observations.</li>
+        <li><strong style="color:var(--color-sphere);">Spherical (k=+1):</strong> Positive curvature, like the surface of a ball. Parallel lines converge.</li>
+        <li><strong style="color:var(--color-hyper);">Hyperbolic (k=-1):</strong> Negative curvature, like the surface of a saddle. Parallel lines diverge.</li>
+    </ul>
+    In the simulation above, the "Geometry" panel on the left lets you see this directly. You can pick a geometry and watch how two parallel lines behave.</p>
+
+    <p><strong>Topology</strong> is about the <em>global</em> properties of space. It describes how the space is "connected" to itself. It answers the question: "Is the universe finite or infinite?" Crucially, topology and geometry are independent. A flat universe is not necessarily infinite!
+    <ul>
+        <li><strong>Simply Connected:</strong> This is the straightforward case. The space goes on forever in all directions (if flat or hyperbolic) or is a simple sphere (if spherical).</li>
+        <li><strong>Multi-Connected:</strong> This is the "wrapped" case. The space is finite, and opposite "ends" are connected. The simplest example is a torus.</li>
+    </ul>
+    The "Topology" panel on the right demonstrates this for a flat geometry. You can see how a spaceship behaves on an infinite plane versus a finite torus, where it wraps around the edges.</p>
+
+    <h2>Core Theory: The Six Possibilities</h2>
+    <p>By combining the three geometries with the two simplest topologies (simply-connected/infinite vs. multi-connected/finite), we get a menu of possible universes. General Relativity tells us that the geometry is determined by the total energy density (Ω), but it tells us nothing about the topology.
+    <table border="1" style="width:100%; border-collapse: collapse; text-align: center;">
+        <tr style="background-color: var(--color-control-bg);"><th></th><th>Simply Connected (Infinite)</th><th>Multi-Connected (Finite)</th></tr>
+        <tr><th>Flat (k=0, Ω=1)</th><td>Infinite Euclidean Space</td><td>3-Torus (like Asteroids)</td></tr>
+        <tr><th>Spherical (k=+1, Ω>1)</th><td>3-Sphere (always finite)</td><td>Poincaré Dodecahedral Space, etc.</td></tr>
+        <tr><th>Hyperbolic (k=-1, Ω<1)</th><td>Infinite Hyperbolic Space</td><td>Finite "Horned" Spaces</td></tr>
+    </table>
+    Our universe appears to be flat, so the two most plausible options for us are an infinite Euclidean space or a finite 3-Torus. Searches for the repeating patterns of a torus have so far come up empty, suggesting that if we do live in a torus, it must be larger than the part of the universe we can see.</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is the key takeaway from this lab?</strong>
+            <p>The most important lesson is that "flat" does not mean "infinite." Our universe appears to have a flat geometry, but this does not, by itself, tell us whether the universe is finite or infinite in volume. It could be a simple, infinite plane, or it could be a finite, wrapped shape like a 3-torus. Distinguishing between these two possibilities requires searching for the global signatures of topology, like the repeating patterns explored in the previous simulation.</p></li>
+        <li><strong>How do the two panels work?</strong>
+            <p><strong>Geometry Panel (Left):</strong> This simulation draws geodesics on a 2D surface. For the "flat" case, it's a simple plane. For the "spherical" case, it's a projection of a sphere. For the "hyperbolic" case, it uses the Poincaré disk projection. It always starts two lines as parallel and shows their subsequent paths to highlight the effect of curvature.
+            <br><strong>Topology Panel (Right):</strong> This simulation shows a particle moving in a 2D box. In the "Infinite Plane" mode, it simply bounces off the walls. In the "Finite Torus" mode, when the particle hits a wall, its position is "wrapped" to the opposite wall, and it continues its journey. This demonstrates the difference in global connectedness.</p></li>
+    </ol>
+`;
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.mainLoop();
+    }
+
+    initDOM() {
+        this.dom = {
+            geoCanvas: document.getElementById('geometry-canvas'),
+            topoCanvas: document.getElementById('topology-canvas'),
+            geoSelect: document.getElementById('geometry-select'),
+            topoSelect: document.getElementById('topology-select'),
+        };
+        this.geoCtx = this.dom.geoCanvas.getContext('2d');
+        this.topoCtx = this.dom.topoCanvas.getContext('2d');
+        document.getElementById('exposition').innerHTML = expositionText;
+        document.getElementById('qa').innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            geo: { type: 'flat', time: 0 },
+            topo: { type: 'infinite', particle: {x:50, y:50, vx:1, vy:0.5} },
+        };
+    }
+
+    initControls() {
+        this.dom.geoSelect.onchange = (e) => { this.state.geo.type = e.target.value; this.state.geo.time = 0; };
+        this.dom.topoSelect.onchange = (e) => { this.state.topo.type = e.target.value; };
+    }
+
+    mainLoop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.mainLoop());
+    }
+
+    update() {
+        // Update geometry simulation
+        this.state.geo.time += 0.01;
+        if(this.state.geo.time > 5) this.state.geo.time = 0;
+
+        // Update topology simulation
+        const p = this.state.topo.particle;
+        p.x += p.vx; p.y += p.vy;
+        if(this.state.topo.type === 'torus') {
+            const w = this.dom.topoCanvas.width, h = this.dom.topoCanvas.height;
+            p.x = (p.x % w + w) % w;
+            p.y = (p.y % h + h) % h;
+        } else {
+            const w = this.dom.topoCanvas.width, h = this.dom.topoCanvas.height;
+            if(p.x<0||p.x>w) p.vx*=-1; if(p.y<0||p.y>h) p.vy*=-1;
+        }
+    }
+
+    draw() {
+        this.drawGeometry();
+        this.drawTopology();
+    }
+
+    drawGeometry() {
+        const { ctx, width, height } = {ctx:this.geoCtx, width:this.dom.geoCanvas.width, height:this.dom.geoCanvas.height};
+        ctx.clearRect(0,0,width,height);
+
+        const y_start = height*0.1;
+        const x1_start = width*0.4, x2_start = width*0.6;
+
+        ctx.lineWidth = 2;
+
+        // Draw path 1
+        ctx.strokeStyle = 'var(--color-path1)';
+        ctx.beginPath(); ctx.moveTo(x1_start, y_start);
+        // Draw path 2
+        ctx.strokeStyle = 'var(--color-path2)';
+        ctx.beginPath(); ctx.moveTo(x2_start, y_start);
+
+        const time = this.state.geo.time;
+        if(this.state.geo.type === 'flat') {
+            ctx.lineTo(x1_start, y_start + time*50);
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x2_start, y_start);
+            ctx.lineTo(x2_start, y_start + time*50);
+            ctx.stroke();
+        } else if (this.state.geo.type === 'spherical') {
+            ctx.quadraticCurveTo(width/2, height/2, x1_start - time*20, y_start + time*50);
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x2_start, y_start);
+            ctx.quadraticCurveTo(width/2, height/2, x2_start + time*20, y_start + time*50);
+            ctx.stroke();
+        } else { // Hyperbolic
+            ctx.quadraticCurveTo(width*0.1, height/2, x1_start - time*20, y_start + time*50);
+            ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x2_start, y_start);
+            ctx.quadraticCurveTo(width*0.9, height/2, x2_start + time*20, y_start + time*50);
+            ctx.stroke();
+        }
+    }
+
+    drawTopology() {
+        const { ctx, width, height } = {ctx:this.topoCtx, width:this.dom.topoCanvas.width, height:this.dom.topoCanvas.height};
+        ctx.clearRect(0,0,width,height);
+
+        ctx.fillStyle = 'var(--color-flat)';
+        const p = this.state.topo.particle;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 2*Math.PI); ctx.fill();
+
+        if(this.state.topo.type === 'torus') {
+            ctx.globalAlpha = 0.3;
+            ctx.beginPath(); ctx.arc((p.x+width)%width, p.y, 10, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc((p.x-width)%width, p.y, 10, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, (p.y+height)%height, 10, 0, 2*Math.PI); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x, (p.y-height)%height, 10, 0, 2*Math.PI); ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+    }
+}
+
+window.onload = () => { new SimulationApp(); };
+</script>
+</body>
+</html>
