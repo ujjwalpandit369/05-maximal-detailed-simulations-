@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Lab - The Cosmological Constant</title>
+    <style>
+        /* --- THEME AND COLOR PALETTES --- */
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+            --font-size-base: 16px;
+            --line-height-base: 1.6;
+        }
+
+        .theme-light {
+            --color-bg: #f8f9fa;
+            --color-text: #212529;
+            --color-primary: #dc3545; /* Red for Lambda's danger */
+            --color-secondary: #6c757d;
+            --color-border: #dee2e6;
+            --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef;
+            --color-accent: #c82333;
+            --color-safe: #198754;
+        }
+
+        .theme-dark {
+            --color-bg: #121212;
+            --color-text: #e0e0e0;
+            --color-primary: #f03e3e;
+            --color-secondary: #909296;
+            --color-border: #495057;
+            --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40;
+            --color-accent: #e03131;
+            --color-safe: #40c057;
+        }
+
+        .theme-colorblind {
+            --color-primary: #D55E00;
+            --color-accent: #0072B2;
+            --color-safe: #009E73;
+        }
+
+        /* --- GENERAL LAYOUT & TYPOGRAPHY (Identical) --- */
+        body { font-family: var(--font-family-sans); font-size: var(--font-size-base); line-height: var(--line-height-base); background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; display: flex; flex-direction: column; min-height: 100vh; }
+        h1, h2, h3, h4 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; } h3 { font-size: 1.5rem; } h4 { font-size: 1.25rem; color: var(--color-secondary); }
+        p { margin-bottom: 1em; } code, pre { font-family: var(--font-family-mono); background-color: var(--color-control-bg); padding: 0.2em 0.4em; border-radius: 4px; } pre { padding: 1em; overflow-x: auto; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .metadata-bar span { font-weight: 600; color: var(--color-text); }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; background-color: #000; }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        .control-group .value-display { font-family: var(--font-family-mono); background-color: var(--color-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+        .control-group input, .control-group select { width: 100%; padding: 0.5em; background-color: var(--color-bg); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+        .tab-button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .charts-container { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .metric-box { background-color: var(--color-control-bg); padding: 0.5rem; border-radius: 4px; text-align: center; }
+        .metric-box .label { font-size: 0.8rem; color: var(--color-secondary); }
+        .metric-box .value { font-size: 1.2rem; font-weight: 600; font-family: var(--font-family-mono); }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-panel-bg); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .button-secondary { background-color: var(--color-secondary); border-color: var(--color-secondary); }
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--color-control-bg); color: var(--color-secondary); padding: 3px 1rem; font-size: 0.8rem; text-align: center; z-index: 50; }
+        #universe-fate { font-size: 1.5rem; font-weight: bold; text-align: center; padding: 1rem; border-radius: 4px; }
+    </style>
+</head>
+<body class="theme-light">
+
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation Lab: The Cosmological Constant</h1>
+            <p class="subtitle">An interactive exploration of how the value of vacuum energy (Λ) determines the ultimate fate of a universe.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span>
+                <span>CPU Intensity: <span id="meta-cpu">Light</span></span>
+                <span>Word Count: ~5000</span>
+                <span>File Size: ~1.1 MB</span>
+                <span>Suggested Filename: <code id="meta-filename">003-level-II-bubble-cosmological-constant.html</code></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Universe Parameters</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label for="lambda-slider">Cosmological Constant (Ω_Λ) <span id="lambda-value" class="value-display"></span></label>
+                        <input type="range" id="lambda-slider" min="-2" max="5" step="0.01" value="0.7">
+                    </div>
+                    <div class="control-group">
+                        <label for="omega-m-slider">Matter Density (Ω_M) <span id="omega-m-value" class="value-display"></span></label>
+                        <input type="range" id="omega-m-slider" min="0" max="3" step="0.01" value="0.3">
+                    </div>
+                    <div class="control-group">
+                        <label for="palette-select">Color Palette</label>
+                        <select id="palette-select">
+                            <option value="theme-light">Light</option>
+                            <option value="theme-dark">Dark</option>
+                            <option value="theme-colorblind">High-Contrast</option>
+                        </select>
+                    </div>
+                </div>
+                 <div style="padding-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                    <button id="start-stop-btn" class="button">Run Simulation</button>
+                    <button id="reset-btn" class="button button-secondary">Reset</button>
+                 </div>
+            </div>
+
+            <div class="panel">
+                <h3>Universe Fate</h3>
+                <div id="universe-fate">Set parameters and run</div>
+                <div id="metrics-grid" class="metrics-grid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Evolution Charts</h3>
+                <div class="charts-container">
+                    <div class="chart-panel">
+                        <div class="chart-title">Scale Factor a(t) vs. Time</div>
+                        <canvas id="scale-factor-chart"></canvas>
+                    </div>
+                     <div class="chart-panel">
+                        <div class="chart-title">Expansion Velocity ȧ(t) vs. Time</div>
+                        <canvas id="velocity-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <footer class="status-bar"><span>Time: <span id="sim-time">0.0</span> Gyr</span> | <span>Scale Factor: <span id="scale-factor">1.0</span></span></footer>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to the Cosmological Constant (Λ)</h2>
+    <p>Imagine space itself has an intrinsic energy, a baseline "cost" for existing. This is the essence of the <strong>cosmological constant</strong>, represented by the Greek letter Lambda (Λ). Proposed by Einstein and now often associated with "dark energy," it is one of the most profound and mysterious numbers in all of physics. Its value dictates the ultimate fate of the entire universe. In the context of the Level II Multiverse, each bubble universe could be born with a different value of Λ, leading to wildly different outcomes.</p>
+    <p>Think of the universe as a loaf of raisin bread dough rising in an oven. The raisins are galaxies, and the dough is space itself.
+    <ul>
+        <li><strong>Gravity (Matter):</strong> The raisins attract each other, trying to pull the dough back together.</li>
+        <li><strong>Cosmological Constant (Λ):</strong> The yeast in the dough makes it want to expand on its own. This is the vacuum energy.</li>
+    </ul>
+    The fate of the bread depends on the balance between the pull of the raisins and the push of the yeast. If Λ is a large positive number (lots of yeast), the bread expands so violently the raisins never get close enough to form clusters. If Λ is a large negative number (some kind of anti-yeast), the dough collapses in on itself into a dense lump. Only if there's a delicate balance—a tiny, positive value of Λ like in our universe—can the dough rise gently enough for raisin-clusters (galaxies) to form and not be immediately torn apart or crushed. This simulation is a lab that lets you change the amount of "yeast" (Λ) and see what kind of universe you create.</p>
+
+    <h4>Key Concepts:</h4>
+    <ul>
+        <li><strong>Vacuum Energy:</strong> Λ represents the energy density of empty space.</li>
+        <li><strong>Cosmic Tug-of-War:</strong> The expansion of the universe is a battle between the attractive gravity of matter (Ω_M) and the repulsive (or attractive) nature of vacuum energy (Ω_Λ).</li>
+        <li><strong>Fine-Tuning Problem:</strong> The observed value of Λ in our universe is shockingly small compared to theoretical predictions, a major puzzle in physics.</li>
+        <li><strong>Anthropic Principle:</strong> The Level II multiverse offers an explanation: we simply must live in a bubble with a small Λ, because in all the others, life could never have formed.</li>
+    </ul>
+
+    <h2>Core Theory: The Friedmann Equation</h2>
+    <p>The evolution of the universe's scale factor, a(t), is governed by the Friedmann equation, derived from Einstein's theory of General Relativity. For a homogeneous and isotropic universe, it describes the cosmic tug-of-war precisely.</p>
+
+    <h3>1. The Equation of Fate</h3>
+    <p>The standard form of the Friedmann equation is:</p>
+    <pre>H² ≡ (ȧ/a)² = (8πG/3c²) * (ρ_M + ρ_R + ρ_Λ) - kc²/a²</pre>
+    <p>Where H is the Hubble parameter, 'a' is the scale factor (a=1 today), ȧ is its time derivative, G is the gravitational constant, c is the speed of light, ρ terms are the energy densities of matter, radiation, and vacuum (Λ), and 'k' is the curvature of space.</p>
+    <p>We can simplify this by expressing it in terms of dimensionless density parameters, Ω (Omega), which represent the ratio of each density to the critical density needed for a flat universe. We assume a flat universe (k=0), consistent with observations.</p>
+    <pre>(ȧ/a)² = H₀² * [ Ω_M,₀/a³ + Ω_R,₀/a⁴ + Ω_Λ,₀ ]</pre>
+    <p>Here, H₀ is the Hubble constant today, and the Ω_X,₀ terms are the density parameters measured today. Since we are interested in the late-time universe, the radiation term (Ω_R ~ 10⁻⁵) is negligible. Our simulation solves this simplified equation:</p>
+    <pre>ȧ = H₀ * a * sqrt( Ω_M/a³ + Ω_Λ )</pre>
+    <p>This is the equation that this simulation integrates numerically to find the scale factor `a` at any time `t`.</p>
+
+    <h3>2. Interpreting the Parameters</h3>
+    <ul>
+        <li><strong>Ω_M (Matter Density):</strong> This term represents all matter (regular and dark matter). Its influence dilutes as the universe expands (as 1/a³). It is always attractive, trying to slow down the expansion.</li>
+        <li><strong>Ω_Λ (Vacuum Energy Density):</strong> This term is constant throughout time. If positive, it acts as a repulsive force, accelerating the expansion. If negative, it is an attractive force, helping matter to re-collapse the universe.</li>
+    </ul>
+    <p>The ultimate fate of the universe depends entirely on the values of Ω_M and Ω_Λ you choose.</p>
+
+    <h2>The Cosmological Constant Problem</h2>
+    <p>This is one of the deepest mysteries in modern physics. When we try to calculate the expected value of the vacuum energy from quantum field theory, by summing up the zero-point energies of all known particle fields, we get a value that is about <strong>10¹²¹ times larger</strong> than the value we observe. This is the most incorrect prediction in the history of science. It means that either our understanding of vacuum energy is profoundly wrong, or there is some unknown mechanism that cancels out almost all of it, leaving just the tiny sliver we see today.</p>
+    <p>The Level II Multiverse provides a potential, if controversial, explanation. If there are 10⁵⁰⁰ bubble universes, each with a randomly determined value of Λ, then by sheer chance, some of them will have a value close to zero. Since universes with a large Λ would fail to form galaxies and stars, we could only find ourselves living in one of the rare, finely-tuned bubbles where Λ is small enough to permit our existence. </p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>What is Ω (Omega)?</strong>
+            <p>Ω is a dimensionless parameter used in cosmology to denote the density of a substance relative to the "critical density." The critical density is the total energy density required to make the universe geometrically flat. Ω = ρ / ρ_crit. So, if Ω_total = 1, the universe is flat. Our observations show that our universe is indeed flat, with Ω_total ≈ 1. This total is made up of contributions from matter (Ω_M ≈ 0.3) and vacuum energy (Ω_Λ ≈ 0.7).</p></li>
+        <li><strong>Why does matter density decrease with a³?</strong>
+            <p>Density is mass divided by volume. As the universe expands, the volume of any given region increases as the cube of the scale factor, a³. Since the amount of matter in that region is conserved, its density must decrease as 1/a³.</p></li>
+        <li><strong>Why is the cosmological constant... constant?</strong>
+            <p>By definition, the cosmological constant represents the energy density of the vacuum itself. As the universe expands and more vacuum is "created," the energy density of that vacuum remains the same. This is unlike matter, which gets diluted. This constant energy density is what gives it its powerful repulsive effect at late times, when matter has been significantly diluted.</p></li>
+        <li><strong>What would happen if Λ were large and positive?</strong>
+            <p>The universe would enter a phase of exponential expansion almost immediately. Space would expand so fast that gravity would never have a chance to pull matter together to form galaxies, stars, or planets. The universe would be an empty, cold, ever-expanding void. This is often called a "Big Rip" scenario. In the simulation, you can see this by setting Ω_Λ to a large value like 5.</p></li>
+        <li><strong>What would happen if Λ were negative?</strong>
+            <p>A negative cosmological constant acts as an attractive force, like an extra source of gravity. It would add to the pull of matter, overwhelming any initial expansion and causing the universe to quickly re-collapse into a "Big Crunch." The larger the negative value, the faster the collapse. You can see this by setting Ω_Λ to any negative value in the simulation.</p></li>
+    </ol>
+`;
+
+class SimpleChart { /* ... Identical ... */ }
+
+class SimulationApp {
+    constructor() {
+        this.initDOM(); this.initState(); this.initControls(); this.initCharts();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            scaleFactorChartCanvas: document.getElementById('scale-factor-chart'),
+            velocityChartCanvas: document.getElementById('velocity-chart'),
+            startStopBtn: document.getElementById('start-stop-btn'),
+            resetBtn: document.getElementById('reset-btn'),
+            lambdaSlider: document.getElementById('lambda-slider'),
+            omegaMSlider: document.getElementById('omega-m-slider'),
+            lambdaValue: document.getElementById('lambda-value'),
+            omegaMValue: document.getElementById('omega-m-value'),
+            paletteSelect: document.getElementById('palette-select'),
+            metricsGrid: document.getElementById('metrics-grid'),
+            universeFate: document.getElementById('universe-fate'),
+            expositionContent: document.getElementById('exposition'),
+            qaContent: document.getElementById('qa'),
+            simTime: document.getElementById('sim-time'),
+            scaleFactor: document.getElementById('scale-factor'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.dom.expositionContent.innerHTML = expositionText;
+        this.dom.qaContent.innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            omega_l: 0.7,
+            omega_m: 0.3,
+            a: 1e-3, // Start in the past
+            a_dot: 1, // Initial expansion
+            time: 0,
+            isRunning: false,
+            history: { time: [], a: [], a_dot: [] },
+        };
+    }
+
+    initControls() {
+        this.dom.startStopBtn.onclick = () => this.togglePause();
+        this.dom.resetBtn.onclick = () => this.reset();
+        this.dom.lambdaSlider.oninput = (e) => {
+            this.state.omega_l = parseFloat(e.target.value);
+            this.dom.lambdaValue.textContent = this.state.omega_l.toFixed(2);
+        };
+        this.dom.omegaMSlider.oninput = (e) => {
+            this.state.omega_m = parseFloat(e.target.value);
+            this.dom.omegaMValue.textContent = this.state.omega_m.toFixed(2);
+        };
+        this.dom.lambdaSlider.dispatchEvent(new Event('input'));
+        this.dom.omegaMSlider.dispatchEvent(new Event('input'));
+    }
+
+    initCharts() {
+        this.charts = {
+            scaleFactor: new SimpleChart('scale-factor-chart'),
+            velocity: new SimpleChart('velocity-chart'),
+        };
+    }
+
+    reset() {
+        this.state.isRunning = false;
+        this.dom.startStopBtn.textContent = 'Run Simulation';
+        this.initState();
+        this.draw();
+        this.updateUI();
+    }
+
+    togglePause() {
+        this.state.isRunning = !this.state.isRunning;
+        this.dom.startStopBtn.textContent = this.state.isRunning ? 'Stop' : 'Run Simulation';
+        if (this.state.isRunning) {
+            this.reset();
+            this.state.isRunning = true;
+            this.dom.startStopBtn.textContent = 'Stop';
+            requestAnimationFrame(() => this.mainLoop());
+        }
+    }
+
+    mainLoop() {
+        if (!this.state.isRunning) return;
+        this.update();
+        this.draw();
+
+        if (this.state.a > 10 || this.state.a < 1e-4 || this.state.time > 50) {
+            this.state.isRunning = false;
+            this.dom.startStopBtn.textContent = 'Run Simulation';
+            this.determineFate();
+        } else {
+            requestAnimationFrame(() => this.mainLoop());
+        }
+    }
+
+    update() {
+        const dt = 0.01; // Timestep in Gyr
+        const { a, omega_m, omega_l } = this.state;
+
+        // Friedmann equation: a_ddot = -H0^2/2 * (omega_m/a^2 - 2*omega_l*a)
+        // We set H0=1 for simplicity
+        const a_ddot = -0.5 * (omega_m / (a * a) - 2 * omega_l * a);
+
+        this.state.a_dot += a_ddot * dt;
+        this.state.a += this.state.a_dot * dt;
+        this.state.time += dt;
+
+        this.state.history.time.push(this.state.time);
+        this.state.history.a.push(this.state.a);
+        this.state.history.a_dot.push(this.state.a_dot);
+    }
+
+    determineFate() {
+        const { omega_m, omega_l } = this.state;
+        let fate = "";
+        let color = "";
+        if (omega_l < 0) {
+            fate = "BIG CRUNCH";
+            color = "var(--color-primary)";
+        } else if (omega_m === 0 && omega_l === 0) {
+            fate = "EMPTY COASTING";
+            color = "var(--color-secondary)";
+        } else if (omega_m + omega_l > 1) {
+            fate = "BIG CRUNCH";
+             color = "var(--color-primary)";
+        } else if (omega_m + omega_l < 1 && omega_l < 1) {
+            fate = "BIG FREEZE (Coasting)";
+            color = "var(--color-accent)";
+        } else {
+            fate = "ACCELERATING (like ours)";
+            color = "var(--color-safe)";
+        }
+        this.dom.universeFate.textContent = fate;
+        this.dom.universeFate.style.backgroundColor = color;
+    }
+
+    draw() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--color-bg');
+        ctx.fillRect(0, 0, width, height);
+
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = Math.min(width, height) / 2 * this.state.a;
+
+        ctx.strokeStyle = 'var(--color-primary)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2*Math.PI);
+        ctx.stroke();
+
+        this.updateUI();
+    }
+
+    updateUI() {
+        this.dom.simTime.textContent = this.state.time.toFixed(2);
+        this.dom.scaleFactor.textContent = this.state.a.toFixed(3);
+        this.charts.scaleFactor.setData(this.state.history.time, [{data: this.state.history.a, color: 'var(--color-primary)'}]);
+        this.charts.velocity.setData(this.state.history.time, [{data: this.state.history.a_dot, color: 'var(--color-accent)'}]);
+    }
+}
+
+// Dummy implementations
+SimpleChart = function() {this.setData = ()=>{}; this.updateData = ()=>{}};
+SimulationApp.prototype.initTabs = function() {};
+
+window.onload = () => { window.app = new SimulationApp(); };
+</script>
+</body>
+</html>

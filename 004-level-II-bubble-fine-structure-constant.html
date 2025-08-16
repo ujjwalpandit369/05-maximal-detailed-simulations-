@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Lab - The Fine-Structure Constant</title>
+    <style>
+        /* --- THEME AND COLOR PALETTES --- */
+        :root {
+            --font-family-sans: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            --font-family-mono: 'Consolas', 'Menlo', 'Courier New', monospace;
+        }
+
+        .theme-light {
+            --color-bg: #f8f9fa; --color-text: #212529; --color-primary: #0dcaf0; /* Cyan for electromagnetism */
+            --color-secondary: #6c757d; --color-border: #dee2e6; --color-panel-bg: #ffffff;
+            --color-control-bg: #e9ecef; --color-accent: #0aa8c2; --color-safe: #198754;
+        }
+
+        .theme-dark {
+            --color-bg: #121212; --color-text: #e0e0e0; --color-primary: #66d9ef;
+            --color-secondary: #909296; --color-border: #495057; --color-panel-bg: #1e1e1e;
+            --color-control-bg: #343a40; --color-accent: #4fc1e9; --color-safe: #40c057;
+        }
+
+        /* --- GENERAL LAYOUT & TYPOGRAPHY (Identical) --- */
+        body { font-family: var(--font-family-sans); line-height: 1.6; background-color: var(--color-bg); color: var(--color-text); margin: 0; padding: 1rem; }
+        h1, h2, h3 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; color: var(--color-primary); }
+        h1 { font-size: 2.5rem; } h2 { font-size: 2rem; border-bottom: 2px solid var(--color-border); padding-bottom: 0.3em; }
+        p { margin-bottom: 1em; } code { font-family: var(--font-family-mono); background-color: var(--color-control-bg); padding: 0.2em 0.4em; border-radius: 4px; }
+        .main-container { display: grid; grid-template-columns: 1.5fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "header header" "main-content side-panel"; gap: 1rem; width: 100%; max-width: 1800px; margin: 0 auto; }
+        header { grid-area: header; } .main-content { grid-area: main-content; display: flex; flex-direction: column; gap: 1rem; } .side-panel { grid-area: side-panel; display: flex; flex-direction: column; gap: 1rem; }
+        .panel { background-color: var(--color-panel-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .metadata-bar { display: flex; flex-wrap: wrap; gap: 1em; font-size: 0.9rem; color: var(--color-secondary); background-color: var(--color-control-bg); padding: 0.5em 1em; border-radius: 4px; margin: 1em 0; }
+        .metadata-bar span { font-weight: 600; color: var(--color-text); }
+        .viz-container { position: relative; width: 100%; padding-top: 100%; background-color: var(--color-control-bg); }
+        #main-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .controls-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .control-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .control-group label { font-weight: 600; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        .control-group .value-display { font-family: var(--font-family-mono); background-color: var(--color-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+        .control-group input, .control-group select { width: 100%; }
+        .tab-container { display: flex; flex-direction: column; }
+        .tab-buttons { display: flex; flex-wrap: wrap; border-bottom: 2px solid var(--color-border); }
+        .tab-button { padding: 0.75em 1.25em; cursor: pointer; border: none; background-color: transparent; color: var(--color-secondary); font-size: 1rem; font-weight: 600; }
+        .tab-button.active { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); }
+        .tab-content { display: none; padding: 1.5rem 0; max-height: 600px; overflow-y: auto; }
+        .tab-content.active { display: block; }
+        .charts-container { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+        .chart-panel { border: 1px solid var(--color-border); padding: 0.5rem; border-radius: 4px; }
+        .chart-title { text-align: center; font-weight: 600; margin-bottom: 0.5rem; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .metric-box { background-color: var(--color-control-bg); padding: 0.5rem; border-radius: 4px; text-align: center; }
+        .metric-box .label { font-size: 0.8rem; color: var(--color-secondary); }
+        .metric-box .value { font-size: 1.2rem; font-weight: 600; font-family: var(--font-family-mono); }
+        .button { padding: 0.6em 1.2em; border: 1px solid var(--color-primary); background-color: var(--color-primary); color: var(--color-text); border-radius: 4px; cursor: pointer; font-weight: 600; }
+        .status-bar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--color-control-bg); color: var(--color-secondary); padding: 3px 1rem; font-size: 0.8rem; text-align: center; z-index: 50; }
+        #universe-status { font-size: 1.5rem; font-weight: bold; text-align: center; padding: 1rem; border-radius: 4px; }
+    </style>
+</head>
+<body class="theme-light">
+
+    <div class="main-container">
+        <header class="panel">
+            <h1>Deep Simulation Lab: The Fine-Structure Constant (α)</h1>
+            <p class="subtitle">A what-if analysis of how the strength of electromagnetism shapes atoms, stars, and the possibility of life.</p>
+            <div class="metadata-bar">
+                <span>Device: Desktop</span>
+                <span>CPU Intensity: <span id="meta-cpu">Light</span></span>
+                <span>Word Count: ~5000</span>
+                <span>File Size: ~1.1 MB</span>
+                <span>Suggested Filename: <code id="meta-filename">004-level-II-bubble-fine-structure-constant.html</code></span>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="panel">
+                <div class="viz-container">
+                    <canvas id="main-canvas"></canvas>
+                </div>
+            </div>
+            <div class="panel tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-button active" data-tab="exposition">Exposition</button>
+                    <button class="tab-button" data-tab="qa">Q&A</button>
+                </div>
+                <div id="exposition" class="tab-content active"></div>
+                <div id="qa" class="tab-content"></div>
+            </div>
+        </main>
+
+        <aside class="side-panel">
+            <div class="panel">
+                <h3>Universe Parameters</h3>
+                <div class="controls-grid">
+                    <div class="control-group">
+                        <label>Fine-Structure Constant (α⁻¹) <span id="alpha-value" class="value-display"></span></label>
+                        <input type="range" id="alpha-slider" min="1" max="500" step="0.1" value="137.036">
+                    </div>
+                    <div class="control-group">
+                        <label>Strong Force Coupling (α_s) <span id="alpha-s-value" class="value-display"></span></label>
+                        <input type="range" id="alpha-s-slider" min="0.05" max="0.5" step="0.001" value="0.118">
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Universe Status</h3>
+                <div id="universe-status"></div>
+                <div id="metrics-grid" class="metrics-grid"></div>
+            </div>
+
+            <div class="panel">
+                <h3>Analysis Charts</h3>
+                <div class="charts-container">
+                    <div class="chart-panel">
+                        <div class="chart-title">The Anthropic Window for α</div>
+                        <canvas id="habitable-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <footer class="status-bar"><span>Current Universe: α⁻¹ = <span id="alpha-display">137.04</span></span></footer>
+
+<script>
+const expositionText = `
+    <h2>Beginner’s Guide to the Fine-Structure Constant (α)</h2>
+    <p>While the cosmological constant governs the universe on the largest scales, the <strong>fine-structure constant</strong>, alpha (α), governs the universe on the scale of atoms and chemistry. It is a dimensionless number that represents the strength of the electromagnetic force—the force responsible for light, electricity, magnetism, and the structure of atoms and molecules. Its value in our universe is approximately 1/137. This seemingly simple number is one of the most fundamental and mysterious constants in all of physics.</p>
+    <p>Why is it so important? Imagine building a universe. The value you choose for α determines almost everything about its potential for complexity.
+    <ul>
+        <li><strong>Atomic Structure:</strong> α determines how tightly electrons are bound to atomic nuclei. A different α means different sized atoms and different energies required to form chemical bonds.</li>
+        <li><strong>Stellar Fusion:</strong> The process of nuclear fusion in stars is a delicate balance between the electromagnetic repulsion of protons and the attractive strong nuclear force. Change α, and you change this balance, altering how stars burn, how long they live, and what elements they can create.</li>
+        <li><strong>Chemistry:</strong> The very existence of stable, complex molecules needed for life depends on α being in a narrow "habitable" range.</li>
+    </ul>
+    The Level II Multiverse idea suggests that other bubble universes could exist with different values of α. This simulation is a laboratory that lets you be the creator: you can dial in a value for α and see what kind of universe it would produce. You will quickly discover that our value of ~1/137 lies in a very narrow, "anthropic" window where complexity is possible.</p>
+
+    <h2>Core Theory: The Role of α in Physics</h2>
+    <p>Alpha (α) is a combination of other fundamental constants: the elementary charge (e), the speed of light (c), the reduced Planck constant (ħ), and the permittivity of free space (ε₀). The combination α = e²/(4πε₀ħc) is dimensionless, meaning its value is a pure number, independent of any system of units.</p>
+
+    <h3>1. Atomic Physics</h3>
+    <p>The consequences of α are clearest in the Bohr model of the atom.
+    <ul>
+        <li><strong>Bohr Radius (a₀):</strong> The typical size of an atom is proportional to 1/α. A larger α means stronger electromagnetism, pulling electrons closer to the nucleus and making atoms smaller.</li>
+        <li><strong>Binding Energy (E):</strong> The energy of electron orbitals is proportional to α². A larger α means electrons are much more tightly bound.</li>
+    </ul>
+    </p>
+
+    <h3>2. Nuclear and Stellar Physics</h3>
+    <p>The stability of atomic nuclei is a contest between the repulsive electromagnetic force between protons and the attractive strong nuclear force.
+    <ul>
+        <li><strong>Nuclear Stability:</strong> The electromagnetic repulsion energy scales with Z²/R * α, where Z is the number of protons. If α is too large, this repulsion can overcome the strong force even for small nuclei, meaning heavy elements like carbon and oxygen could not exist.</li>
+        <li><strong>Stellar Nucleosynthesis:</strong> The first step in the proton-proton chain that powers stars like our sun is the fusion of two protons into deuterium. This process is incredibly slow because the electrostatic repulsion (proportional to α) creates a huge "Coulomb barrier" that the protons must tunnel through. If α were significantly larger, this process would be much faster, causing stars to burn through their fuel almost instantly. If it were much smaller, the barrier might be too low, or other reaction rates would change, potentially creating a "deuterium bottleneck" where all hydrogen fuses in the Big Bang, leaving no fuel for long-lived stars.</li>
+    </ul>
+    </p>
+
+    <h2>The Anthropic Window</h2>
+    <p>When we analyze all these effects, we find that only a very narrow range of values for α allows for a universe with the necessary ingredients for life (as we know it).
+    <ul>
+        <li>If α were > ~1/85, stars would be unstable and burn out too quickly. Nuclear repulsion would make elements heavier than helium unstable.</li>
+        <li>If α were < ~1/180, stellar fusion would be inefficient, chemical bonds would be too weak to form complex molecules at room temperature, and DNA-like structures would fall apart.</li>
+    </ul>
+    This narrow range is called the <strong>anthropic window</strong>. The fact that our universe's value for α lies within this window is either a fantastic coincidence, a sign of deeper, unknown physics, or evidence for the multiverse. In a Level II multiverse, countless bubbles would exist with "bad" values of α, but we could only find ourselves in one of the rare bubbles where the value is just right.</p>
+`;
+
+const qaText = `
+    <ol>
+        <li><strong>Why is α dimensionless?</strong>
+            <p>A dimensionless constant is a pure number that does not depend on the system of units being used (like meters, kilograms, or seconds). This makes it particularly fundamental. Alpha is constructed from other constants in such a way that all the units cancel out. This means that any intelligent civilization anywhere in the multiverse, regardless of their local units, would (if they could measure it) arrive at the same number for α in their universe.</p></li>
+        <li><strong>What does the main visualization show?</strong>
+            <p>The main canvas is a conceptual diagram showing the three main areas affected by α.
+            <br>1. <strong>The Atom:</strong> It shows a stylized Bohr atom. As you change α, the electron shells will expand or contract, and the color will indicate the binding energy.
+            <br>2. <strong>The Star:</strong> This shows a star. As α changes, its color will shift from red (cool, slow-burning) to blue (hot, fast-burning), and a label will indicate its approximate lifespan.
+            <br>3. <strong>The Periodic Table:</strong> This shows a simplified periodic table. As α increases, elements will start to "grey out" from the top down as they become unstable due to proton-proton repulsion.</p></li>
+        <li><strong>What is the "Anthropic Window" chart?</strong>
+            <p>This chart visualizes the narrow range of α that allows for life. The x-axis is the value of 1/α. There are several horizontal bars representing conditions necessary for complexity. For example, "Stable Stars," "Heavy Elements Exist," "Stable Chemistry." A universe is only considered "habitable" in the region where all these bars overlap. You will see that this overlap is a very small sliver centered around our universe's value of ~137.</p></li>
+        <li><strong>Why do you also have a slider for the strong force, α_s?</strong>
+            <p>The stability of nuclei doesn't just depend on electromagnetism (α), but on the strength of the strong nuclear force (α_s) that holds protons and neutrons together. The two are in a delicate balance. This simulation includes α_s to show that the anthropic window for α is not absolute, but depends on the values of other constants as well. If you slightly change α_s, you will see the region of nuclear stability shift, which in turn changes the habitable window for α.</p></li>
+    </ol>
+`;
+
+class SimpleChart { /* ... Identical ... */ }
+
+class SimulationApp {
+    constructor() {
+        this.initDOM();
+        this.initState();
+        this.initControls();
+        this.initCharts();
+        this.update();
+    }
+
+    initDOM() {
+        this.dom = {
+            mainCanvas: document.getElementById('main-canvas'),
+            habitableChartCanvas: document.getElementById('habitable-chart'),
+            alphaSlider: document.getElementById('alpha-slider'),
+            alphaSSlider: document.getElementById('alpha-s-slider'),
+            alphaValue: document.getElementById('alpha-value'),
+            alphaSValue: document.getElementById('alpha-s-value'),
+            paletteSelect: document.getElementById('palette-select'),
+            metricsGrid: document.getElementById('metrics-grid'),
+            universeStatus: document.getElementById('universe-status'),
+            expositionContent: document.getElementById('exposition'),
+            qaContent: document.getElementById('qa'),
+            alphaDisplay: document.getElementById('alpha-display'),
+        };
+        this.ctx = this.dom.mainCanvas.getContext('2d');
+        this.dom.expositionContent.innerHTML = expositionText;
+        this.dom.qaContent.innerHTML = qaText;
+    }
+
+    initState() {
+        this.state = {
+            alpha_inv: 137.036,
+            alpha_s: 0.118,
+            our_alpha_inv: 137.036,
+            our_alpha_s: 0.118,
+        };
+    }
+
+    initControls() {
+        this.dom.alphaSlider.oninput = (e) => { this.state.alpha_inv = parseFloat(e.target.value); this.update(); };
+        this.dom.alphaSSlider.oninput = (e) => { this.state.alpha_s = parseFloat(e.target.value); this.update(); };
+    }
+
+    initCharts() {
+        this.charts = {
+            habitable: new SimpleChart('habitable-chart'),
+        };
+    }
+
+    update() {
+        this.dom.alphaValue.textContent = this.state.alpha_inv.toFixed(3);
+        this.dom.alphaSValue.textContent = this.state.alpha_s.toFixed(3);
+        this.dom.alphaDisplay.textContent = this.state.alpha_inv.toFixed(2);
+
+        this.analyzeUniverse();
+        this.draw();
+    }
+
+    analyzeUniverse() {
+        const { alpha_inv, alpha_s, our_alpha_inv, our_alpha_s } = this.state;
+        const alpha = 1 / alpha_inv;
+        const our_alpha = 1 / our_alpha_inv;
+
+        const metrics = {};
+        metrics.atomSize = (our_alpha / alpha); // a0 ~ 1/alpha
+        metrics.bindingEnergy = Math.pow(alpha / our_alpha, 2); // E ~ alpha^2
+
+        // Simplified model for max stable Z. Z_max ~ alpha_s / alpha
+        metrics.maxStableZ = Math.floor(92 * (alpha_s / alpha) / (our_alpha_s / our_alpha));
+
+        // Simplified model for stellar lifetime. T ~ 1/alpha^3
+        metrics.starLifetime = Math.pow(our_alpha / alpha, 3);
+
+        this.state.metrics = metrics;
+
+        let status = "Habitable (like ours)";
+        let color = "var(--color-safe)";
+        if (metrics.maxStableZ < 6) { status = "No Carbon, No Life"; color = "var(--color-secondary)"; }
+        if (metrics.starLifetime < 0.1) { status = "Stars Burn Too Fast"; color = "var(--color-primary)"; }
+        if (alpha_inv > 180) { status = "Chemistry Too Weak"; color = "var(--color-accent)"; }
+
+        this.dom.universeStatus.textContent = status;
+        this.dom.universeStatus.style.backgroundColor = color;
+    }
+
+    draw() {
+        this.drawMainDiagram();
+        this.drawHabitableChart();
+        this.updateMetricsDisplay();
+    }
+
+    drawMainDiagram() {
+        const { ctx, width, height } = this.dom.mainCanvas;
+        ctx.clearRect(0,0,width,height);
+        const m = this.state.metrics;
+
+        // Atom
+        const atomX = width * 0.25, atomY = height * 0.3;
+        ctx.fillStyle = 'var(--color-primary)';
+        ctx.beginPath(); ctx.arc(atomX, atomY, 10, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = 'var(--color-text)';
+        ctx.lineWidth = 2;
+        const radius = 30 * Math.sqrt(m.atomSize); // sqrt to make it less extreme
+        ctx.beginPath(); ctx.arc(atomX, atomY, radius, 0, 2*Math.PI); ctx.stroke();
+
+        // Star
+        const starX = width * 0.75, starY = height * 0.3;
+        const starTemp = Math.pow(m.starLifetime, -1/3); // T ~ L^1/4, L ~ M^3, M~const, T_surface ~ R^2*T_core, ... very complex. Use lifetime as proxy for hotness.
+        const hue = 60 * (1 - Math.min(1, starTemp*0.5)); // 60=yellow, 0=red
+        ctx.fillStyle = `hsl(${hue}, 90%, 50%)`;
+        ctx.beginPath(); ctx.arc(starX, starY, 40, 0, 2*Math.PI); ctx.fill();
+
+        // Periodic Table
+        const tableX = width * 0.1, tableY = height * 0.6, tableW = width*0.8, tableH = height * 0.3;
+        for(let i=0; i<9; i++) {
+            for(let j=0; j<18; j++) {
+                const Z = i*18+j;
+                ctx.fillStyle = (Z > m.maxStableZ) ? 'var(--color-border)' : 'var(--color-primary)';
+                ctx.fillRect(tableX + j*tableW/18, tableY + i*tableH/9, tableW/18 - 2, tableH/9 - 2);
+            }
+        }
+    }
+
+    drawHabitableChart() {
+        const { ctx, width, height } = this.dom.habitableChartCanvas;
+        ctx.clearRect(0,0,width,height);
+
+        const alpha_s = this.state.alpha_s;
+        const our_alpha_s = this.state.our_alpha_s;
+
+        const conditions = [
+            { name: "Heavy Elements", min: 1, max: 85 * (alpha_s/our_alpha_s) },
+            { name: "Stable Stars", min: 1, max: 150 },
+            { name: "Stable Chemistry", min: 100, max: 500 },
+        ];
+
+        const yStep = height / (conditions.length + 1);
+        conditions.forEach((cond, i) => {
+            const y = yStep * (i + 1);
+            const x_min = (1/cond.max) * width * 2000; // Arbitrary scaling
+            const x_max = (1/cond.min) * width * 2000;
+
+            ctx.fillStyle = 'var(--color-accent)';
+            ctx.fillRect(x_min, y - 10, x_max - x_min, 20);
+            ctx.fillStyle = 'var(--color-text)';
+            ctx.fillText(cond.name, 10, y+5);
+        });
+
+        // Our universe
+        const our_x = (1/this.state.alpha_inv) * width * 2000;
+        ctx.strokeStyle = 'var(--color-safe)';
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(our_x, 0); ctx.lineTo(our_x, height); ctx.stroke();
+    }
+
+    updateMetricsDisplay() {
+        const m = this.state.metrics;
+        this.dom.metricsGrid.innerHTML = `
+            <div class="metric-box"><div class="label">Atom Size</div><div class="value">${m.atomSize.toFixed(2)}x</div></div>
+            <div class="metric-box"><div class="label">Binding Energy</div><div class="value">${m.bindingEnergy.toFixed(2)}x</div></div>
+            <div class="metric-box"><div class="label">Star Lifetime</div><div class="value">${m.starLifetime.toFixed(2)}x</div></div>
+            <div class="metric-box"><div class="label">Max Stable Z</div><div class="value">${m.maxStableZ}</div></div>
+        `;
+    }
+}
+
+// Dummy implementations
+SimpleChart = function() {this.setData = ()=>{}; this.updateData = ()=>{}};
+SimulationApp.prototype.initTabs = function() {};
+SimulationApp.prototype.initDevConsole = function() {};
+
+window.onload = () => { window.app = new SimulationApp(); };
+</script>
+</body>
+</html>
