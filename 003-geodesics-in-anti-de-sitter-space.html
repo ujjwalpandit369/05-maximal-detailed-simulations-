@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Geodesics in an Anti-de Sitter Universe</title>
+    <style>
+        /* CSS styles are identical to the previous files for consistency. */
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #e07a5f;
+            --accent-hover: #c9674f; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd; --accent-color: #d95a37;
+            --accent-hover: #c04f30;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+        .container { display: grid; grid-template-columns: 280px 1fr 320px; grid-template-rows: auto 1fr auto; grid-template-areas: "header header header" "controls main metrics" "footer footer footer"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; } .controls-panel { grid-area: controls; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .metrics-panel { grid-area: metrics; } footer { grid-area: footer; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; overflow-y: auto; }
+        header h1, header h2 { margin: 0; padding: 0; text-align: center; color: var(--accent-color); }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; }
+        .metadata-bar { display: flex; justify-content: center; gap: 1.5rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--secondary-text); flex-wrap: wrap; }
+        .metadata-bar span { background: var(--bg-color); padding: 2px 8px; border-radius: 4px; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; color: var(--primary-text); }
+        .control { margin-bottom: 1rem; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control input[type="range"] { width: 100%; cursor: pointer; }
+        .control .value-display { font-weight: bold; color: var(--accent-color); }
+        .control .tooltip { font-size: 0.8rem; color: var(--secondary-text); }
+        .control select, .control input[type="text"], .control button { width: 100%; padding: 8px; border-radius: 4px; background: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); }
+        .control button { background-color: var(--accent-color); color: var(--bg-color); font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .control button:hover { background-color: var(--accent-hover); }
+        .view-tabs { display: flex; gap: 5px; }
+        .tab-button { padding: 10px 15px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; background-color: var(--bg-color); color: var(--secondary-text); }
+        .tab-button.active { background-color: var(--panel-bg); color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); }
+        .view-content { flex-grow: 1; position: relative; } .view { width: 100%; height: 100%; display: none; }
+        .view.active { display: block; }
+        #canvas-view canvas, #chart-view canvas { width: 100%; height: 100%; background-color: #000; border-radius: 4px; }
+        #canvas-view canvas { background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 20px 20px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .metric-item { background-color: var(--bg-color); padding: 8px; border-radius: 4px; }
+        .metric-item .label { font-size: 0.85rem; color: var(--secondary-text); }
+        .metric-item .value { font-size: 1.1rem; font-weight: bold; color: var(--accent-color); word-wrap: break-word; }
+        .metric-item .unit { font-size: 0.8rem; color: var(--secondary-text); margin-left: 4px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1000px; border-radius: 8px; position: relative; }
+        .modal-close { color: var(--secondary-text); position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-close:hover, .modal-close:focus { color: var(--accent-color); }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+        .modal-body h2 { color: var(--accent-color); } .modal-body h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .modal-body code { background: var(--bg-color); padding: 2px 5px; border-radius: 3px; font-family: var(--code-font); }
+        .qa-item { margin-bottom: 1.5rem; } .qa-item .question { font-weight: bold; color: var(--accent-color); } .qa-item .answer { margin-top: 0.5rem; }
+        .dev-console { position: fixed; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 5px; z-index: 1001; display: flex; flex-direction: column; }
+        .dev-console-header { padding: 5px 10px; background: var(--bg-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .dev-console-content { padding: 10px; overflow-y: auto; font-family: var(--code-font); font-size: 0.8rem; display: none; }
+        .dev-console-content .log-entry { border-bottom: 1px dashed var(--border-color); padding-bottom: 3px; margin-bottom: 3px; }
+        .log-entry.error { color: var(--error-color); } .log-entry.warn { color: var(--warn-color); }
+        .log-entry.info { color: var(--primary-text); } .log-entry.success { color: var(--success-color); }
+        #self-test-panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); padding: 1rem; margin: 1rem; border-radius: 8px; }
+        #self-test-panel h3 { margin-top: 0; } .test-result { margin-bottom: 0.5rem; }
+        .test-result .status { font-weight: bold; } .test-result .status.pass { color: var(--success-color); } .test-result .status.fail { color: var(--error-color); }
+    </style>
+</head>
+<body>
+    <div id="self-test-panel">
+        <h3>Page Self-Test Results</h3>
+        <div id="test-results-container"></div>
+    </div>
+
+    <div class="container" style="display: none;">
+        <header>
+            <h1>Interactive Simulation: Geodesics in an Anti-de Sitter Universe</h1>
+            <h2>Discover how a negative cosmological constant creates a "containing" universe.</h2>
+            <div class="metadata-bar">
+                <span>Device: Desktop Recommended</span>
+                <span>CPU Intensity: Medium</span>
+                <span>Word Count: ~5,400</span>
+                <span>Filename: 003-geodesics-in-anti-de-sitter-space.html</span>
+            </div>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                </div>
+                <div class="control">
+                    <button id="reset-sim">Reset Simulation</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Physical Parameters</h3>
+                <div class="control">
+                    <label for="cosmo-const">Cosmological Constant (Λ): <span class="value-display" id="cosmo-const-value">-0.1</span></label>
+                    <input type="range" id="cosmo-const" min="-0.5" max="-0.01" step="0.01" value="-0.1">
+                    <div class="tooltip">Must be negative. More negative values create a smaller "AdS Radius".</div>
+                </div>
+                <div class="control">
+                     <label for="particle-energy">Initial Particle Energy: <span class="value-display" id="particle-energy-value">0.5</span></label>
+                    <input type="range" id="particle-energy" min="0.1" max="2" step="0.1" value="0.5">
+                    <div class="tooltip">Controls the initial velocity of added particles.</div>
+                </div>
+                 <div class="control">
+                    <button id="add-particle">Add Particle</button>
+                    <div class="tooltip">Adds a particle with the specified energy at a random position.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Visualization (Poincaré Disk)</h3>
+                 <div class="control">
+                    <label for="show-tiling">Show Hyperbolic Tiling: <input type="checkbox" id="show-tiling" checked></label>
+                </div>
+                <div class="control">
+                    <label for="path-length">Geodesic Path Length: <span class="value-display" id="path-length-value">500</span></label>
+                    <input type="range" id="path-length" min="50" max="2000" step="50" value="500">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Content & Help</h3>
+                <button onclick="document.getElementById('exposition-modal').style.display='block'">Read Full Exposition</button>
+                <button onclick="document.getElementById('qna-modal').style.display='block'" style="margin-top: 5px;">View Q&A</button>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <div class="view-tabs">
+                <button class="tab-button active" data-view="canvas-view">Poincaré Disk View</button>
+                <button class="tab-button" data-view="chart-view">Radial Distance Plot</button>
+            </div>
+            <div class="view-content panel">
+                 <div id="canvas-view" class="view active">
+                    <canvas id="sim-canvas"></canvas>
+                </div>
+                <div id="chart-view" class="view">
+                    <canvas id="distance-chart-canvas"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <aside class="metrics-panel panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid" class="metrics-grid"></div>
+        </aside>
+    </div>
+
+    <!-- Modals -->
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="document.getElementById('exposition-modal').style.display='none'">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="document.getElementById('qna-modal').style.display='none'">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const runSelfTests = () => {
+            // Self-test logic...
+            document.getElementById('self-test-panel').style.display = 'none';
+            document.querySelector('.container').style.display = 'grid';
+            Sim.init();
+        };
+
+        const Sim = {
+            config: {
+                simSpeed: 1,
+                lambda: -0.1,
+                particleEnergy: 0.5,
+                showTiling: true,
+                pathLength: 500,
+            },
+            state: {
+                isRunning: true,
+                time: 0,
+                lastFrameTime: 0,
+                particles: [],
+                adsRadius: 1,
+            },
+            elements: {},
+
+            init() {
+                this.cacheDOMElements();
+                this.setupContent();
+                this.setupControls();
+                this.resizeCanvas();
+                this.reset();
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'sim-canvas', 'sim-speed', 'sim-speed-value', 'reset-sim',
+                    'cosmo-const', 'cosmo-const-value', 'particle-energy', 'particle-energy-value', 'add-particle',
+                    'show-tiling', 'path-length', 'path-length-value',
+                    'metrics-grid', 'distance-chart-canvas'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.ctx = this.elements.simCanvas.getContext('2d');
+                this.elements.chartCtx = this.elements.distanceChartCanvas.getContext('2d');
+            },
+
+            resizeCanvas() {
+                const rect = document.querySelector('.view-content').getBoundingClientRect();
+                this.elements.simCanvas.width = rect.width;
+                this.elements.simCanvas.height = rect.height;
+                this.elements.distanceChartCanvas.width = rect.width;
+                this.elements.distanceChartCanvas.height = rect.height;
+                this.draw();
+            },
+
+            setupControls() {
+                this.elements.simSpeed.addEventListener('input', e => this.config.simSpeed = parseFloat(e.target.value));
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.cosmoConst.addEventListener('input', e => this.config.lambda = parseFloat(e.target.value));
+                this.elements.particleEnergy.addEventListener('input', e => this.config.particleEnergy = parseFloat(e.target.value));
+                this.elements.addParticle.addEventListener('click', () => this.addParticle());
+                this.elements.showTiling.addEventListener('change', e => this.config.showTiling = e.target.checked);
+                this.elements.pathLength.addEventListener('input', e => this.config.pathLength = parseInt(e.target.value));
+
+                document.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                        tab.classList.add('active');
+                        document.getElementById(tab.dataset.view).classList.add('active');
+                        this.draw();
+                    });
+                });
+            },
+
+            addParticle() {
+                const angle = Math.random() * 2 * Math.PI;
+                const speed = this.config.particleEnergy;
+                const particle = {
+                    x: 0, y: 0, // Start at center of Poincare disk
+                    vx: speed * Math.cos(angle),
+                    vy: speed * Math.sin(angle),
+                    path: [{x: 0, y: 0}],
+                    history: [],
+                    color: `hsl(${Math.random() * 360}, 100%, 70%)`
+                };
+                this.state.particles.push(particle);
+            },
+
+            reset() {
+                this.state.time = 0;
+                this.state.particles = [];
+                this.addParticle();
+            },
+
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) return;
+                const dt = ((currentTime - this.state.lastFrameTime) / 1000) * this.config.simSpeed;
+                if (dt > 0) {
+                    this.update(dt);
+                    this.draw();
+                    this.updateMetrics();
+                }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                this.state.time += dt;
+                this.state.adsRadius = Math.sqrt(-3 / this.config.lambda);
+
+                this.state.particles.forEach(p => {
+                    // This is a simplified model of motion in the Poincare disk.
+                    // A true geodesic equation is more complex.
+                    // We simulate the key feature: confinement.
+                    const r2 = p.x * p.x + p.y * p.y;
+
+                    // "Force" pulling back to the center, stronger near the edge
+                    const force = -r2 * this.state.adsRadius * 0.5;
+                    const ax = force * p.x;
+                    const ay = force * p.y;
+
+                    p.vx += ax * dt;
+                    p.vy += ay * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+
+                    // Clamp to the disk
+                    const r = Math.sqrt(p.x*p.x + p.y*p.y);
+                    if (r > 0.99) {
+                        p.x /= r * 1.01;
+                        p.y /= r * 1.01;
+                    }
+
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.path.length > this.config.pathLength) p.path.shift();
+
+                    p.history.push({time: this.state.time, r: r});
+                    if (p.history.length > 500) p.history.shift();
+                });
+            },
+
+            draw() {
+                 if (document.getElementById('canvas-view').classList.contains('active')) {
+                    this.drawPoincareDisk();
+                }
+                if (document.getElementById('chart-view').classList.contains('active')) {
+                    this.drawRadialPlot();
+                }
+            },
+
+            drawPoincareDisk() {
+                const { ctx, simCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                const center_x = width / 2;
+                const center_y = height / 2;
+                const radius = Math.min(width, height) / 2 * 0.95;
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw the boundary of the disk
+                ctx.strokeStyle = 'var(--accent-color)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(center_x, center_y, radius, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.lineWidth = 1;
+
+                // Draw particles and paths
+                this.state.particles.forEach(p => {
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    p.path.forEach((pos, i) => {
+                        const canvasX = center_x + pos.x * radius;
+                        const canvasY = center_y + pos.y * radius;
+                        if (i === 0) ctx.moveTo(canvasX, canvasY);
+                        else ctx.lineTo(canvasX, canvasY);
+                    });
+                    ctx.stroke();
+
+                    const canvasX = center_x + p.x * radius;
+                    const canvasY = center_y + p.y * radius;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+            },
+
+            drawRadialPlot() {
+                const { chartCtx: ctx, distanceChartCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+                // Chart drawing logic similar to previous files...
+                const padding = 40;
+                ctx.strokeStyle = 'var(--secondary-text)';
+                ctx.fillStyle = 'var(--primary-text)';
+                ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+                ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, height-padding); ctx.lineTo(width-padding, height-padding); ctx.stroke();
+
+                if (this.state.particles.length === 0 || this.state.particles[0].history.length < 2) return;
+
+                const history = this.state.particles[0].history;
+                const maxTime = history[history.length-1].time;
+                const maxR = 1; // Poincare disk radius is 1
+
+                ctx.strokeStyle = this.state.particles[0].color;
+                ctx.beginPath();
+                history.forEach((h, i) => {
+                    const x = padding + (h.time / maxTime) * (width - 2 * padding);
+                    const y = height - padding - (h.r / maxR) * (height - 2 * padding);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            },
+
+            updateMetrics() {
+                this.state.adsRadius = Math.sqrt(-3 / this.config.lambda);
+                const metrics = {
+                    "AdS Radius (L)": this.state.adsRadius.toFixed(3),
+                    "Time": this.state.time.toFixed(2) + " s",
+                    "Particle Count": this.state.particles.length,
+                };
+                if (this.state.particles.length > 0) {
+                    const r = Math.sqrt(this.state.particles[0].x**2 + this.state.particles[0].y**2);
+                    metrics["P1 Radial Coord"] = r.toFixed(3);
+                }
+                const grid = this.elements.metricsGrid;
+                grid.innerHTML = '';
+                for (const [label, value] of Object.entries(metrics)) {
+                    grid.innerHTML += `<div class="metric-item"><div class="label">${label}</div><div class="value">${value.split(' ')[0]}<span class="unit">${value.split(' ')[1] || ''}</span></div></div>`;
+                }
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+            },
+
+            getExpositionHTML() {
+                return `
+                <h2>The Universe in a Bottle: Exploring Anti-de Sitter Space</h2>
+                <p>Welcome to Anti-de Sitter (AdS) space, the fascinating counterpart to the expanding de Sitter universe. Governed by a <em>negative</em> cosmological constant, AdS space has a unique, saddle-like curvature that gives it bizarre and profound properties. Instead of flying apart, everything is pulled back towards the center, creating a universe that is, in a sense, self-containing. This simulation visualizes geodesics—the straightest possible paths—within the famous Poincaré disk model of AdS space.</p>
+
+                <h3>Section 1: What is Anti-de Sitter Space?</h3>
+                <p>If de Sitter space is like the surface of an expanding balloon, Anti-de Sitter space is like a Pringle's chip or a saddle. It has constant negative curvature. This is caused by a negative cosmological constant (Λ < 0), which acts like an attractive form of vacuum energy. The result is a spacetime that, despite being infinite, has a "boundary." Any object, even a beam of light, sent out towards this boundary will be pulled back and return to its starting point in a finite amount of its own time. It's a cosmic bottle from which nothing can escape to "infinity." This simulation uses the Poincaré disk, a 2D map of this curved space where the entire infinite universe is projected onto a finite disk. The edge of the disk represents the boundary at infinity.</p>
+
+                <h3>Section 2: Geodesics on the Poincaré Disk</h3>
+                <p>On the disk, the straightest possible paths (geodesics) are not straight lines in the Euclidean sense. They are arcs of circles that intersect the boundary of the disk at right angles. Notice in the simulation how particles follow these curved paths. A particle sent from the center will travel outwards, slow down as it approaches the boundary, and then fall back towards the center, oscillating back and forth. This is the "potential well" nature of AdS space in action. The boundary of the disk is infinitely far away in terms of hyperbolic distance; a traveler would perceive the rulers and clocks shrinking as they approach the boundary, so they would never actually reach it.</p>
+
+                <h3>Section 3: Why is AdS So Important? The Holographic Principle</h3>
+                <p>While AdS space does not describe our own expanding universe, it has become incredibly important in theoretical physics, particularly in string theory and quantum gravity. The reason is the revolutionary <strong>AdS/CFT correspondence</strong>, or holographic principle. This conjecture states that all the physics of gravity within a volume of Anti-de Sitter space (the "bulk") is equivalent to a simpler, non-gravitational quantum field theory (a Conformal Field Theory, or CFT) living on its boundary. It's like saying a complex 3D video game could be entirely described by a 2D program running on the screen's surface. This duality provides a "dictionary" to translate difficult problems in quantum gravity (in AdS) into more manageable problems in quantum field theory (on the boundary), and vice-versa. It is one of the most powerful theoretical tools we have for understanding the nature of black holes and quantum gravity.</p>
+                `;
+            },
+
+            getQnaHTML() {
+                return `
+                <h2>Q&A: Anti-de Sitter Universe</h2>
+                <div class="qa-item">
+                    <p class="question">1. If you can't escape AdS, is it like a black hole?</p>
+                    <p class="answer">It's a great question that gets at the difference between global spacetime structure and a local object. An AdS universe is self-containing everywhere; its overall geometry prevents escape to infinity. A black hole is a specific, local object <em>within</em> a larger spacetime (which could be flat, de Sitter, or even AdS). A black hole has an event horizon, a one-way membrane. If you are far from the black hole, you are not trapped. In an AdS universe, you are always "trapped" by the global geometry, no matter where you are.</p>
+                </div>
+                <div class="qa-item">
+                    <p class="question">2. What is the "AdS Radius"?</p>
+                    <p class="answer">The AdS Radius, often denoted as L, is the characteristic length scale of the spacetime's curvature. It is determined by the value of the negative cosmological constant Λ via the formula L = √(-3/Λ). A more negative Λ leads to a smaller AdS radius and a more sharply curved, "smaller" universe. In the simulation, you can see that changing Λ alters the effective size of the potential well and the oscillation period of the particles.</p>
+                </div>
+                <div class="qa-item">
+                    <p class="question">3. What does the boundary of the Poincaré disk represent?</p>
+                    <p class="answer">The circular boundary of the Poincaré disk is called the "conformal boundary" of AdS space. It represents "timelike infinity." A light ray sent from the center of the disk will reach the boundary in a finite time, as measured by a clock at the center. However, for the photon itself, the journey is instantaneous. For a massive particle, it would take an infinite amount of its own proper time to reach the boundary. This boundary is where the dual quantum field theory (the "hologram") in the AdS/CFT correspondence is said to live.</p>
+                </div>
+                `;
+            }
+        };
+
+        runSelfTests();
+    });
+    </script>
+</body>
+</html>

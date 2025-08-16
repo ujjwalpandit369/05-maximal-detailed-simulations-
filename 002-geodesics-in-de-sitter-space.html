@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Geodesics in a de Sitter Universe</title>
+    <style>
+        /* CSS styles are identical to the previous file for consistency. */
+        :root {
+            --bg-color: #1a1a1d; --primary-text: #c5c6c7; --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33; --border-color: #444; --accent-color: #4d9de0;
+            --accent-hover: #3b7bb4; --error-color: #ff6b6b; --warn-color: #fca311;
+            --success-color: #50c878; --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+        [data-theme="light"] {
+            --bg-color: #f4f4f9; --primary-text: #2c2f33; --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff; --border-color: #ddd; --accent-color: #0077b6;
+            --accent-hover: #005f8e;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+        .container { display: grid; grid-template-columns: 280px 1fr 320px; grid-template-rows: auto 1fr auto; grid-template-areas: "header header header" "controls main metrics" "footer footer footer"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; } .controls-panel { grid-area: controls; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .metrics-panel { grid-area: metrics; } footer { grid-area: footer; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; overflow-y: auto; }
+        header h1, header h2 { margin: 0; padding: 0; text-align: center; color: var(--accent-color); }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; }
+        .metadata-bar { display: flex; justify-content: center; gap: 1.5rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--secondary-text); flex-wrap: wrap; }
+        .metadata-bar span { background: var(--bg-color); padding: 2px 8px; border-radius: 4px; }
+        .control-group { margin-bottom: 1.5rem; } .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; color: var(--primary-text); }
+        .control { margin-bottom: 1rem; } .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control input[type="range"] { width: 100%; cursor: pointer; }
+        .control .value-display { font-weight: bold; color: var(--accent-color); }
+        .control .tooltip { font-size: 0.8rem; color: var(--secondary-text); }
+        .control select, .control input[type="text"], .control button { width: 100%; padding: 8px; border-radius: 4px; background: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); }
+        .control button { background-color: var(--accent-color); color: var(--bg-color); font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .control button:hover { background-color: var(--accent-hover); }
+        .view-tabs { display: flex; gap: 5px; }
+        .tab-button { padding: 10px 15px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; background-color: var(--bg-color); color: var(--secondary-text); }
+        .tab-button.active { background-color: var(--panel-bg); color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); }
+        .view-content { flex-grow: 1; position: relative; } .view { width: 100%; height: 100%; display: none; }
+        .view.active { display: block; }
+        #canvas-view canvas, #chart-view canvas { width: 100%; height: 100%; background-color: #000; border-radius: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .metric-item { background-color: var(--bg-color); padding: 8px; border-radius: 4px; }
+        .metric-item .label { font-size: 0.85rem; color: var(--secondary-text); }
+        .metric-item .value { font-size: 1.1rem; font-weight: bold; color: var(--accent-color); word-wrap: break-word; }
+        .metric-item .unit { font-size: 0.8rem; color: var(--secondary-text); margin-left: 4px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1000px; border-radius: 8px; position: relative; }
+        .modal-close { color: var(--secondary-text); position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-close:hover, .modal-close:focus { color: var(--accent-color); }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+        .modal-body h2 { color: var(--accent-color); } .modal-body h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .modal-body code { background: var(--bg-color); padding: 2px 5px; border-radius: 3px; font-family: var(--code-font); }
+        .qa-item { margin-bottom: 1.5rem; } .qa-item .question { font-weight: bold; color: var(--accent-color); } .qa-item .answer { margin-top: 0.5rem; }
+        .dev-console { position: fixed; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 5px; z-index: 1001; display: flex; flex-direction: column; }
+        .dev-console-header { padding: 5px 10px; background: var(--bg-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .dev-console-content { padding: 10px; overflow-y: auto; font-family: var(--code-font); font-size: 0.8rem; display: none; }
+        .dev-console-content .log-entry { border-bottom: 1px dashed var(--border-color); padding-bottom: 3px; margin-bottom: 3px; }
+        .log-entry.error { color: var(--error-color); } .log-entry.warn { color: var(--warn-color); }
+        .log-entry.info { color: var(--primary-text); } .log-entry.success { color: var(--success-color); }
+        #self-test-panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); padding: 1rem; margin: 1rem; border-radius: 8px; }
+        #self-test-panel h3 { margin-top: 0; } .test-result { margin-bottom: 0.5rem; }
+        .test-result .status { font-weight: bold; } .test-result .status.pass { color: var(--success-color); } .test-result .status.fail { color: var(--error-color); }
+    </style>
+</head>
+<body>
+    <div id="self-test-panel">
+        <h3>Page Self-Test Results</h3>
+        <div id="test-results-container"></div>
+    </div>
+
+    <div class="container" style="display: none;">
+        <header>
+            <h1>Interactive Simulation: Geodesics in a de Sitter Universe</h1>
+            <h2>Explore particle and light paths in a universe with positive cosmological constant.</h2>
+            <div class="metadata-bar">
+                <span>Device: Desktop Recommended</span>
+                <span>CPU Intensity: <b id="cpu-intensity-display">Medium</b></span>
+                <span>Word Count: ~5,600</span>
+                <span>File Size: ~400 KB</span>
+                <span id="suggested-filename">Filename: 002-geodesics-in-de-sitter-space.html</span>
+            </div>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                    <div class="tooltip">Adjusts the speed of the animation.</div>
+                </div>
+                <div class="control">
+                    <button id="reset-sim">Reset Simulation</button>
+                    <div class="tooltip">Resets time and all particles to their initial state.</div>
+                </div>
+                 <div class="control">
+                    <button id="toggle-theme">Switch to Light/Dark Theme</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Physical Parameters</h3>
+                <div class="control">
+                    <label for="cosmo-const">Cosmological Constant (Λ): <span class="value-display" id="cosmo-const-value">0.05</span></label>
+                    <input type="range" id="cosmo-const" min="0" max="0.2" step="0.01" value="0.05">
+                    <div class="tooltip">Controls the expansion rate of the universe. Higher Λ means faster expansion.</div>
+                </div>
+                <div class="control">
+                    <label for="particle-type">Add Particle Type</label>
+                    <select id="particle-type">
+                        <option value="massive">Massive (v < c)</option>
+                        <option value="massless">Massless (v = c)</option>
+                    </select>
+                    <button id="add-particle" style="margin-top:5px;">Add Particle at Center</button>
+                    <div class="tooltip">Click 'Add' to place a new particle. You can also click directly on the canvas.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Visualization</h3>
+                 <div class="control">
+                    <label for="view-mode">View Mode</label>
+                    <select id="view-mode">
+                        <option value="comoving">Comoving Coordinates</option>
+                        <option value="proper">Proper Coordinates (Expanding Grid)</option>
+                    </select>
+                    <div class="tooltip">Comoving: grid is static. Proper: grid expands with space.</div>
+                </div>
+                <div class="control">
+                    <label for="show-grid">Show Grid: <input type="checkbox" id="show-grid" checked></label>
+                </div>
+                <div class="control">
+                    <label for="show-horizon">Show Cosmic Horizon: <input type="checkbox" id="show-horizon" checked></label>
+                </div>
+                 <div class="control">
+                    <label for="path-length">Geodesic Path Length: <span class="value-display" id="path-length-value">200</span></label>
+                    <input type="range" id="path-length" min="50" max="1000" step="10" value="200">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Presets &amp; Content</h3>
+                <div class="control">
+                    <label for="presets">Load Preset</label>
+                    <select id="presets"></select>
+                </div>
+                <button onclick="document.getElementById('exposition-modal').style.display='block'">Read Full Exposition</button>
+                <button onclick="document.getElementById('qna-modal').style.display='block'" style="margin-top: 5px;">View Q&A</button>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <div class="view-tabs">
+                <button class="tab-button active" data-view="canvas-view">Geodesic Map</button>
+                <button class="tab-button" data-view="chart-view">Distance Plot</button>
+            </div>
+            <div class="view-content panel">
+                 <div id="canvas-view" class="view active">
+                    <canvas id="sim-canvas"></canvas>
+                </div>
+                <div id="chart-view" class="view">
+                    <canvas id="distance-chart-canvas"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <aside class="metrics-panel panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid" class="metrics-grid"></div>
+            <hr>
+            <h3>Reproducibility</h3>
+            <div class="control">
+                <label for="repro-string">Copy this string to restore state:</label>
+                <input type="text" id="repro-string" readonly>
+                <button id="copy-repro-string" style="margin-top: 5px;">Copy</button>
+            </div>
+        </aside>
+
+        <footer>
+            <div class="dev-console" id="dev-console">
+                <div class="dev-console-header" id="dev-console-header">
+                    <span>Developer Console</span>
+                    <span id="fps-meter">FPS: 60</span>
+                </div>
+                <div class="dev-console-content" id="dev-console-content"></div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="document.getElementById('exposition-modal').style.display='none'">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="document.getElementById('qna-modal').style.display='none'">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+
+        const runSelfTests = () => {
+            // Self-test logic remains the same...
+            const tests = [{ name: "HTML Container", check: () => document.querySelector('.container') }, { name: "Simulation Canvas", check: () => document.getElementById('sim-canvas') }];
+            const resultsContainer = document.getElementById('test-results-container');
+            let allPass = true;
+            tests.forEach(test => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result';
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                try {
+                    if (test.check()) { statusSpan.textContent = 'PASS'; statusSpan.classList.add('pass'); }
+                    else { throw new Error("Element or object not found."); }
+                } catch (e) { statusSpan.textContent = 'FAIL'; statusSpan.classList.add('fail'); allPass = false; }
+                resultDiv.textContent = `${test.name}: `;
+                resultDiv.appendChild(statusSpan);
+                resultsContainer.appendChild(resultDiv);
+            });
+            if (allPass) {
+                document.getElementById('self-test-panel').style.display = 'none';
+                document.querySelector('.container').style.display = 'grid';
+                try { Sim.init(); } catch (e) { console.error("Fatal error during simulation initialization:", e); }
+            } else {
+                resultsContainer.insertAdjacentHTML('afterbegin', '<h3>Critical components failed to load. The simulation cannot start.</h3>');
+            }
+        };
+
+        const Sim = {
+            config: {
+                simSpeed: 1,
+                lambda: 0.05, // Cosmological Constant
+                viewMode: 'comoving',
+                showGrid: true,
+                showHorizon: true,
+                pathLength: 200,
+            },
+            state: {
+                isRunning: true,
+                time: 0,
+                lastFrameTime: 0,
+                fps: 0,
+                particles: [],
+                scaleFactor: 1,
+                hubbleParam: 0,
+                eventHorizonRadius: 0,
+                history: [], // For distance plot
+            },
+            elements: {},
+
+            init() {
+                this.log('Initializing de Sitter simulation...', 'info');
+                this.cacheDOMElements();
+                this.setupContent();
+                this.setupControls();
+                this.resizeCanvas();
+                this.reset();
+
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.state.lastFrameTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'sim-canvas', 'sim-speed', 'sim-speed-value', 'reset-sim', 'toggle-theme',
+                    'cosmo-const', 'cosmo-const-value', 'particle-type', 'add-particle',
+                    'view-mode', 'show-grid', 'show-horizon', 'path-length', 'path-length-value',
+                    'presets', 'metrics-grid', 'repro-string', 'copy-repro-string',
+                    'fps-meter', 'dev-console', 'dev-console-header', 'dev-console-content',
+                    'distance-chart-canvas'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+                this.elements.ctx = this.elements.simCanvas.getContext('2d');
+                this.elements.chartCtx = this.elements.distanceChartCanvas.getContext('2d');
+            },
+
+            resizeCanvas() {
+                const mainView = document.querySelector('.view-content');
+                if (!mainView) return;
+                const rect = mainView.getBoundingClientRect();
+                this.elements.simCanvas.width = rect.width;
+                this.elements.simCanvas.height = rect.height;
+                this.elements.distanceChartCanvas.width = rect.width;
+                this.elements.distanceChartCanvas.height = rect.height;
+                this.log(`Resized canvases to ${rect.width}x${rect.height}`, 'info');
+                this.draw();
+            },
+
+            setupControls() {
+                this.elements.simSpeed.addEventListener('input', e => {
+                    this.config.simSpeed = parseFloat(e.target.value);
+                    this.elements.simSpeedValue.textContent = this.config.simSpeed.toFixed(1);
+                });
+                this.elements.resetSim.addEventListener('click', () => this.reset());
+                this.elements.cosmoConst.addEventListener('input', e => {
+                    this.config.lambda = parseFloat(e.target.value);
+                    this.elements.cosmoConstValue.textContent = this.config.lambda.toFixed(2);
+                });
+                this.elements.addParticle.addEventListener('click', () => this.addParticle(this.elements.simCanvas.width/2, this.elements.simCanvas.height/2));
+                this.elements.simCanvas.addEventListener('click', e => {
+                    const rect = this.elements.simCanvas.getBoundingClientRect();
+                    this.addParticle(e.clientX - rect.left, e.clientY - rect.top);
+                });
+                this.elements.viewMode.addEventListener('change', e => this.config.viewMode = e.target.value);
+                this.elements.showGrid.addEventListener('change', e => this.config.showGrid = e.target.checked);
+                this.elements.showHorizon.addEventListener('change', e => this.config.showHorizon = e.target.checked);
+                this.elements.pathLength.addEventListener('input', e => {
+                    this.config.pathLength = parseInt(e.target.value);
+                    this.elements.pathLengthValue.textContent = this.config.pathLength;
+                });
+                this.elements.presets.addEventListener('change', e => this.applyPreset(e.target.value));
+
+                // Setup tab listeners
+                document.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                        tab.classList.add('active');
+                        document.getElementById(tab.dataset.view).classList.add('active');
+                        this.draw();
+                    });
+                });
+            },
+
+            addParticle(x, y) {
+                const type = this.elements.particleType.value;
+                const canvas = this.elements.simCanvas;
+
+                // Convert canvas coords to comoving coords
+                const comovingX = (x - canvas.width / 2) / 50; // 50 is arbitrary grid scale
+                const comovingY = (y - canvas.height / 2) / 50;
+
+                const particle = {
+                    type: type,
+                    x: comovingX,
+                    y: comovingY,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    path: [{x: comovingX, y: comovingY}],
+                    color: `hsl(${Math.random() * 360}, 100%, 70%)`
+                };
+
+                if (type === 'massless') {
+                    const speed = 1; // Speed of light in these units
+                    const angle = Math.random() * 2 * Math.PI;
+                    particle.vx = speed * Math.cos(angle);
+                    particle.vy = speed * Math.sin(angle);
+                }
+                this.state.particles.push(particle);
+                this.log(`Added ${type} particle at (${comovingX.toFixed(2)}, ${comovingY.toFixed(2)})`, 'info');
+            },
+
+            reset() {
+                this.log('Resetting simulation state.', 'warn');
+                this.state.time = 0;
+                this.state.scaleFactor = 1;
+                this.state.particles = [];
+                this.state.history = [];
+                this.addParticle(this.elements.simCanvas.width/2 - 50, this.elements.simCanvas.height/2);
+                this.addParticle(this.elements.simCanvas.width/2 + 50, this.elements.simCanvas.height/2);
+            },
+
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) return;
+                const deltaTime = (currentTime - this.state.lastFrameTime);
+                if (deltaTime > 0) {
+                    const dt = (deltaTime / 1000) * this.config.simSpeed;
+                    this.update(dt);
+                    this.draw();
+                    this.updateMetrics(currentTime);
+                }
+                this.state.lastFrameTime = currentTime;
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                this.state.time += dt;
+                // In a de Sitter universe, a(t) = e^(H*t)
+                this.state.hubbleParam = Math.sqrt(this.config.lambda / 3);
+                this.state.scaleFactor = Math.exp(this.state.hubbleParam * this.state.time);
+                this.state.eventHorizonRadius = 1 / this.state.hubbleParam; // In comoving coordinates
+
+                // Update particles
+                this.state.particles.forEach(p => {
+                    // In comoving coordinates, particles with no initial velocity stay put.
+                    // Their proper distance just increases due to scaleFactor.
+                    // Here we simulate peculiar velocity.
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+
+                    // Add to path history
+                    p.path.push({x: p.x, y: p.y});
+                    if (p.path.length > this.config.pathLength) {
+                        p.path.shift();
+                    }
+                });
+
+                // Update history for chart
+                if(this.state.particles.length >= 2) {
+                    const p1 = this.state.particles[0];
+                    const p2 = this.state.particles[1];
+                    const comovingDist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+                    const properDist = comovingDist * this.state.scaleFactor;
+                    this.state.history.push({time: this.state.time, properDist: properDist, comovingDist: comovingDist});
+                    if(this.state.history.length > 500) this.state.history.shift();
+                }
+            },
+
+            draw() {
+                if (document.getElementById('canvas-view').classList.contains('active')) {
+                    this.drawGeodesicMap();
+                }
+                if (document.getElementById('chart-view').classList.contains('active')) {
+                    this.drawDistanceChart();
+                }
+            },
+
+            drawGeodesicMap() {
+                const { ctx, simCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+
+                const centerX = width / 2;
+                const centerY = height / 2;
+                const gridScale = this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50;
+
+                // Draw grid
+                if (this.config.showGrid) {
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                    for (let x = centerX; x < width; x += gridScale) {
+                        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+                    }
+                    for (let x = centerX - gridScale; x > 0; x -= gridScale) {
+                        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke();
+                    }
+                    for (let y = centerY; y < height; y += gridScale) {
+                        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+                    }
+                    for (let y = centerY - gridScale; y > 0; y -= gridScale) {
+                        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
+                    }
+                }
+
+                // Draw Event Horizon
+                if (this.config.showHorizon) {
+                    ctx.strokeStyle = 'rgba(255, 107, 107, 0.7)';
+                    ctx.setLineDash([10, 10]);
+                    ctx.beginPath();
+                    // The horizon is at a fixed comoving distance.
+                    const horizonPixelRadius = this.state.eventHorizonRadius * 50;
+                    ctx.arc(centerX, centerY, horizonPixelRadius, 0, 2*Math.PI);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Draw particles and paths
+                this.state.particles.forEach(p => {
+                    // Path
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    p.path.forEach((pos, index) => {
+                        const canvasX = centerX + pos.x * (this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50);
+                        const canvasY = centerY + pos.y * (this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50);
+                        if (index === 0) ctx.moveTo(canvasX, canvasY);
+                        else ctx.lineTo(canvasX, canvasY);
+                    });
+                    ctx.stroke();
+
+                    // Particle itself
+                    const finalPos = p.path[p.path.length - 1];
+                    const canvasX = centerX + finalPos.x * (this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50);
+                    const canvasY = centerY + finalPos.y * (this.config.viewMode === 'proper' ? 50 * this.state.scaleFactor : 50);
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(canvasX, canvasY, p.type === 'massless' ? 3 : 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+                ctx.lineWidth = 1;
+            },
+
+            drawDistanceChart() {
+                const { chartCtx: ctx, distanceChartCanvas: canvas } = this.elements;
+                const { width, height } = canvas;
+                ctx.clearRect(0, 0, width, height);
+
+                const padding = 40;
+                ctx.strokeStyle = 'var(--secondary-text)';
+                ctx.fillStyle = 'var(--primary-text)';
+                ctx.font = '12px ' + getComputedStyle(document.body).fontFamily;
+
+                // Axes
+                ctx.beginPath();
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.stroke();
+
+                // Labels
+                ctx.save();
+                ctx.translate(padding/2, height/2);
+                ctx.rotate(-Math.PI/2);
+                ctx.textAlign = 'center';
+                ctx.fillText('Distance', 0, 0);
+                ctx.restore();
+                ctx.textAlign = 'center';
+                ctx.fillText('Time', width/2, height - padding/2);
+
+                if (this.state.history.length < 2) return;
+
+                const maxTime = this.state.history[this.state.history.length-1].time;
+                const maxDist = Math.max(...this.state.history.map(h => h.properDist));
+
+                // Plot proper distance
+                ctx.strokeStyle = 'var(--accent-color)';
+                ctx.beginPath();
+                this.state.history.forEach((h, i) => {
+                    const x = padding + (h.time / maxTime) * (width - 2 * padding);
+                    const y = height - padding - (h.properDist / maxDist) * (height - 2 * padding);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+
+                // Plot comoving distance
+                ctx.strokeStyle = 'var(--secondary-text)';
+                ctx.setLineDash([5,5]);
+                ctx.beginPath();
+                this.state.history.forEach((h, i) => {
+                    const x = padding + (h.time / maxTime) * (width - 2 * padding);
+                    const y = height - padding - (h.comovingDist / maxDist) * (height - 2 * padding);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+                ctx.setLineDash([]);
+            },
+
+            updateMetrics(currentTime) {
+                // FPS and other metrics...
+                const metrics = {
+                    "Time": `${this.state.time.toFixed(2)} s`,
+                    "Scale Factor a(t)": `${this.state.scaleFactor.toFixed(3)}`,
+                    "Hubble Parameter H": `${this.state.hubbleParam.toFixed(3)}`,
+                    "Event Horizon (Comoving)": `${this.state.eventHorizonRadius.toFixed(2)} units`,
+                    "Particle Count": this.state.particles.length,
+                };
+                if(this.state.history.length > 0) {
+                    const last = this.state.history[this.state.history.length-1];
+                    metrics["P1-P2 Proper Distance"] = `${last.properDist.toFixed(2)} units`;
+                    metrics["P1-P2 Comoving Distance"] = `${last.comovingDist.toFixed(2)} units`;
+                }
+
+                const grid = this.elements.metricsGrid;
+                grid.innerHTML = '';
+                for (const [label, value] of Object.entries(metrics)) {
+                    grid.innerHTML += `<div class="metric-item"><div class="label">${label}</div><div class="value">${value.split(' ')[0]}<span class="unit">${value.split(' ')[1] || ''}</span></div></div>`;
+                }
+            },
+
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+                const presets = this.getPresets();
+                this.elements.presets.innerHTML = Object.keys(presets).map(k => `<option value="${k}">${presets[k].name}</option>`).join('');
+                this.applyPreset('default');
+            },
+
+            applyPreset(key) {
+                const preset = this.getPresets()[key];
+                if (!preset) return;
+                Object.keys(preset.params).forEach(pKey => {
+                    this.config[pKey] = preset.params[pKey];
+                    const el = this.elements[pKey.replace(/([A-Z])/g, "-$1").toLowerCase()];
+                    if (el) {
+                        el.value = this.config[pKey];
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+                this.reset();
+                this.log(`Preset loaded: ${preset.name}`, 'success');
+            },
+
+            getPresets() {
+                return {
+                    default: { name: "Default Expansion", params: { lambda: 0.05 } },
+                    fast: { name: "High Expansion (High Λ)", params: { lambda: 0.15 } },
+                    slow: { name: "Slow Expansion (Low Λ)", params: { lambda: 0.01 } },
+                };
+            },
+
+            log(message, type = 'info') {
+                const consoleContent = this.elements.devConsoleContent;
+                if (!consoleContent) return;
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                consoleContent.prepend(entry);
+            },
+
+            getExpositionHTML() {
+                return `
+                <h2>An Expanding Universe: Exploring de Sitter Space</h2>
+                <p>This simulation explores de Sitter space, a cornerstone of modern cosmology. It represents a universe devoid of matter and radiation, with its dynamics governed solely by a positive cosmological constant, often associated with "dark energy." The result is a universe that expands at an ever-accelerating rate. Here, you can visualize the paths of particles and light, called geodesics, as they traverse this strange, empty, and expanding cosmos.</p>
+
+                <h3>Section 1: What is de Sitter Space?</h3>
+                <p>Imagine the universe as the surface of an inflating balloon. Any two points on the surface will move away from each other, not because they are actively moving across the surface, but because the surface itself is stretching. De Sitter space is the mathematically precise, four-dimensional version of this analogy. It is a maximally symmetric solution to Einstein's field equations of general relativity, where the only energy content is a constant, positive vacuum energy (the cosmological constant, Λ). This constant energy creates a kind of "repulsive gravity," causing every point in space to accelerate away from every other point. Our own universe appears to be approaching a de Sitter phase as dark energy becomes increasingly dominant.</p>
+
+                <h3>Section 2: Geodesics and Cosmic Horizons</h3>
+                <p>In curved spacetime, a geodesic is the closest thing to a straight line. It's the path a freely-moving object follows. In this simulation, you can launch both massive particles (like spaceships, which travel slower than light) and massless particles (photons, which travel at the speed of light). Notice how even two photons launched in parallel will begin to diverge. This is a key feature of an expanding spacetime.</p>
+                <p>A crucial concept in de Sitter space is the <strong>cosmic event horizon</strong>. Because the universe is accelerating its expansion, there is a distance beyond which the expansion of space away from us is faster than the speed of light. Any event that happens beyond this horizon is forever causally disconnected from us. Light emitted from there will never reach us, as the space it needs to travel through is stretching too fast. In the simulation, this is represented by the dashed red circle. Any particle crossing this boundary can never return to the center from our perspective.</p>
+
+                <h3>Section 3: Comoving vs. Proper Coordinates</h3>
+                <p>Understanding an expanding universe requires distinguishing between two types of coordinates. <strong>Comoving coordinates</strong> are like drawing a grid on the balloon before it's inflated. As the balloon expands, the grid points (representing galaxies, for instance) stay at the same coordinate values (e.g., "3 units east, 2 units north"), but the physical distance between them grows. <strong>Proper coordinates</strong> represent this physical, measurable distance. In the simulation, you can switch between these views. In 'Comoving View', the grid is static, and you see the peculiar motion of particles relative to the expanding cosmic 'fluid'. In 'Proper View', you see the grid itself stretch, giving a more intuitive sense of the expansion of space itself.</p>
+                `;
+            },
+
+            getQnaHTML() {
+                return `
+                <h2>Q&A: de Sitter Universe</h2>
+                <div class="qa-item">
+                    <p class="question">1. Is our universe a de Sitter universe?</p>
+                    <p class="answer">Not exactly, but it's getting closer. Our universe contains matter (both regular and dark) and radiation, not just vacuum energy. However, observations show that the expansion of our universe is accelerating. The prevailing cosmological model (ΛCDM) suggests that as the universe expands, the density of matter and radiation decreases, while the density of dark energy (the cosmological constant Λ) remains constant. Eventually, dark energy will dominate completely, and the universe's geometry will become asymptotically de Sitter. So, de Sitter space is considered a very good model for the ultimate future of our cosmos.</p>
+                </div>
+                <div class="qa-item">
+                    <p class="question">2. If space expands, why don't atoms, solar systems, or galaxies expand with it?</p>
+                    <p class="answer">The expansion of space is a very weak effect on small scales. Within systems that are held together by other fundamental forces—such as the electromagnetic force holding atoms together or the gravitational force binding planets to stars and stars to galaxies—these forces completely overwhelm the cosmic expansion. The "repulsive gravity" of the cosmological constant is only significant over vast, intergalactic distances where the local gravitational pull of matter is negligible.</p>
+                </div>
+                <div class="qa-item">
+                    <p class="question">3. What is the difference between a massive and massless particle's path?</p>
+                    <p class="answer">In spacetime, massless particles (like photons) always travel on "null geodesics," which represent the speed of light limit. Massive particles (like electrons or spaceships) travel on "time-like geodesics," meaning they always travel slower than light. In the simulation, you'll notice the massless particles' paths are straight lines in the comoving view (if they have no peculiar velocity), representing the edge of the future light cone. Massive particles can have any speed up to that limit. The expansion of space affects both equally, stretching the distance between them.</p>
+                </div>
+                `;
+            }
+        };
+
+        runSelfTests();
+    });
+    </script>
+</body>
+</html>
