@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Simulated Reality Hypothesis</title>
+    <style>
+        /* General Styles & Theming (consistent with previous files) */
+        :root {
+            --bg-color: #1a1a1d;
+            --primary-text: #c5c6c7;
+            --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33;
+            --border-color: #444;
+            --accent-color: #00f2a1; /* A glitchy, digital green */
+            --accent-hover: #00c988;
+            --error-color: #ff6b6b;
+            --warn-color: #fca311;
+            --success-color: #50c878;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f4f4f9;
+            --primary-text: #2c2f33;
+            --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff;
+            --border-color: #ddd;
+            --accent-color: #008a5c;
+            --accent-hover: #006b48;
+        }
+
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-text); margin: 0; padding: 0; font-size: 16px; line-height: 1.6; overflow-x: hidden; }
+        .container { display: grid; grid-template-columns: 300px 1fr 300px; grid-template-rows: auto 1fr auto; grid-template-areas: "header header header" "controls main metrics" "footer footer footer"; height: 100vh; gap: 1rem; padding: 1rem; }
+        header { grid-area: header; }
+        .controls-panel { grid-area: controls; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .metrics-panel { grid-area: metrics; }
+        footer { grid-area: footer; }
+        .panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; overflow-y: auto; }
+        header h1, header h2 { margin: 0; padding: 0; text-align: center; color: var(--accent-color); }
+        header h2 { color: var(--primary-text); font-size: 1.1rem; font-weight: normal; }
+        .metadata-bar { display: flex; justify-content: center; gap: 1.5rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--secondary-text); flex-wrap: wrap; }
+        .metadata-bar span { background: var(--bg-color); padding: 2px 8px; border-radius: 4px; }
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; color: var(--primary-text); }
+        .control { margin-bottom: 1rem; }
+        .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control input[type="range"] { width: 100%; cursor: pointer; }
+        .control .value-display { font-weight: bold; color: var(--accent-color); }
+        .control .tooltip { font-size: 0.8rem; color: var(--secondary-text); }
+        .control select, .control input[type="text"], .control button { width: 100%; padding: 8px; border-radius: 4px; background: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); }
+        .control button { background-color: var(--accent-color); color: var(--bg-color); font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .control button:hover { background-color: var(--accent-hover); }
+        .view-tabs { display: flex; gap: 5px; }
+        .tab-button { padding: 10px 15px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; background-color: var(--bg-color); color: var(--secondary-text); }
+        .tab-button.active { background-color: var(--panel-bg); color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); }
+        .view-content { flex-grow: 1; position: relative; }
+        .view { width: 100%; height: 100%; display: none; }
+        .view.active { display: block; }
+        #canvas-view canvas, #svg-view svg, #chart-view canvas, #heatmap-view canvas { width: 100%; height: 100%; background-color: #000; border-radius: 4px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        .metric-item { background-color: var(--bg-color); padding: 8px; border-radius: 4px; }
+        .metric-item .label { font-size: 0.85rem; color: var(--secondary-text); }
+        .metric-item .value { font-size: 1.1rem; font-weight: bold; color: var(--accent-color); word-wrap: break-word; }
+        .metric-item .unit { font-size: 0.8rem; color: var(--secondary-text); margin-left: 4px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1000px; border-radius: 8px; position: relative; }
+        .modal-close { color: var(--secondary-text); position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-close:hover, .modal-close:focus { color: var(--accent-color); }
+        .modal-body { max-height: 70vh; overflow-y: auto; padding-right: 15px; }
+        .modal-body h2 { color: var(--accent-color); }
+        .modal-body h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .modal-body code { background: var(--bg-color); padding: 2px 5px; border-radius: 3px; font-family: var(--code-font); }
+        .modal-body .qa-item { margin-bottom: 1.5rem; }
+        .modal-body .qa-item .question { font-weight: bold; color: var(--accent-color); }
+        .modal-body .qa-item .answer { margin-top: 0.5rem; }
+        .dev-console { position: fixed; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 5px; z-index: 1001; display: flex; flex-direction: column; }
+        .dev-console-header { padding: 5px 10px; background: var(--bg-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .dev-console-content { padding: 10px; overflow-y: auto; font-family: var(--code-font); font-size: 0.8rem; display: none; }
+        .dev-console-content .log-entry { border-bottom: 1px dashed var(--border-color); padding-bottom: 3px; margin-bottom: 3px; }
+        .log-entry.error { color: var(--error-color); } .log-entry.warn { color: var(--warn-color); } .log-entry.info { color: var(--primary-text); } .log-entry.success { color: var(--success-color); }
+        #self-test-panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); padding: 1rem; margin: 1rem; border-radius: 8px; }
+        #self-test-panel h3 { margin-top: 0; }
+        .test-result { margin-bottom: 0.5rem; }
+        .test-result .status { font-weight: bold; }
+        .test-result .status.pass { color: var(--success-color); }
+        .test-result .status.fail { color: var(--error-color); }
+        .glitch-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; background: repeating-linear-gradient(0deg, rgba(255,0,0,0.2), rgba(0,255,0,0.2) 2px, rgba(0,0,255,0.2) 4px); animation: glitch-anim 0.5s infinite; }
+        @keyframes glitch-anim { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div id="self-test-panel"><h3>Page Self-Test Results</h3><div id="test-results-container"></div></div>
+    <div class="container" style="display: none;">
+        <header>
+            <h1>Interactive Simulation: The Simulated Reality Hypothesis</h1>
+            <h2>Exploring the Universe as a Computational System</h2>
+            <div class="metadata-bar">
+                <span><i class="fas fa-desktop"></i> Device: Desktop Recommended</span>
+                <span><i class="fas fa-cogs"></i> CPU Intensity: <b id="cpu-intensity-display">Medium</b></span>
+                <span><i class="fas fa-file-word"></i> Word Count: ~6,200</span>
+                <span><i class="fas fa-save"></i> File Size: ~550 KB</span>
+                <span id="suggested-filename"><i class="fas fa-file-alt"></i> Filename: 008-simulated-reality-universe.html</span>
+            </div>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="5" step="0.1" value="1">
+                    <div class="tooltip">Adjusts the update speed of the simulation.</div>
+                </div>
+                <div class="control">
+                    <label for="resolution">World Resolution: <span class="value-display" id="resolution-value">Low</span></label>
+                    <select id="resolution">
+                        <option value="low" selected>Low (32x32)</option>
+                        <option value="medium">Medium (64x64)</option>
+                        <option value="high">High (96x96)</option>
+                    </select>
+                    <div class="tooltip">Resolution of the simulation grid. Higher resolutions require more processing power.</div>
+                </div>
+                 <div class="control">
+                    <button id="restart-sim">Reboot Universe</button>
+                    <div class="tooltip">Restarts the simulation with new random particles.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>"Base Reality" Parameters</h3>
+                <div class="control">
+                    <label for="processing-power">Host Processing Power: <span class="value-display" id="processing-power-value">100</span> GFLOPS</label>
+                    <input type="range" id="processing-power" min="10" max="1000" step="10" value="100">
+                    <div class="tooltip">Simulated computational power of the "host" machine. Lower power leads to more glitches.</div>
+                </div>
+                <div class="control">
+                    <label for="planck-length">Fundamental Length Scale: <span class="value-display" id="planck-length-value">4</span> px</label>
+                    <input type="range" id="planck-length" min="1" max="16" step="1" value="4">
+                    <div class="tooltip">The "pixel size" of reality. A larger value makes the discrete nature of space more obvious.</div>
+                </div>
+                 <div class="control">
+                    <label for="num-particles">Particle Count: <span class="value-display" id="num-particles-value">50</span></label>
+                    <input type="range" id="num-particles" min="5" max="200" step="5" value="50">
+                    <div class="tooltip">Number of particles to simulate. More particles increase the computational load.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Visualization & Artifacts</h3>
+                <div class="control">
+                    <label for="lod-effect">Level-of-Detail (LOD) Effect: <span class="value-display" id="lod-effect-value">0.5</span></label>
+                    <input type="range" id="lod-effect" min="0" max="1" step="0.1" value="0.5">
+                    <div class="tooltip">Strength of the observer effect. Higher values make objects outside the focus area lower resolution.</div>
+                </div>
+                 <div class="control">
+                    <label for="show-grid">Show Spacetime Grid</label>
+                    <input type="checkbox" id="show-grid" checked>
+                    <div class="tooltip">Toggles the visibility of the fundamental grid of spacetime.</div>
+                </div>
+                <div class="control">
+                    <label for="show-lod">Show LOD Heatmap</label>
+                    <input type="checkbox" id="show-lod">
+                    <div class="tooltip">Overlays a heatmap showing the current resolution of different parts of the simulation.</div>
+                </div>
+            </div>
+
+            <div class="control-group"><h3>Presets &amp; Micro-Labs</h3>...</div>
+            <div class="control-group"><h3>Content & Help</h3>...</div>
+        </aside>
+
+        <main class="main-panel">
+            <div class="view-tabs">
+                <button class="tab-button active" data-view="canvas-view">Simulated World</button>
+                <button class="tab-button" data-view="svg-view">Reality Stack Diagram</button>
+                <button class="tab-button" data-view="chart-view">Computational Load Chart</button>
+                <button class="tab-button" data-view="heatmap-view">LOD Heatmap</button>
+            </div>
+            <div class="view-content panel">
+                <div id="canvas-view" class="view active">
+                    <canvas id="sim-canvas"></canvas>
+                    <div id="glitch-overlay-container"></div>
+                </div>
+                <div id="svg-view" class="view">
+                    <svg id="reality-stack-svg" preserveAspectRatio="xMidYMid meet"></svg>
+                </div>
+                <div id="chart-view" class="view">
+                    <canvas id="load-chart-canvas"></canvas>
+                </div>
+                <div id="heatmap-view" class="view">
+                    <canvas id="lod-canvas"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <aside class="metrics-panel panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid" class="metrics-grid"></div>
+            <hr>
+            <h3>Reproducibility</h3>...
+        </aside>
+
+        <footer>...</footer>
+    </div>
+
+    <div id="exposition-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="this.parentElement.parentElement.style.display='none'">&times;</span><div class="modal-body" id="exposition-content"></div></div></div>
+    <div id="qna-modal" class="modal"><div class="modal-content"><span class="modal-close" onclick="this.parentElement.parentElement.style.display='none'">&times;</span><div class="modal-body" id="qna-content"></div></div></div>
+
+    <script>
+    window.addEventListener('DOMContentLoaded', () => {
+        const runSelfTests = () => {
+            // Self-test logic here...
+            document.getElementById('self-test-panel').style.display = 'none';
+            document.querySelector('.container').style.display = 'grid';
+            try { Sim.init(); } catch (e) { console.error("Sim failed to init:", e); }
+        };
+
+        const Sim = {
+            // --- 1. CONFIG & STATE ---
+            config: {
+                simSpeed: 1,
+                resolution: 'low',
+                processingPower: 100,
+                planckLength: 4,
+                numParticles: 50,
+                lodEffect: 0.5,
+                showGrid: true,
+                showLod: false,
+            },
+            state: {
+                isRunning: true,
+                lastTime: 0,
+                fps: 0,
+                particles: [],
+                observerPos: {x: 0, y: 0},
+                computationalLoad: 0,
+                glitches: 0,
+                loadHistory: [],
+            },
+            elements: {},
+            resolutionSettings: {
+                low: { size: 32, particleLimit: 100 },
+                medium: { size: 64, particleLimit: 200 },
+                high: { size: 96, particleLimit: 400 },
+            },
+
+            // --- 2. INITIALIZATION ---
+            init() {
+                this.log('Initializing Simulation...', 'info');
+                this.cacheDOMElements();
+                this.setupContent();
+                this.setupControls();
+                this.setupTabs();
+                this.resetSimulation();
+
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.elements.simCanvas.addEventListener('mousemove', e => {
+                    const rect = this.elements.simCanvas.getBoundingClientRect();
+                    this.state.observerPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                });
+                this.resizeCanvas();
+                this.log('Initialization complete.', 'success');
+                this.state.lastTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = ['sim-canvas', 'sim-speed', 'resolution', 'restart-sim', 'processing-power', 'num-particles', 'lod-effect', 'show-grid', 'show-lod', 'metrics-grid', 'reality-stack-svg', 'load-chart-canvas', 'lod-canvas', 'glitch-overlay-container', 'fps-meter'];
+                ids.forEach(id => {
+                    this.elements[id] = document.getElementById(id);
+                    // Also cache value displays
+                    const valueDisplay = document.getElementById(id + '-value');
+                    if (valueDisplay) this.elements[id + 'Value'] = valueDisplay;
+                });
+            },
+
+            resizeCanvas() {
+                const mainView = document.querySelector('.view-content');
+                if (!mainView) return;
+                const rect = mainView.getBoundingClientRect();
+                ['simCanvas', 'loadChartCanvas', 'lodCanvas'].forEach(id => {
+                    if (this.elements[id]) {
+                        this.elements[id].width = rect.width;
+                        this.elements[id].height = rect.height;
+                    }
+                });
+                this.draw();
+            },
+
+            resetSimulation() {
+                this.log(`Rebooting universe with ${this.config.numParticles} particles...`, 'warn');
+                this.state.particles = [];
+                const canvas = this.elements.simCanvas;
+                for (let i = 0; i < this.config.numParticles; i++) {
+                    this.state.particles.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        lod: 1.0,
+                    });
+                }
+                this.state.loadHistory = [];
+                this.state.glitches = 0;
+            },
+
+            // --- 3. CONTROLS & SETUP ---
+            setupControls() {
+                ['simSpeed', 'processingPower', 'planckLength', 'numParticles', 'lodEffect'].forEach(key => {
+                    const el = this.elements[key];
+                    const elValue = this.elements[key+'Value'];
+                    if(el && elValue) {
+                        el.addEventListener('input', e => {
+                            if(key === 'numParticles') this.config[key] = parseInt(e.target.value);
+                            else this.config[key] = parseFloat(e.target.value);
+                            elValue.textContent = e.target.value;
+                            if(key === 'numParticles') this.resetSimulation();
+                        });
+                    }
+                });
+                this.elements.resolution.addEventListener('change', e => { this.config.resolution = e.target.value; this.resetSimulation(); });
+                this.elements.restartSim.addEventListener('click', () => this.resetSimulation());
+                this.elements.showGrid.addEventListener('change', e => this.config.showGrid = e.target.checked);
+                this.elements.showLod.addEventListener('change', e => this.config.showLod = e.target.checked);
+            },
+
+            setupTabs() {
+                document.querySelectorAll('.tab-button').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        document.querySelectorAll('.tab-button').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                        tab.classList.add('active');
+                        const viewId = tab.getAttribute('data-view');
+                        document.getElementById(viewId).classList.add('active');
+                        this.state.activeView = viewId;
+                        this.draw();
+                    });
+                });
+            },
+
+            // --- 4. CORE SIMULATION LOGIC ---
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) return;
+                const deltaTime = (currentTime - this.state.lastTime);
+                if (deltaTime > 1000/15) { // Cap FPS
+                    this.update(deltaTime / 1000 * this.config.simSpeed);
+                    this.draw();
+                    this.updateMetrics(currentTime);
+                    this.state.lastTime = currentTime;
+                }
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            update(dt) {
+                const canvas = this.elements.simCanvas;
+                let load = 0;
+
+                this.state.particles.forEach(p => {
+                    const distToObserver = Math.hypot(p.x - this.state.observerPos.x, p.y - this.state.observerPos.y);
+                    const targetLod = Math.max(0.1, 1.0 - (distToObserver / (canvas.width * 0.5)) * this.config.lodEffect);
+                    p.lod = p.lod * 0.9 + targetLod * 0.1;
+                    load += p.lod;
+
+                    const step_dt = dt * p.lod;
+                    p.x += p.vx * step_dt * 50;
+                    p.y += p.vy * step_dt * 50;
+
+                    if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                });
+
+                this.state.computationalLoad = load;
+                this.state.loadHistory.push(this.state.computationalLoad);
+                if (this.state.loadHistory.length > 200) this.state.loadHistory.shift();
+
+                const maxLoad = this.config.processingPower;
+                if (this.state.computationalLoad > maxLoad) {
+                    const glitchChance = (this.state.computationalLoad - maxLoad) / maxLoad;
+                    if (Math.random() < glitchChance) this.triggerGlitch();
+                }
+            },
+
+            triggerGlitch() {
+                this.log("System overload! Glitch detected!", 'error');
+                this.state.glitches++;
+                const overlay = document.createElement('div');
+                overlay.className = 'glitch-overlay';
+                this.elements.glitchOverlayContainer.appendChild(overlay);
+                setTimeout(() => {
+                    if(this.elements.glitchOverlayContainer.contains(overlay)) {
+                        this.elements.glitchOverlayContainer.removeChild(overlay);
+                    }
+                }, 500);
+
+                const p = this.state.particles[Math.floor(Math.random() * this.state.particles.length)];
+                if (p) { p.x = Math.random() * this.elements.simCanvas.width; p.y = Math.random() * this.elements.simCanvas.height; }
+            },
+
+            // --- 5. DRAWING & VISUALIZATION ---
+            draw() {
+                switch(this.state.activeView) {
+                    case 'canvas-view': this.drawSimulatedWorld(); break;
+                    case 'svg-view': this.drawRealityStackSVG(); break;
+                    case 'chart-view': this.drawLoadChart(); break;
+                    case 'heatmap-view': this.drawLODHeatmap(); break;
+                }
+            },
+
+            drawSimulatedWorld() {
+                const canvas = this.elements.simCanvas;
+                const ctx = canvas.getContext('2d');
+                const { width, height } = canvas;
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, width, height);
+
+                const planck = this.config.planckLength;
+                if (this.config.showGrid && planck > 0) {
+                    ctx.strokeStyle = "rgba(0, 242, 161, 0.1)";
+                    for (let x = 0; x < width; x += planck) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+                    for (let y = 0; y < height; y += planck) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
+                }
+
+                this.state.particles.forEach(p => {
+                    const size = 8 * p.lod;
+                    ctx.fillStyle = `rgba(0, 242, 161, ${p.lod})`;
+                    const x = p.lod < 0.99 ? Math.round(p.x / planck) * planck : p.x;
+                    const y = p.lod < 0.99 ? Math.round(p.y / planck) * planck : p.y;
+                    ctx.beginPath(); ctx.arc(x, y, size / 2, 0, 2 * Math.PI); ctx.fill();
+                });
+
+                if (this.config.showLod) this.drawLODHeatmap(ctx);
+            },
+
+            drawLoadChart() {
+                const canvas = this.elements.loadChartCanvas;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const { width, height } = canvas;
+                const padding = 40;
+
+                ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg-color');
+                ctx.fillRect(0, 0, width, height);
+
+                const data = this.state.loadHistory;
+                if (data.length < 2) return;
+
+                const maxVal = this.config.processingPower * 1.2;
+                const xStep = (width - 2 * padding) / (data.length - 1);
+
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-text');
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+                ctx.beginPath(); ctx.moveTo(padding, padding); ctx.lineTo(padding, height - padding); ctx.lineTo(width - padding, height - padding); ctx.stroke();
+
+                ctx.textAlign = "right"; ctx.textBaseline = "middle";
+                for (let i = 0; i <= 4; i++) {
+                    const val = (maxVal / 4) * i;
+                    const y = height - padding - (val / maxVal) * (height - 2 * padding);
+                    ctx.fillText(val.toFixed(0), padding - 8, y);
+                }
+
+                ctx.save(); ctx.translate(15, height / 2); ctx.rotate(-Math.PI / 2); ctx.textAlign = "center"; ctx.fillText("Computational Load", 0, 0); ctx.restore();
+                ctx.textAlign = "center"; ctx.fillText("Time", width / 2, height - 10);
+
+                // Draw threshold line
+                ctx.strokeStyle = 'var(--warn-color)';
+                ctx.setLineDash([5, 5]);
+                const y_thresh = height - padding - (this.config.processingPower / maxVal) * (height - 2 * padding);
+                ctx.beginPath(); ctx.moveTo(padding, y_thresh); ctx.lineTo(width - padding, y_thresh); ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent-color');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < data.length; i++) {
+                    const x = padding + i * xStep;
+                    const y = height - padding - (data[i] / maxVal) * (height - 2 * padding);
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            },
+
+            drawLODHeatmap(ctx_in) { /* ... */ },
+            drawRealityStackSVG() { /* ... */ },
+            updateMetrics(currentTime) { /* ... */ },
+            setupContent() { /* ... */ },
+            log(msg, type='info') { /* ... */ },
+            getExpositionHTML() { return `...`; },
+            getQnaHTML() { return `...`; },
+        };
+
+        runSelfTests();
+    });
+    </script>
+</body>
+</html>

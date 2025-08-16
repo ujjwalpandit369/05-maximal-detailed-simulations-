@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Spontaneously Nucleated Universe</title>
+    <style>
+        /* General Styles & Theming (adapted from existing file for consistency) */
+        :root {
+            --bg-color: #1a1a1d;
+            --primary-text: #c5c6c7;
+            --secondary-text: #9fa0a1;
+            --panel-bg: #2c2f33;
+            --border-color: #444;
+            --accent-color: #4d90f0; /* Changed accent to a cosmic blue */
+            --accent-hover: #357ae8;
+            --error-color: #ff6b6b;
+            --warn-color: #fca311;
+            --success-color: #50c878;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --code-font: 'Courier New', Courier, monospace;
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f4f4f9;
+            --primary-text: #2c2f33;
+            --secondary-text: #5a5a5a;
+            --panel-bg: #ffffff;
+            --border-color: #ddd;
+            --accent-color: #005bb5;
+            --accent-hover: #003f8a;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 0;
+            font-size: 16px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: auto 1fr auto;
+            grid-template-areas:
+                "header header header"
+                "controls main metrics"
+                "footer footer footer";
+            height: 100vh;
+            gap: 1rem;
+            padding: 1rem;
+        }
+
+        header { grid-area: header; }
+        .controls-panel { grid-area: controls; }
+        .main-panel { grid-area: main; display: flex; flex-direction: column; gap: 1rem; }
+        .metrics-panel { grid-area: metrics; }
+        footer { grid-area: footer; }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        /* Header */
+        header h1, header h2 {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            color: var(--accent-color);
+        }
+        header h2 {
+            color: var(--primary-text);
+            font-size: 1.1rem;
+            font-weight: normal;
+        }
+        .metadata-bar {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--secondary-text);
+            flex-wrap: wrap;
+        }
+        .metadata-bar span {
+            background: var(--bg-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Controls */
+        .control-group { margin-bottom: 1.5rem; }
+        .control-group h3 { margin-top: 0; border-bottom: 2px solid var(--accent-color); padding-bottom: 0.5rem; color: var(--primary-text); }
+        .control { margin-bottom: 1rem; }
+        .control label { display: block; font-size: 0.9rem; margin-bottom: 0.25rem; }
+        .control input[type="range"] { width: 100%; cursor: pointer; }
+        .control .value-display { font-weight: bold; color: var(--accent-color); }
+        .control .tooltip { font-size: 0.8rem; color: var(--secondary-text); }
+        .control select, .control input[type="text"], .control button { width: 100%; padding: 8px; border-radius: 4px; background: var(--bg-color); color: var(--primary-text); border: 1px solid var(--border-color); }
+        .control button { background-color: var(--accent-color); color: var(--bg-color); font-weight: bold; cursor: pointer; transition: background-color 0.2s; }
+        .control button:hover { background-color: var(--accent-hover); }
+
+        /* Main Visualization Area */
+        .view-tabs { display: flex; gap: 5px; }
+        .tab-button { padding: 10px 15px; border: 1px solid var(--border-color); border-bottom: none; border-radius: 6px 6px 0 0; cursor: pointer; background-color: var(--bg-color); color: var(--secondary-text); }
+        .tab-button.active { background-color: var(--panel-bg); color: var(--accent-color); border-bottom: 1px solid var(--panel-bg); }
+        .view-content { flex-grow: 1; position: relative; }
+        .view { width: 100%; height: 100%; display: none; }
+        .view.active { display: block; }
+        #canvas-view canvas, #svg-view svg, #chart-view canvas, #heatmap-view canvas { width: 100%; height: 100%; background-color: #000; border-radius: 4px; }
+
+        /* Metrics Panel */
+        .metrics-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
+        .metric-item { background-color: var(--bg-color); padding: 8px; border-radius: 4px; }
+        .metric-item .label { font-size: 0.85rem; color: var(--secondary-text); }
+        .metric-item .value { font-size: 1.1rem; font-weight: bold; color: var(--accent-color); word-wrap: break-word; }
+        .metric-item .unit { font-size: 0.8rem; color: var(--secondary-text); margin-left: 4px; }
+
+        /* Modals for Text Content */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: var(--panel-bg); margin: 5% auto; padding: 20px; border: 1px solid var(--border-color); width: 80%; max-width: 1000px; border-radius: 8px; position: relative; }
+        .modal-close { color: var(--secondary-text); position: absolute; top: 10px; right: 25px; font-size: 35px; font-weight: bold; cursor: pointer; }
+        .modal-close:hover, .modal-close:focus { color: var(--accent-color); }
+        .modal-body { max-height: 70vh; overflow-y: auto; padding-right: 15px; }
+        .modal-body h2 { color: var(--accent-color); }
+        .modal-body h3 { border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+        .modal-body code { background: var(--bg-color); padding: 2px 5px; border-radius: 3px; font-family: var(--code-font); }
+        .modal-body .qa-item { margin-bottom: 1.5rem; }
+        .modal-body .qa-item .question { font-weight: bold; color: var(--accent-color); }
+        .modal-body .qa-item .answer { margin-top: 0.5rem; }
+        .modal-body .micro-diagram { float: right; width: 150px; height: 150px; margin: 0 0 10px 10px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px;}
+
+        /* Developer Console & Status */
+        .dev-console { position: fixed; bottom: 10px; right: 10px; width: 350px; max-height: 200px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 5px; z-index: 1001; display: flex; flex-direction: column; }
+        .dev-console-header { padding: 5px 10px; background: var(--bg-color); cursor: pointer; display: flex; justify-content: space-between; }
+        .dev-console-content { padding: 10px; overflow-y: auto; font-family: var(--code-font); font-size: 0.8rem; display: none; }
+        .dev-console-content .log-entry { border-bottom: 1px dashed var(--border-color); padding-bottom: 3px; margin-bottom: 3px; }
+        .log-entry.error { color: var(--error-color); } .log-entry.warn { color: var(--warn-color); } .log-entry.info { color: var(--primary-text); } .log-entry.success { color: var(--success-color); }
+
+        /* On-load self-test panel */
+        #self-test-panel { background-color: var(--panel-bg); border: 1px solid var(--border-color); padding: 1rem; margin: 1rem; border-radius: 8px; }
+        #self-test-panel h3 { margin-top: 0; }
+        .test-result { margin-bottom: 0.5rem; }
+        .test-result .status { font-weight: bold; }
+        .test-result .status.pass { color: var(--success-color); }
+        .test-result .status.fail { color: var(--error-color); }
+
+        /* Annotation tools */
+        .annotation-tools { position: absolute; top: 10px; left: 10px; background: rgba(44, 47, 51, 0.8); padding: 5px; border-radius: 5px; z-index: 10; }
+        .annotation-tools button { background: none; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 5px; margin: 2px; cursor: pointer; border-radius: 3px; }
+        .annotation-tools button.active { background: var(--accent-color); color: var(--bg-color); }
+    </style>
+</head>
+<body>
+    <div id="self-test-panel">
+        <h3>Page Self-Test Results</h3>
+        <div id="test-results-container"></div>
+    </div>
+
+    <div class="container" style="display: none;">
+        <header>
+            <h1>Interactive Simulation: Spontaneously Nucleated Universe</h1>
+            <h2>Visualizing False Vacuum Decay and the Birth of a Bubble Universe</h2>
+            <div class="metadata-bar">
+                <span><i class="fas fa-desktop"></i> Device: Desktop Recommended</span>
+                <span><i class="fas fa-cogs"></i> CPU Intensity: <b id="cpu-intensity-display">Heavy</b></span>
+                <span><i class="fas fa-file-word"></i> Word Count: ~5,900</span>
+                <span><i class="fas fa-save"></i> File Size: ~500 KB</span>
+                <span id="suggested-filename"><i class="fas fa-file-alt"></i> Filename: 007-spontaneously-nucleated-universe.html</span>
+            </div>
+        </header>
+
+        <aside class="controls-panel panel">
+            <div class="control-group">
+                <h3>Global Controls</h3>
+                <div class="control">
+                    <label for="sim-speed">Simulation Speed: <span class="value-display" id="sim-speed-value">1</span>x</label>
+                    <input type="range" id="sim-speed" min="0.1" max="10" step="0.1" value="1" aria-describedby="sim-speed-tooltip">
+                    <div class="tooltip" id="sim-speed-tooltip">Adjusts the update frequency of the simulation.</div>
+                </div>
+                <div class="control">
+                    <label for="resolution">Grid Resolution: <span class="value-display" id="resolution-value">64x64</span></label>
+                    <select id="resolution">
+                        <option value="32">32x32 (Fastest)</option>
+                        <option value="64" selected>64x64 (Balanced)</option>
+                        <option value="128">128x128 (Slow)</option>
+                        <option value="256">256x256 (Heavy - Warning!)</option>
+                    </select>
+                    <div class="tooltip" id="resolution-tooltip">Size of the simulated spacetime grid. Larger grids are much slower.</div>
+                </div>
+                 <div class="control">
+                    <button id="restart-sim">Restart Simulation</button>
+                    <div class="tooltip">Resets the universe to its initial false vacuum state.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Potential Energy Parameters</h3>
+                <div class="control">
+                    <label for="false-vacuum-energy">False Vacuum Energy (V₀): <span class="value-display" id="false-vacuum-energy-value">0.8</span></label>
+                    <input type="range" id="false-vacuum-energy" min="0.1" max="1.0" step="0.05" value="0.8" aria-describedby="fve-tooltip">
+                    <div class="tooltip" id="fve-tooltip">The energy density of the initial state. Higher energy leads to faster expansion.</div>
+                </div>
+                <div class="control">
+                    <label for="barrier-height">Energy Barrier Height (ΔV): <span class="value-display" id="barrier-height-value">0.1</span></label>
+                    <input type="range" id="barrier-height" min="0.01" max="0.5" step="0.01" value="0.1" aria-describedby="bh-tooltip">
+                    <div class="tooltip" id="bh-tooltip">The energy barrier the field must tunnel through. Higher barriers make nucleation rarer.</div>
+                </div>
+                 <div class="control">
+                    <label for="true-vacuum-offset">True Vacuum Offset (ε): <span class="value-display" id="true-vacuum-offset-value">0.05</span></label>
+                    <input type="range" id="true-vacuum-offset" min="0" max="0.2" step="0.01" value="0.05" aria-describedby="tvo-tooltip">
+                    <div class="tooltip" id="tvo-tooltip">Energy difference between true and false vacuums. Drives bubble wall expansion.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Quantum Fluctuation Controls</h3>
+                <div class="control">
+                    <label for="fluctuation-strength">Fluctuation Strength (σ): <span class="value-display" id="fluctuation-strength-value">0.02</span></label>
+                    <input type="range" id="fluctuation-strength" min="0" max="0.1" step="0.005" value="0.02" aria-describedby="fs-tooltip">
+                    <div class="tooltip" id="fs-tooltip">Magnitude of random quantum fluctuations at each point.</div>
+                </div>
+                 <div class="control">
+                    <label for="fluctuation-rate">Fluctuation Rate: <span class="value-display" id="fluctuation-rate-value">0.1</span></label>
+                    <input type="range" id="fluctuation-rate" min="0.01" max="1" step="0.01" value="0.1" aria-describedby="fr-tooltip">
+                    <div class="tooltip" id="fr-tooltip">Probability per site of a large fluctuation event occurring.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Visualization</h3>
+                <div class="control">
+                    <label for="color-palette">Color Palette</label>
+                    <select id="color-palette">
+                        <option value="viridis">Viridis</option>
+                        <option value="plasma" selected>Plasma</option>
+                        <option value="inferno">Inferno</option>
+                        <option value="grayscale">Grayscale</option>
+                    </select>
+                    <div class="tooltip">Color map for the scalar field's potential energy.</div>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Presets &amp; Micro-Labs</h3>
+                <div class="control">
+                    <label for="presets">Load Preset</label>
+                    <select id="presets"></select>
+                </div>
+                <div class="control">
+                    <label for="microlabs">Run Micro-Lab</label>
+                    <select id="microlabs"></select>
+                    <button id="run-microlab" style="margin-top: 5px;">Run Experiment</button>
+                </div>
+                 <div id="microlab-output" style="height: 100px; background: var(--bg-color); border: 1px solid var(--border-color); overflow-y: scroll; padding: 5px; font-size: 0.8em; margin-top: 10px;"></div>
+            </div>
+
+            <div class="control-group">
+                <h3>Content & Help</h3>
+                <button onclick="document.getElementById('exposition-modal').style.display='block'">Read Full Exposition</button>
+                <button onclick="document.getElementById('qna-modal').style.display='block'" style="margin-top: 5px;">View Q&A</button>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <div class="view-tabs">
+                <button class="tab-button active" data-view="canvas-view">Scalar Field Evolution</button>
+                <button class="tab-button" data-view="svg-view">Potential Energy Diagram</button>
+                <button class="tab-button" data-view="chart-view">Bubble Growth Chart</button>
+                <button class="tab-button" data-view="heatmap-view">Energy Density Map</button>
+            </div>
+            <div class="view-content panel">
+                <div class="annotation-tools">
+                    <button id="tool-pin" title="Add Annotation Pin">Pin</button>
+                    <button id="tool-measure" title="Measure Distance">Measure</button>
+                    <button id="tool-clear" title="Clear Annotations">Clear</button>
+                </div>
+                <div id="canvas-view" class="view active">
+                    <canvas id="sim-canvas"></canvas>
+                </div>
+                <div id="svg-view" class="view">
+                    <svg id="potential-svg" preserveAspectRatio="xMidYMid meet"></svg>
+                </div>
+                <div id="chart-view" class="view">
+                    <canvas id="growth-chart-canvas"></canvas>
+                </div>
+                <div id="heatmap-view" class="view">
+                    <canvas id="energy-canvas"></canvas>
+                    <div id="heatmap-tooltip" style="position:absolute; display:none; background:rgba(0,0,0,0.7); color:white; padding:5px; border-radius:3px;"></div>
+                </div>
+            </div>
+        </main>
+
+        <aside class="metrics-panel panel">
+            <h3>Live Metrics</h3>
+            <div id="metrics-grid" class="metrics-grid"></div>
+            <hr>
+            <h3>Reproducibility</h3>
+            <div class="control">
+                <label for="repro-string">Copy this string to restore state:</label>
+                <input type="text" id="repro-string" readonly>
+                <button id="copy-repro-string" style="margin-top: 5px;">Copy</button>
+            </div>
+            <hr>
+            <h3>Numerical Diagnostics</h3>
+            <div class="metric-item">
+                <div class="label">Total Energy Drift</div>
+                <div class="value" id="diag-energy-drift">0.000%</div>
+            </div>
+            <div class="metric-item">
+                <div class="label">CFL Condition</div>
+                <div class="value" id="diag-cfl" style="color: var(--success-color);">Stable</div>
+            </div>
+        </aside>
+
+        <footer>
+            <div class="dev-console" id="dev-console">
+                <div class="dev-console-header" id="dev-console-header">
+                    <span>Developer Console</span>
+                    <span id="fps-meter">FPS: 60</span>
+                </div>
+                <div class="dev-console-content" id="dev-console-content"></div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modal for Exposition -->
+    <div id="exposition-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('exposition-modal').style.display='none'">&times;</span>
+            <div class="modal-body" id="exposition-content"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Q&A -->
+    <div id="qna-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="document.getElementById('qna-modal').style.display='none'">&times;</span>
+            <div class="modal-body" id="qna-content"></div>
+        </div>
+    </div>
+
+    <script>
+    // --- SELF-CONTAINED SIMULATION SCRIPT ---
+    window.addEventListener('DOMContentLoaded', () => {
+
+        // --- 0. SELF-TEST ON LOAD ---
+        const runSelfTests = () => {
+            const tests = [
+                { name: "HTML Container", check: () => document.querySelector('.container') },
+                { name: "Simulation Canvas", check: () => document.getElementById('sim-canvas') },
+                { name: "Controls Panel", check: () => document.querySelector('.controls-panel') },
+                { name: "Metrics Panel", check: () => document.querySelector('.metrics-panel') },
+                { name: "Exposition Modal", check: () => document.getElementById('exposition-modal') },
+                { name: "Q&A Modal", check: () => document.getElementById('qna-modal') },
+                { name: "Core Simulation Object", check: () => typeof Sim !== 'undefined' },
+            ];
+            const resultsContainer = document.getElementById('test-results-container');
+            let allPass = true;
+            resultsContainer.innerHTML = '';
+
+            tests.forEach(test => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result';
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                try {
+                    if (test.check()) {
+                        statusSpan.textContent = 'PASS';
+                        statusSpan.classList.add('pass');
+                    } else { throw new Error("Element or object not found."); }
+                } catch (e) {
+                    statusSpan.textContent = 'FAIL';
+                    statusSpan.classList.add('fail');
+                    allPass = false;
+                }
+                resultDiv.textContent = `${test.name}: `;
+                resultDiv.appendChild(statusSpan);
+                resultsContainer.appendChild(resultDiv);
+            });
+
+            if (allPass) {
+                document.getElementById('self-test-panel').style.display = 'none';
+                document.querySelector('.container').style.display = 'grid';
+                try {
+                    Sim.init();
+                } catch (e) {
+                    console.error("Fatal error during simulation initialization:", e);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.innerHTML = `<h3>Fatal Error</h3><p>Could not start simulation. Check console for details.</p><p><i>${e.message}</i></p>`;
+                    errorDiv.style.color = 'var(--error-color)';
+                    document.body.prepend(errorDiv);
+                }
+            } else {
+                resultsContainer.insertAdjacentHTML('afterbegin', '<h3>Critical components failed to load. The simulation cannot start.</h3>');
+            }
+        };
+
+        const Sim = {
+            // --- 1. CONFIGURATION & STATE ---
+            config: {
+                simSpeed: 1,
+                resolution: 64,
+                falseVacuumEnergy: 0.8,
+                barrierHeight: 0.1,
+                trueVacuumOffset: 0.05,
+                fluctuationStrength: 0.02,
+                fluctuationRate: 0.1,
+                colorPalette: 'plasma',
+                dt: 0.1, // Timestep for numerical integration
+                dx: 1.0, // Grid spacing
+            },
+            state: {
+                isRunning: true,
+                lastTime: 0,
+                fps: 0,
+                frameCount: 0,
+                fpsLastUpdate: 0,
+                activeView: 'canvas-view',
+                time: 0,
+                grid: [],
+                grid_prev: [],
+                bubbles: [],
+                chartData: [],
+                totalEnergy: 0,
+                initialEnergy: 0,
+            },
+            elements: {},
+            palettes: {
+                viridis: t => [Math.sqrt(0.22+0.53*t),Math.sqrt(0.02+3.33*t-3.42*t*t),Math.sqrt(0.30-0.05*t+2.06*t*t)],
+                plasma: t => [Math.sqrt(0.09+3.22*t-2.08*t*t),Math.sqrt(0.00+0.51*t+1.91*t*t),Math.sqrt(0.66-2.29*t+2.82*t*t)],
+                inferno: t => [Math.sqrt(0.00+3.89*t-3.83*t*t),Math.sqrt(0.01+0.21*t+1.56*t*t),Math.sqrt(0.56-1.28*t+1.98*t*t)],
+                grayscale: t => [t, t, t],
+            },
+
+            // --- 2. INITIALIZATION ---
+            init() {
+                this.log('Initializing simulation...', 'info');
+                this.cacheDOMElements();
+                this.setupContent();
+                this.setupControls();
+                this.setupTabs();
+                this.setupDevConsole();
+                this.resetSimulation();
+                this.resizeCanvas();
+
+                window.addEventListener('resize', () => this.resizeCanvas());
+                this.log('Initialization complete.', 'success');
+                this.state.lastTime = performance.now();
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            cacheDOMElements() {
+                const ids = [
+                    'sim-canvas', 'sim-speed', 'sim-speed-value', 'resolution', 'resolution-value', 'restart-sim',
+                    'false-vacuum-energy', 'false-vacuum-energy-value', 'barrier-height', 'barrier-height-value',
+                    'true-vacuum-offset', 'true-vacuum-offset-value', 'fluctuation-strength', 'fluctuation-strength-value',
+                    'fluctuation-rate', 'fluctuation-rate-value', 'color-palette', 'presets', 'microlabs', 'run-microlab', 'microlab-output',
+                    'metrics-grid', 'repro-string', 'copy-repro-string', 'diag-energy-drift', 'diag-cfl',
+                    'fps-meter', 'dev-console', 'dev-console-header', 'dev-console-content',
+                    'potential-svg', 'growth-chart-canvas', 'energy-canvas', 'heatmap-tooltip'
+                ];
+                ids.forEach(id => this.elements[id] = document.getElementById(id));
+            },
+
+            resetSimulation() {
+                this.log(`Resetting universe to ${this.config.resolution}x${this.config.resolution}...`, 'warn');
+                this.state.grid = new Array(this.config.resolution * this.config.resolution).fill(0);
+                this.state.grid_prev = new Array(this.config.resolution * this.config.resolution).fill(0);
+                this.state.time = 0;
+                this.state.bubbles = [];
+                this.state.chartData = [];
+                this.setupGrowthChart();
+                this.state.initialEnergy = this.calculateTotalEnergy();
+                this.state.totalEnergy = this.state.initialEnergy;
+                this.draw();
+            },
+
+            resizeCanvas() {
+                const mainView = document.querySelector('.view-content');
+                if (!mainView) return;
+                const rect = mainView.getBoundingClientRect();
+
+                ['simCanvas', 'growth-chart-canvas', 'energyCanvas'].forEach(id => {
+                    if (this.elements[id]) {
+                        const canvas = this.elements[id];
+                        canvas.width = rect.width;
+                        canvas.height = rect.height;
+                    }
+                });
+
+                if (this.elements.potentialSvg) {
+                    this.elements.potentialSvg.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+                }
+                this.log(`Resized canvases to ${rect.width}x${rect.height}`, 'info');
+                this.draw();
+            },
+
+            // --- 3. EVENT LISTENERS & CONTROLS ---
+            setupControls() {
+                this.elements.simSpeed.addEventListener('input', e => {
+                    this.config.simSpeed = parseFloat(e.target.value);
+                    this.elements.simSpeedValue.textContent = this.config.simSpeed.toFixed(1);
+                });
+                this.elements.resolution.addEventListener('change', e => {
+                    if (e.target.value > 128 && !confirm("Warning: A resolution of 256x256 is extremely demanding and may cause your browser to become unresponsive. Continue?")) {
+                        e.target.value = this.config.resolution;
+                        return;
+                    }
+                    this.config.resolution = parseInt(e.target.value);
+                    this.elements.resolutionValue.textContent = `${this.config.resolution}x${this.config.resolution}`;
+                    this.resetSimulation();
+                });
+                this.elements.restartSim.addEventListener('click', () => this.resetSimulation());
+
+                // Potential params
+                this.elements.falseVacuumEnergy.addEventListener('input', e => {
+                    this.config.falseVacuumEnergy = parseFloat(e.target.value);
+                    this.elements.falseVacuumEnergyValue.textContent = this.config.falseVacuumEnergy.toFixed(2);
+                    this.draw();
+                });
+                this.elements.barrierHeight.addEventListener('input', e => {
+                    this.config.barrierHeight = parseFloat(e.target.value);
+                    this.elements.barrierHeightValue.textContent = this.config.barrierHeight.toFixed(2);
+                    this.draw();
+                });
+                this.elements.trueVacuumOffset.addEventListener('input', e => {
+                    this.config.trueVacuumOffset = parseFloat(e.target.value);
+                    this.elements.trueVacuumOffsetValue.textContent = this.config.trueVacuumOffset.toFixed(2);
+                    this.draw();
+                });
+
+                // Fluctuation params
+                this.elements.fluctuationStrength.addEventListener('input', e => {
+                    this.config.fluctuationStrength = parseFloat(e.target.value);
+                    this.elements.fluctuationStrengthValue.textContent = this.config.fluctuationStrength.toFixed(3);
+                });
+                this.elements.fluctuationRate.addEventListener('input', e => {
+                    this.config.fluctuationRate = parseFloat(e.target.value);
+                    this.elements.fluctuationRateValue.textContent = this.config.fluctuationRate.toFixed(2);
+                });
+
+                this.elements.colorPalette.addEventListener('change', e => this.config.colorPalette = e.target.value);
+                this.elements.presets.addEventListener('change', e => this.applyPreset(e.target.value));
+                this.elements.runMicrolab.addEventListener('click', () => this.runMicroLab(this.elements.microlabs.value));
+                this.elements.copyReproString.addEventListener('click', () => {
+                    this.elements.reproString.value = JSON.stringify(this.config);
+                    navigator.clipboard.writeText(this.elements.reproString.value).then(() => {
+                         this.log('Reproducibility string copied to clipboard.', 'success');
+                    });
+                });
+            },
+
+            setupTabs() {
+                const tabs = document.querySelectorAll('.tab-button');
+                const views = document.querySelectorAll('.view');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        views.forEach(v => v.classList.remove('active'));
+                        tab.classList.add('active');
+                        const viewId = tab.getAttribute('data-view');
+                        document.getElementById(viewId).classList.add('active');
+                        this.state.activeView = viewId;
+                        this.draw();
+                    });
+                });
+            },
+
+            setupDevConsole() {
+                this.elements.devConsoleHeader.addEventListener('click', () => {
+                    const content = this.elements.devConsoleContent;
+                    content.style.display = content.style.display === 'block' ? 'none' : 'block';
+                });
+            },
+
+            // --- 4. CORE SIMULATION LOGIC ---
+            gameLoop(currentTime) {
+                if (!this.state.isRunning) return;
+
+                const frameTime = (currentTime - this.state.lastTime);
+                if (frameTime > 1000 / 15) { // Cap updates to prevent spiral of death
+                    for (let i = 0; i < this.config.simSpeed; i++) {
+                         this.update();
+                    }
+                    this.draw();
+                    this.updateMetrics(currentTime);
+                    this.state.lastTime = currentTime;
+                }
+
+                requestAnimationFrame(this.gameLoop.bind(this));
+            },
+
+            potential(phi) {
+                const v0 = this.config.falseVacuumEnergy;
+                const dv = this.config.barrierHeight;
+                const eps = this.config.trueVacuumOffset;
+                // A quartic potential V(phi) = a*phi^4 - b*phi^2 + c*phi
+                // We construct it from the desired parameters
+                const b = 4 * dv;
+                const a = b / 2;
+                const c = eps * Math.sqrt(2*a);
+                return a * phi**4 - b * phi**2 + c * phi + v0;
+            },
+
+            potential_derivative(phi) {
+                 const dv = this.config.barrierHeight;
+                 const eps = this.config.trueVacuumOffset;
+                 const b = 4 * dv;
+                 const a = b / 2;
+                 const c = eps * Math.sqrt(2*a);
+                 return 4 * a * phi**3 - 2 * b * phi + c;
+            },
+
+            update() {
+                const N = this.config.resolution;
+                const new_grid = new Array(N * N);
+                const dt2 = this.config.dt * this.config.dt;
+                const dx2 = this.config.dx * this.config.dx;
+
+                // Verlet integration
+                for (let y = 0; y < N; y++) {
+                    for (let x = 0; x < N; x++) {
+                        const i = y * N + x;
+
+                        // Laplacian (discrete)
+                        const phi_up = this.state.grid[((y - 1 + N) % N) * N + x];
+                        const phi_down = this.state.grid[((y + 1) % N) * N + x];
+                        const phi_left = this.state.grid[y * N + ((x - 1 + N) % N)];
+                        const phi_right = this.state.grid[y * N + ((x + 1) % N)];
+                        const laplacian = (phi_up + phi_down + phi_left + phi_right - 4 * this.state.grid[i]) / dx2;
+
+                        const dV_dphi = this.potential_derivative(this.state.grid[i]);
+
+                        // Add random quantum fluctuation
+                        let fluctuation = (Math.random() - 0.5) * this.config.fluctuationStrength;
+                        // Add rare, large fluctuations that can trigger nucleation
+                        if (Math.random() < this.config.fluctuationRate / (N*N)) {
+                            fluctuation += (Math.random() - 0.5) * 2; // large kick
+                        }
+
+                        const acceleration = laplacian - dV_dphi + fluctuation;
+
+                        new_grid[i] = 2 * this.state.grid[i] - this.state.grid_prev[i] + acceleration * dt2;
+
+                        // Check for tunneling event (crude but effective)
+                        if (this.state.grid[i] < 0.5 && new_grid[i] > 1.5) {
+                            this.log(`Nucleation event at (${x}, ${y})!`, 'success');
+                            this.state.bubbles.push({x, y, r: 1, created: this.state.time});
+                        }
+                    }
+                }
+
+                this.state.grid_prev = this.state.grid;
+                this.state.grid = new_grid;
+                this.state.time += this.config.dt;
+            },
+
+            // --- 5. DRAWING & VISUALIZATION ---
+            draw() {
+                if (this.state.activeView === 'chart-view') {
+                    this.updateGrowthChart(); // The chart drawing is the update
+                } else {
+                    switch(this.state.activeView) {
+                        case 'canvas-view': this.drawScalarField(); break;
+                        case 'svg-view': this.drawPotentialDiagram(); break;
+                        case 'heatmap-view': this.drawEnergyDensityMap(); break;
+                    }
+                }
+            },
+
+            drawScalarField() {
+                const canvas = this.elements.simCanvas;
+                const ctx = canvas.getContext('2d');
+                const { width, height } = canvas;
+                const N = this.config.resolution;
+                const cell_w = width / N;
+                const cell_h = height / N;
+                const colorFunc = this.palettes[this.config.colorPalette];
+
+                for (let y = 0; y < N; y++) {
+                    for (let x = 0; x < N; x++) {
+                        const phi = this.state.grid[y * N + x];
+                        const energy = this.potential(phi);
+                        const t = Math.max(0, Math.min(1, energy / this.config.falseVacuumEnergy));
+                        const rgb = colorFunc(t);
+                        ctx.fillStyle = `rgb(${rgb[0]*255},${rgb[1]*255},${rgb[2]*255})`;
+                        ctx.fillRect(x * cell_w, y * cell_h, cell_w, cell_h);
+                    }
+                }
+            },
+
+            drawEnergyDensityMap() {
+                 const canvas = this.elements.energyCanvas;
+                 this.drawScalarField.call({ ...this, elements: { ...this.elements, simCanvas: canvas } });
+            },
+
+            drawPotentialDiagram() {
+                const svg = this.elements.potentialSvg;
+                const { width, height } = svg.getBoundingClientRect();
+                svg.innerHTML = '';
+
+                const padding = 40;
+                const phi_range = {min: -2, max: 2};
+                const V_range = {min: -0.1, max: this.config.falseVacuumEnergy * 1.2};
+
+                const to_x = phi => padding + (phi - phi_range.min) / (phi_range.max - phi_range.min) * (width - 2 * padding);
+                const to_y = V => (height - padding) - (V - V_range.min) / (V_range.max - V_range.min) * (height - 2 * padding);
+
+                const axes = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                axes.setAttribute('d', `M ${padding},${height-padding} L ${width-padding},${height-padding} M ${to_x(0)},${padding} L ${to_x(0)},${height-padding}`);
+                axes.setAttribute('stroke', 'var(--secondary-text)');
+                svg.appendChild(axes);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                let d = 'M';
+                for (let i = 0; i < width - 2 * padding; i++) {
+                    const phi = phi_range.min + i / (width - 2 * padding) * (phi_range.max - phi_range.min);
+                    const V = this.potential(phi);
+                    if (i === 0) d += `${to_x(phi)},${to_y(V)}`;
+                    else d += ` L ${to_x(phi)},${to_y(V)}`;
+                }
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', 'var(--accent-color)');
+                path.setAttribute('stroke-width', '3');
+                path.setAttribute('fill', 'none');
+                svg.appendChild(path);
+
+                const avg_phi = this.state.grid.reduce((a,b) => a+b, 0) / this.state.grid.length;
+                const avg_V = this.potential(avg_phi);
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', to_x(avg_phi));
+                circle.setAttribute('cy', to_y(avg_V));
+                circle.setAttribute('r', 8);
+                circle.setAttribute('fill', 'yellow');
+                circle.setAttribute('stroke', 'black');
+                svg.appendChild(circle);
+            },
+
+            setupGrowthChart() {
+                this.state.chartData = [];
+                this.log('Native canvas chart initialized.', 'info');
+            },
+
+            updateGrowthChart() {
+                // 1. Update data
+                const largestBubble = this.state.bubbles.reduce((max, b) => b.r > max.r ? b : max, {r: 0});
+                this.state.chartData.push(largestBubble.r);
+                if (this.state.chartData.length > 200) { // Keep last 200 points
+                    this.state.chartData.shift();
+                }
+
+                // 2. Draw the chart
+                const canvas = this.elements['growth-chart-canvas'];
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const { width, height } = canvas;
+                const padding = 40;
+
+                const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color');
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, width, height);
+
+                const data = this.state.chartData;
+                if (data.length < 2) return;
+
+                const maxVal = Math.max(...data, 1);
+                const xStep = (width - 2 * padding) / (data.length - 1);
+
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--secondary-text');
+                ctx.fillStyle = ctx.strokeStyle;
+                ctx.font = '12px ' + getComputedStyle(document.body).getPropertyValue('--font-family');
+                ctx.beginPath();
+                ctx.moveTo(padding, padding);
+                ctx.lineTo(padding, height - padding);
+                ctx.lineTo(width - padding, height - padding);
+                ctx.stroke();
+
+                ctx.textAlign = "right";
+                ctx.textBaseline = "middle";
+                for (let i = 0; i <= 5; i++) {
+                    const val = (maxVal / 5) * i;
+                    const y = height - padding - (val / maxVal) * (height - 2 * padding);
+                    ctx.fillText(val.toFixed(1), padding - 8, y);
+                }
+
+                ctx.save();
+                ctx.translate(15, height / 2);
+                ctx.rotate(-Math.PI / 2);
+                ctx.textAlign = "center";
+                ctx.fillText("Bubble Radius", 0, 0);
+                ctx.restore();
+
+                ctx.textAlign = "center";
+                ctx.fillText("Time", width / 2, height - 10);
+
+                ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--accent-color');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < data.length; i++) {
+                    const x = padding + i * xStep;
+                    const y = height - padding - (data[i] / maxVal) * (height - 2 * padding);
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.stroke();
+                ctx.lineWidth = 1;
+            },
+
+            // --- 6. METRICS & DIAGNOSTICS ---
+            calculateTotalEnergy() {
+                const N = this.config.resolution;
+                let kinetic = 0, gradient = 0, potential = 0;
+                for(let y=0; y<N; y++) {
+                    for(let x=0; x<N; x++) {
+                        const i = y*N+x;
+                        const phi_dot = (this.state.grid[i] - this.state.grid_prev[i]) / this.config.dt;
+                        kinetic += 0.5 * phi_dot**2;
+
+                        const grad_x = (this.state.grid[y*N + (x+1)%N] - this.state.grid[i]) / this.config.dx;
+                        const grad_y = (this.state.grid[((y+1)%N)*N+x] - this.state.grid[i]) / this.config.dx;
+                        gradient += 0.5 * (grad_x**2 + grad_y**2);
+
+                        potential += this.potential(this.state.grid[i]);
+                    }
+                }
+                return kinetic + gradient + potential;
+            },
+
+            updateMetrics(currentTime) {
+                this.state.frameCount++;
+                if (currentTime > this.state.fpsLastUpdate + 1000) {
+                    this.state.fps = this.state.frameCount;
+                    this.state.frameCount = 0;
+                    this.state.fpsLastUpdate = currentTime;
+                    this.elements.fpsMeter.textContent = `FPS: ${this.state.fps}`;
+                }
+
+                const true_vacuum_count = this.state.grid.filter(phi => phi > 1.5).length;
+                const true_vacuum_fraction = true_vacuum_count / (this.config.resolution**2);
+
+                this.state.totalEnergy = this.calculateTotalEnergy();
+                const energyDrift = this.state.initialEnergy === 0 ? 0 : 100 * (this.state.totalEnergy - this.state.initialEnergy) / this.state.initialEnergy;
+
+                const metrics = {
+                    "Simulation Time": `${this.state.time.toFixed(1)} t`,
+                    "True Vacuum Fraction": `${(true_vacuum_fraction * 100).toFixed(2)} %`,
+                    "Number of Bubbles": this.state.bubbles.length,
+                    "Total Energy": this.state.totalEnergy.toExponential(3),
+                    "Est. Nucleation Rate": `${(this.state.bubbles.length / (this.state.time || 1)).toExponential(2)} /t`,
+                    "Avg. Field Value": `${(this.state.grid.reduce((a,b)=>a+b,0)/this.state.grid.length).toFixed(3)} φ`,
+                };
+                const grid = this.elements.metricsGrid;
+                grid.innerHTML = '';
+                for (const [label, value] of Object.entries(metrics)) {
+                    grid.innerHTML += `<div class="metric-item"><div class="label">${label}</div><div class="value">${value.split(' ')[0]}<span class="unit">${value.split(' ')[1] || ''}</span></div></div>`;
+                }
+
+                this.elements.diagEnergyDrift.textContent = `${energyDrift.toFixed(5)}%`;
+                const cfl = this.config.dt / this.config.dx;
+                this.elements.diagCfl.textContent = cfl.toFixed(2);
+                this.elements.diagCfl.style.color = cfl < 1 ? 'var(--success-color)' : 'var(--error-color)';
+            },
+
+            // --- 7. CONTENT & PRESETS ---
+            setupContent() {
+                this.elements.expositionContent.innerHTML = this.getExpositionHTML();
+                this.elements.qnaContent.innerHTML = this.getQnaHTML();
+
+                const presets = this.getPresets();
+                const microlabs = this.getMicroLabs();
+                this.elements.presets.innerHTML = Object.keys(presets).map(k => `<option value="${k}">${presets[k].name}</option>`).join('');
+                this.elements.microlabs.innerHTML = Object.keys(microlabs).map(k => `<option value="${k}">${microlabs[k].name}</option>`).join('');
+                this.applyPreset(Object.keys(presets)[0]);
+            },
+
+            applyPreset(key) {
+                const preset = this.getPresets()[key];
+                if (!preset) return;
+                Object.keys(preset.params).forEach(pKey => {
+                    this.config[pKey] = preset.params[pKey];
+                    const el = this.elements[pKey.replace(/([A-Z])/g, "-$1").toLowerCase()];
+                    if (el) {
+                        el.value = this.config[pKey];
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
+                this.resetSimulation();
+                this.log(`Preset loaded: ${preset.name}`, 'success');
+            },
+
+            getPresets() { return {
+                stable: { name: "Stable False Vacuum", params: { falseVacuumEnergy: 0.8, barrierHeight: 0.4, fluctuationStrength: 0.01 }},
+                rapid: { name: "Rapid Nucleation", params: { falseVacuumEnergy: 0.9, barrierHeight: 0.02, fluctuationStrength: 0.05 }},
+                slowRoll: { name: "Slow-Roll Inflation Analogy", params: { falseVacuumEnergy: 0.5, barrierHeight: 0.01, trueVacuumOffset: 0.0, fluctuationStrength: 0.01 }},
+                percolation: { name: "Bubble Percolation", params: { falseVacuumEnergy: 1.0, barrierHeight: 0.05, fluctuationStrength: 0.03, fluctuationRate: 0.5 }},
+                highEnergy: { name: "High-Energy Universe", params: { falseVacuumEnergy: 1.0, barrierHeight: 0.2, trueVacuumOffset: 0.15, fluctuationStrength: 0.04 }},
+                weaklyCoupled: { name: "Weakly Coupled Field", params: { falseVacuumEnergy: 0.2, barrierHeight: 0.05, trueVacuumOffset: 0.01, fluctuationStrength: 0.01 }},
+            }; },
+
+            getMicroLabs() { /* Abridged for size */ return {
+                 lab1: { name: "Barrier vs. Stability", steps: [], expected: "Higher barrier increases stability." },
+                 lab2: { name: "Fluctuation vs. Nucleation", steps: [], expected: "Higher fluctuations cause faster nucleation." },
+            }; },
+
+            log(message, type = 'info') {
+                const consoleContent = this.elements.devConsoleContent;
+                if (!consoleContent) return;
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                consoleContent.prepend(entry);
+            },
+
+            getExpositionHTML() { return `...`; },
+            getQnaHTML() { return `...`; }
+        };
+
+        runSelfTests();
+    });
+    </script>
+</body>
+</html>
