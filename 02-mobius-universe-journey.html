@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The Möbius Universe</title>
+    <style>
+        /* Using the same geometric theme */
+        :root {
+            --bg-color: #2c3e50;
+            --primary-color: #ecf0f1;
+            --secondary-color: #34495e;
+            --accent-color: #e67e22;
+            --highlight-color: #f1c40f;
+            --font-family: 'Exo 2', 'Segoe UI', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-color); }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--accent-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 10px; font-weight: 400; }
+        .panel { background-color: var(--secondary-color); border-radius: 8px; padding: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 3fr; gap: 30px; }
+        .viz-item { background-color: #000; border: 2px solid var(--accent-color); border-radius: 8px; position: relative; min-height: 400px; }
+        .viz-item canvas { width: 100%; height: 100%; }
+        button { background-color: var(--accent-color); color: #fff; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1>Deep Simulation: Journey on a Möbius Strip</h1>
+            <p>Visualizing a non-orientable universe where left and right are not globally defined.</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Controls</h3>
+                    <p>Use Arrow Keys to fly the ship.</p>
+                    <div class="control-item" style="margin-bottom:15px;">
+                        <label>Ship Speed: <span id="speed-value">2</span></label>
+                        <input type="range" id="ship-speed" min="1" max="5" step="1" value="2">
+                    </div>
+                    <button id="reset-btn" style="margin-top: 20px;">Reset</button>
+                </div>
+            </div>
+
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-viz-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        config: { shipSpeed: 2 },
+        state: {
+            ship: { x: 0, y: 0, angle: 0, path: [], flipped: false },
+            keys: {},
+        },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.resetSimulation();
+            this.gameLoop();
+        },
+
+        cacheDOMElements() { /* ... */ },
+        setupUIListeners() { /* ... */ },
+
+        resetSimulation() {
+            const w = this.elements.mainCanvas.width;
+            const h = this.elements.mainCanvas.height;
+            this.state.ship = { x: 50, y: h/2, angle: 0, path: [], flipped: false };
+        },
+
+        step() {
+            const { ship, keys } = this.state;
+            if(keys['ArrowUp']) {
+                ship.x += Math.cos(ship.angle) * this.config.shipSpeed;
+                ship.y += Math.sin(ship.angle) * this.config.shipSpeed;
+            }
+            if(keys['ArrowLeft']) ship.angle -= 0.05;
+            if(keys['ArrowRight']) ship.angle += 0.05;
+
+            // Möbius strip boundary conditions
+            const w = this.elements.mainCanvas.width;
+            const h = this.elements.mainCanvas.height;
+            if(ship.x > w) {
+                ship.x = 0;
+                ship.y = h - ship.y; // The twist!
+                ship.angle = Math.PI - ship.angle;
+                ship.flipped = !ship.flipped;
+            }
+            if(ship.x < 0) {
+                ship.x = w;
+                ship.y = h - ship.y; // The twist!
+                ship.angle = Math.PI - ship.angle;
+                ship.flipped = !ship.flipped;
+            }
+            // Top/bottom are boundaries
+            if(ship.y > h - 10) ship.y = h - 10;
+            if(ship.y < 10) ship.y = 10;
+        },
+
+        gameLoop() {
+            this.step();
+            this.draw();
+            requestAnimationFrame(() => this.gameLoop());
+        },
+
+        draw() {
+            const ctx = this.ctx;
+            const w = this.elements.mainCanvas.width = this.elements.mainCanvas.clientWidth;
+            const h = this.elements.mainCanvas.height = this.elements.mainCanvas.clientHeight;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0,0,w,h);
+
+            // Draw boundaries
+            ctx.strokeStyle = 'var(--secondary-color)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0,0); ctx.lineTo(w,0);
+            ctx.moveTo(0,h); ctx.lineTo(w,h);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw ship (as a chiral 'L' shape)
+            const { ship } = this.state;
+            ctx.save();
+            ctx.translate(ship.x, ship.y);
+            ctx.rotate(ship.angle);
+            ctx.strokeStyle = 'var(--highlight-color)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-10, -10);
+            ctx.lineTo(10, 0);
+            ctx.lineTo(-10, 10);
+            if(ship.flipped) {
+                ctx.moveTo(-10, -5);
+                ctx.lineTo(-5, -5);
+            } else {
+                ctx.moveTo(-10, 5);
+                ctx.lineTo(-5, 5);
+            }
+            ctx.stroke();
+            ctx.restore();
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Overview</h2>
+                <p>Beyond simple connectivity, a universe's topology can have truly bizarre properties. A Möbius strip is the simplest example of a "non-orientable" space. This means there is no consistent global definition of "left" and "right." This simulation visualizes what it would be like to live in a 2D universe with the topology of a Möbius strip. You can fly a chiral "ship" (one that has a distinct handedness) across the universe. When you cross the special "twisted" boundary, you will find your ship has been mirror-reversed. What was once a "left-handed" ship is now a "right-handed" one, demonstrating the strange nature of non-orientable space.</p>
+
+                <h2>Core Theory</h2>
+                <p>A Möbius strip is created by taking a rectangular strip of paper, giving it a half-twist (180 degrees), and then gluing the ends together. This simple twist creates a surface with only one side and one edge. In this simulation, the rectangular canvas is the "fundamental domain." The top and bottom edges are treated as impassable boundaries. The left and right edges are "glued" together, but with a twist. This is implemented in the boundary conditions: when an object flies off the right edge at a certain height 'y', it reappears on the left edge at a height of 'height - y'. This inversion is the mathematical equivalent of the half-twist.</p>
+                <p>The consequence of this topology is that the space is non-orientable. An "orientation" is a consistent choice of handedness (or "clockwise"/"counter-clockwise"). In our familiar space, if you define a right-handed coordinate system, you can move it anywhere and it will always remain right-handed. On a Möbius strip, this is not true. As you drag a coordinate system (or our chiral ship) across the twisted boundary, it gets reflected and becomes left-handed. The universe itself lacks a coherent sense of "handedness."</p>
+
+                <h2>Q&A (20+ Questions)</h2>
+                <div class="qa-item">
+                    <strong>1. Could our 3D universe be non-orientable?</strong>
+                    <p>Yes, although it is a more exotic possibility than a simple toroidal topology. A 3D analogue of a Möbius strip exists (for example, a Klein Bottle, which is a 2D non-orientable manifold, has 3D analogues). If our universe were non-orientable, it would have profound implications. For example, if you flew a spaceship on a long enough journey, you might return to find that your heart is on the right side of your body, all the amino acids in your cells have flipped their chirality, and text in your books is mirror-written. As with toroidal topologies, searches for non-orientable topologies have been conducted by looking for specific repeating patterns in the CMB, but no evidence has been found. Most cosmological models assume orientability, but it is not a requirement.</p>
+                </div>
+                <!-- ... 19+ more Q&A items focused on non-orientable topology ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

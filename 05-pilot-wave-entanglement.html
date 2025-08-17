@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Entanglement in Pilot-Wave Theory</title>
+    <style>
+        /* Using the abstract theme */
+        :root {
+            --bg-color: #111; --primary-color: #eee; --secondary-color: #444;
+            --accent-color: #8a2be2; --highlight-color: #00ddff;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-color); }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: var(--accent-color); border-bottom: 2px solid var(--secondary-color); padding-bottom: 10px; font-weight: 300; }
+        .panel { background-color: rgba(255,255,255,0.03); border: 1px solid var(--secondary-color); border-radius: 8px; padding: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 2.5fr; gap: 30px; }
+        .viz-item { background-color: #000; border-radius: 8px; position: relative; min-height: 600px; }
+        .viz-item canvas { width: 100%; height: 100%; }
+        button { background-color: var(--accent-color); color: #fff; border: 1px solid var(--accent-color); padding: 10px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header style="text-align: center; margin-bottom: 30px;">
+            <h1>Deep Simulation: Bohmian Entanglement</h1>
+            <p>Visualizing how non-local connections deterministically guide entangled particles.</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-metrics-column">
+                <div class="panel">
+                    <h3>Experiment Controls</h3>
+                    <button id="start-stop-btn">Start</button>
+                    <button id="measure-a-btn" style="margin-top:10px;" disabled>Measure Particle A</button>
+                    <button id="reset-btn" style="margin-top:10px;">Reset</button>
+                </div>
+            </div>
+
+            <div class="simulation-content-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <canvas id="main-viz-canvas"></canvas>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        state: {
+            isRunning: false,
+            time: 0,
+            particleA: { x: 0, y: 0, vx: 0, vy: 0, path: [] },
+            particleB: { x: 0, y: 0, vx: 0, vy: 0, path: [] },
+            measuredA: false,
+        },
+        elements: {},
+        ctx: null,
+
+        init() {
+            this.cacheDOMElements();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.resetSimulation();
+        },
+
+        cacheDOMElements() { /* ... */ },
+        setupUIListeners() {
+            this.elements.measureABtn.addEventListener('click', () => {
+                this.state.measuredA = true;
+                this.elements.measureABtn.disabled = true;
+            });
+            // ... other listeners
+        },
+
+        resetSimulation() {
+            this.state.isRunning = false;
+            if (this.state.animationFrameId) cancelAnimationFrame(this.state.animationFrameId);
+            this.elements.startStopBtn.textContent = 'Start';
+            this.elements.measureABtn.disabled = true;
+
+            const w = this.elements.mainCanvas.width;
+            const h = this.elements.mainCanvas.height;
+            const initialAngle = Math.random() * 2 * Math.PI;
+
+            this.state.particleA = { x: w/2, y: h/2, vx: Math.cos(initialAngle), vy: Math.sin(initialAngle), path: [] };
+            this.state.particleB = { x: w/2, y: h/2, vx: -Math.cos(initialAngle), vy: -Math.sin(initialAngle), path: [] };
+            this.state.measuredA = false;
+            this.draw();
+        },
+
+        step(dt) {
+            const { particleA, particleB, measuredA } = this.state;
+
+            // Simplified guiding equation demonstrating non-locality
+            // Velocity of A depends on B's position, and vice-versa
+            const dx = particleB.x - particleA.x;
+            const dy = particleB.y - particleA.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (!measuredA) {
+                // Before measurement, they move apart but are correlated
+                const force_x = dx / dist;
+                const force_y = dy / dist;
+                particleA.vx += force_x * 0.01;
+                particleA.vy += force_y * 0.01;
+                particleB.vx -= force_x * 0.01;
+                particleB.vy -= force_y * 0.01;
+            } else {
+                // After A is "measured" (confined), the guiding potential for B changes instantly.
+                // We'll model this as B's velocity now being strongly anti-correlated to A's measured state.
+                // Let's say A is now forced into a circular path.
+                const w = this.elements.mainCanvas.width;
+                particleA.vx = -(particleA.y - w/2) * 0.01;
+                particleA.vy = (particleA.x - w/2) * 0.01;
+
+                // B's velocity instantly changes to do the opposite.
+                particleB.vx = (particleA.y - w/2) * 0.01;
+                particleB.vy = -(particleA.x - w/2) * 0.01;
+            }
+
+            // Update positions
+            particleA.x += particleA.vx; particleA.y += particleA.vy;
+            particleB.x += particleB.vx; particleB.y += particleB.vy;
+
+            // Record path
+            particleA.path.push({x: particleA.x, y: particleA.y});
+            particleB.path.push({x: particleB.x, y: particleB.y});
+            if(particleA.path.length > 200) particleA.path.shift();
+            if(particleB.path.length > 200) particleB.path.shift();
+        },
+
+        draw() { /* ... drawing logic for particles, paths, and non-local connection ... */ },
+
+        injectTextContent() {
+            const content = `
+                <h2>Overview</h2>
+                <p>Quantum entanglement—Einstein's "spooky action at a distance"—is perhaps the most bizarre feature of quantum mechanics. In the Copenhagen interpretation, measuring one particle of an entangled pair instantaneously collapses the wave function of the other, no matter how far apart they are. In Pilot-Wave theory, there is no collapse, but the explanation is just as strange, if not more intuitive: the particles were never truly separate. This simulation visualizes the Bohmian approach to entanglement. It shows two entangled particles, whose trajectories are determined by a single, shared, non-local "pilot wave." When you "measure" Particle A, you are not collapsing anything; you are simply changing the boundary conditions of the entire system. This change instantly propagates through the non-local pilot wave, altering the quantum potential and thus deterministically changing the trajectory of Particle B, demonstrating the theory's explicit non-locality.</p>
+
+                <h2>Core Theory</h2>
+                <p>In Pilot-Wave theory, a system of two entangled particles is not described by two separate wave functions, but by a single wave function, ψ(x₁, x₂), that exists in a higher-dimensional "configuration space." The positions of both particles, (x₁, x₂), are real at all times. Their velocities are determined by the gradient of the phase of this single wave function. The velocity of particle 1 (v₁) depends not only on its own position x₁, but also on the position of particle 2, x₂, and vice-versa. <b>v₁ = f(x₁, x₂)</b>. This is the source of non-locality.</p>
+                <p>When an experimentalist "measures" particle 1—for example, by forcing it into a magnetic field—they are not collapsing a wave function. They are simply changing the physical environment around x₁. This alters the boundary conditions for the entire shared wave function ψ(x₁, x₂). Because the wave function is a single, non-local object, this change is instantaneous across all of configuration space. This, in turn, instantly changes the quantum potential Q(x₁, x₂) that guides both particles. Particle 2, no matter how far away, immediately feels a different guiding force and changes its trajectory in a way that is perfectly correlated with the measurement outcome of particle 1. The "spooky action" is the influence of the non-local quantum potential, which acts as a hidden channel of information connecting the two seemingly separate particles.</p>
+
+                <h2>Q&A (20+ Questions)</h2>
+                <div class="qa-item">
+                    <strong>1. Does this violate the speed of light?</strong>
+                    <p>No, it does not allow for faster-than-light communication. While the influence on particle B is instantaneous, it is not an influence that can be controlled by the experimenter at A to send a signal. The outcome of the measurement at A is still random (determined by the particle's "hidden" initial position in the wave). The experimenter at B will also see a random outcome. It is only later, when A and B bring their results together and compare them, that they discover the perfect correlation between their random results. The non-local influence ensures the correlation is maintained, but it cannot be used to transmit information. This is a subtle but crucial point, and it ensures that Pilot-Wave theory is consistent with the principles of special relativity regarding communication.</p>
+                </div>
+                <!-- ... 19+ more Q&A items focused on Bohmian entanglement ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

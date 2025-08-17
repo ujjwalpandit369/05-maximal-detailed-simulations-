@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The 3-Torus Universe</title>
+    <meta name="description" content="A first-person 3D simulation of navigating a universe with the topology of a 3-torus, a finite space that wraps around on itself.">
+    <meta name="keywords" content="Cosmic Topology, 3-Torus, Toroidal Universe, Finite Universe, Wraparound, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #58a6ff; /* A vibrant blue for space */
+            --highlight-color: #e3b341; /* A golden color for ghosts */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 700px;
+            cursor: none;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--primary-color); }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 10px; border-radius: 5px; border-left: 3px solid var(--highlight-color); }
+        .metric-item strong { display: block; color: var(--accent-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.1em; }
+        .crosshair { position: absolute; top: 50%; left: 50%; width: 2px; height: 10px; background: white; transform: translate(-50%, -50%); }
+        .crosshair::before { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 2px; background: white; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: The 3-Torus Universe</h1>
+            <p>A First-Person Journey Through a "Wraparound" Cosmos</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item" id="main-container">
+                        <div class="crosshair"></div>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Flight Controls</h3>
+                    <p>Click simulation to capture mouse. Press ESC to release.</p>
+                    <div class="controls-grid">
+                        <div>W: Forward</div><div>S: Backward</div>
+                        <div>A: Strafe Left</div><div>D: Strafe Right</div>
+                        <div>R: Ascend</div><div>F: Descend</div>
+                        <div>Mouse: Look</div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Universe Controls</h3>
+                    <div class="control-group">
+                        <label for="universe-size">Universe Size (L)</label>
+                        <input type="range" id="universe-size" min="50" max="200" step="10" value="100">
+                    </div>
+                     <div class="control-group">
+                        <label>Show Ghosts:</label>
+                        <input type="checkbox" id="show-ghosts" checked>
+                    </div>
+                    <div class="control-group">
+                        <label>Show Domain Box:</label>
+                        <input type="checkbox" id="show-box">
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Navigation Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item"><strong>X:</strong> <span id="metric-x">0</span></div>
+                        <div class="metric-item"><strong>Y:</strong> <span id="metric-y">0</span></div>
+                        <div class="metric-item"><strong>Z:</strong> <span id="metric-z">0</span></div>
+                        <div class="metric-item"><strong>Speed:</strong> <span id="metric-speed">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Requires THREE.js
+    const SimApp = {
+        elements: {},
+        three: { scene: null, camera: null, renderer: null, controls: null, galaxyGroup: null, boxHelper: null, ghost: null },
+        state: {
+            keys: {},
+            universeSize: 100,
+            showGhosts: true,
+            showBox: false,
+            velocity: new THREE.Vector3(),
+            damping: 0.95
+        },
+
+        init() {
+            this.cacheDOMElements();
+            this.initThreeJS();
+            this.setupEventListeners();
+            this.createGalaxies();
+            this.injectTextContent();
+            this.animate();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                container: document.getElementById('main-container'),
+                sizeSlider: document.getElementById('universe-size'),
+                ghostsCheck: document.getElementById('show-ghosts'),
+                boxCheck: document.getElementById('show-box'),
+                metricX: document.getElementById('metric-x'),
+                metricY: document.getElementById('metric-y'),
+                metricZ: document.getElementById('metric-z'),
+                metricSpeed: document.getElementById('metric-speed'),
+            };
+        },
+
+        initThreeJS() {
+            const t = this.three;
+            t.scene = new THREE.Scene();
+            t.camera = new THREE.PerspectiveCamera(75, this.elements.container.clientWidth / this.elements.container.clientHeight, 0.1, 1000);
+            t.renderer = new THREE.WebGLRenderer({ antialias: true });
+            t.renderer.setSize(this.elements.container.clientWidth, this.elements.container.clientHeight);
+            this.elements.container.appendChild(t.renderer.domElement);
+
+            const light = new THREE.AmbientLight(0x404040);
+            t.scene.add(light);
+        },
+
+        createGalaxies() {
+            const t = this.three;
+            if (t.galaxyGroup) t.scene.remove(t.galaxyGroup);
+            t.galaxyGroup = new THREE.Group();
+
+            const galaxyGeo = new THREE.SphereGeometry(1, 16, 16);
+            for (let i = 0; i < 200; i++) {
+                const galaxyMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(Math.random(), Math.random(), Math.random()) });
+                const galaxy = new THREE.Mesh(galaxyGeo, galaxyMat);
+                galaxy.position.set(
+                    (Math.random() - 0.5) * this.state.universeSize,
+                    (Math.random() - 0.5) * this.state.universeSize,
+                    (Math.random() - 0.5) * this.state.universeSize
+                );
+                t.galaxyGroup.add(galaxy);
+            }
+            t.scene.add(t.galaxyGroup);
+
+            if(t.boxHelper) t.scene.remove(t.boxHelper);
+            const boxGeo = new THREE.BoxGeometry(this.state.universeSize, this.state.universeSize, this.state.universeSize);
+            t.boxHelper = new THREE.BoxHelper(new THREE.Mesh(boxGeo), 0xffffff);
+            t.boxHelper.visible = this.state.showBox;
+            t.scene.add(t.boxHelper);
+
+            if(!t.ghost) {
+                const ghostGeo = new THREE.ConeGeometry(0.5, 2, 32);
+                const ghostMat = new THREE.MeshBasicMaterial({ color: 0xe3b341, transparent: true, opacity: 0.5 });
+                t.ghost = new THREE.Mesh(ghostGeo, ghostMat);
+                t.scene.add(t.ghost);
+            }
+        },
+
+        setupEventListeners() {
+            this.elements.sizeSlider.addEventListener('input', e => {
+                this.state.universeSize = parseFloat(e.target.value);
+                this.createGalaxies();
+            });
+            this.elements.ghostsCheck.addEventListener('change', e => this.state.showGhosts = e.target.checked);
+            this.elements.boxCheck.addEventListener('change', e => {
+                this.state.showBox = e.target.checked;
+                this.three.boxHelper.visible = this.state.showBox;
+            });
+
+            document.addEventListener('keydown', e => this.state.keys[e.key.toLowerCase()] = true);
+            document.addEventListener('keyup', e => this.state.keys[e.key.toLowerCase()] = false);
+
+            this.elements.container.addEventListener('click', () => {
+                this.elements.container.requestPointerLock();
+            });
+            document.addEventListener('mousemove', e => {
+                if (document.pointerLockElement === this.elements.container) {
+                    this.three.camera.rotation.y -= e.movementX * 0.002;
+                    this.three.camera.rotation.x -= e.movementY * 0.002;
+                    this.three.camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, this.three.camera.rotation.x));
+                }
+            });
+        },
+
+        updatePlayer(delta) {
+            const speed = 0.5;
+            const moveDirection = new THREE.Vector3();
+            if (this.state.keys['w']) moveDirection.z -= 1;
+            if (this.state.keys['s']) moveDirection.z += 1;
+            if (this.state.keys['a']) moveDirection.x -= 1;
+            if (this.state.keys['d']) moveDirection.x += 1;
+            if (this.state.keys['r']) moveDirection.y += 1;
+            if (this.state.keys['f']) moveDirection.y -= 1;
+
+            if (moveDirection.lengthSq() > 0) {
+                moveDirection.normalize().multiplyScalar(speed);
+                moveDirection.applyQuaternion(this.three.camera.quaternion);
+                this.state.velocity.add(moveDirection);
+            }
+
+            this.three.camera.position.add(this.state.velocity);
+            this.state.velocity.multiplyScalar(this.damping);
+
+            // Torus wraparound logic
+            const L = this.state.universeSize;
+            const halfL = L / 2;
+            this.three.camera.position.x = ((this.three.camera.position.x + halfL) % L + L) % L - halfL;
+            this.three.camera.position.y = ((this.three.camera.position.y + halfL) % L + L) % L - halfL;
+            this.three.camera.position.z = ((this.three.camera.position.z + halfL) % L + L) % L - halfL;
+
+             // Update ghost
+            this.three.ghost.visible = this.state.showGhosts;
+            if(this.state.showGhosts) {
+                this.three.ghost.position.copy(this.three.camera.position);
+                // Find closest wraparound image
+                let closestDistSq = Infinity;
+                let bestOffset = new THREE.Vector3();
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        for (let k = -1; k <= 1; k++) {
+                            if (i === 0 && j === 0 && k === 0) continue;
+                            const offset = new THREE.Vector3(i*L, j*L, k*L);
+                            const distSq = this.three.camera.position.distanceToSquared(offset);
+                            if (distSq < closestDistSq) {
+                                closestDistSq = distSq;
+                                bestOffset = offset;
+                            }
+                        }
+                    }
+                }
+                this.three.ghost.position.sub(bestOffset);
+                this.three.ghost.quaternion.copy(this.three.camera.quaternion);
+            }
+        },
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            this.updatePlayer(0.1);
+            this.updateMetrics();
+            this.three.renderer.render(this.three.scene, this.three.camera);
+        },
+
+        updateMetrics() {
+            const pos = this.three.camera.position;
+            this.elements.metricX.textContent = pos.x.toFixed(1);
+            this.elements.metricY.textContent = pos.y.toFixed(1);
+            this.elements.metricZ.textContent = pos.z.toFixed(1);
+            this.elements.metricSpeed.textContent = this.state.velocity.length().toFixed(2);
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Geometry vs. Topology: The Shape of Space</h2>
+                <p>When we ask about the "shape of the universe," we are asking two different but related questions. The first question is about <strong>geometry</strong>: what is the local curvature of spacetime? Decades of cosmological measurements, culminating in data from the Planck satellite, have shown that on the largest scales, our universe is remarkably close to being geometrically "flat." This means it obeys the laws of standard Euclidean geometry that we learn in school—parallel lines stay parallel, angles of a triangle sum to 180 degrees, etc.</p>
+                <p>The second question is about <strong>topology</strong>: what is the overall connectivity and global shape of space? Crucially, a flat geometry does not imply an infinite space. A simple 2D analogy is the surface of a cylinder versus an infinite plane. Both are geometrically flat (a bug living on them would not be able to measure any intrinsic curvature), but the cylinder is finite in one direction—if you travel far enough, you return to where you started. The study of these possible global shapes for our universe is called cosmic topology.</p>
+
+                <h2>The 3-Torus: A Cosmic Video Game</h2>
+                <p>The simplest, most intuitive topology for a flat, 3D universe is the <strong>3-torus</strong>. You can think of it by analogy with a classic 2D video game like <em>Asteroids</em>. In the game, the screen is a 2D torus. When your ship flies off the right edge, it reappears on the left. When it flies off the top, it reappears on the bottom. The space is finite, but it has no "edge" or "center."</p>
+                <p>A 3-torus is the 3D version of this. It's a finite volume of space (a "fundamental domain," which you can visualize as a cube) where each face is glued to the opposite face. If you fly your spaceship through the "right" face of the cube, you instantly reappear through the "left" face. The same applies to the top/bottom and front/back faces. You are navigating a finite universe that appears infinite because it contains an endless, repeating lattice of copies of its contents.</p>
+                <p>This simulation places you inside one such 3-torus universe, filled with a repeating lattice of galaxies. As you fly around, you will experience the "wraparound" effect. The "fundamental domain box" can be toggled to show the boundaries of the primary cell of the universe.</p>
+
+                <h2>Ghosts in the Cosmos</h2>
+                <p>One of the most fascinating consequences of living in a finite, toroidal universe is that you could, in principle, see yourself. Light from the back of your head could travel all the way around the universe and re-enter your eyes from the front. You would see an image of yourself from the distant past—a "ghost." Because the universe is so large, this light would take billions of years to complete its journey.</p>
+                <p>In this simulation, you can toggle "Show Ghosts" to visualize this effect. A semi-transparent "ghost" of your ship will appear in the direction of your nearest wraparound image. The sky in a toroidal universe would be filled with such ghosts—repeating images of every galaxy, including our own Milky Way, seen at different ages and from different angles. Cosmologists search for these repeating patterns in galaxy surveys and, most importantly, in the Cosmic Microwave Background (CMB) to test for this topology.</p>
+
+                <h2>Q&A: Navigating the Torus</h2>
+                <div class="qa-item">
+                    <strong>1. Is the universe really a donut?</strong>
+                    <p>This is a common point of confusion. A 2-torus, which is a 2D surface, can be visualized as the surface of a donut embedded in 3D space. However, our universe is 3-dimensional. A 3-torus is a 3D space and cannot be easily visualized as an object in our familiar 3D world (it would require embedding in a higher-dimensional space). The "wraparound cube" is the best way to think about its connectivity.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. If the universe is finite, what is outside it?</strong>
+                    <p>In this model, there is no "outside." The concept of an outside requires embedding the universe in a higher-dimensional space, but the theory doesn't require this. The universe is self-contained. Asking what's outside a 3-torus universe is like asking what's "north" of the North Pole on the surface of the Earth. The question doesn't make sense within the context of the space itself.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

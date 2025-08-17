@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: Calabi-Yau Compactification</title>
+    <meta name="description" content="An interactive visualization of a Calabi-Yau manifold, exploring how the geometry of extra dimensions determines the laws of physics in string theory.">
+    <meta name="keywords" content="Calabi-Yau, Compactification, Extra Dimensions, String Theory, Moduli, Landscape, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #f78166; /* A warm orange for geometry */
+            --highlight-color: #89ddff; /* A cool blue for topology */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            line-height: 1.8;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel {
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .viz-item {
+            background-color: #000;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            position: relative;
+            height: 700px;
+            overflow: hidden;
+        }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .control-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--highlight-color);
+            color: #0d1117;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 15px; border-radius: 5px; border-left: 3px solid var(--accent-color); }
+        .metric-item strong { display: block; color: var(--highlight-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: Calabi-Yau Compactification</h1>
+            <p>Visualizing the Shape of Hidden Dimensions</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item">
+                        <div id="cy-container"></div>
+                    </div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Geometric Probes</h3>
+                    <div class="control-group">
+                        <label>Highlight Geometric Features:</label>
+                        <button id="probe-cycles-btn">Probe 2-Cycles (Particle Generations)</button>
+                        <button id="probe-moduli-btn">Probe Moduli (Coupling Constants)</button>
+                    </div>
+                     <button id="reset-view-btn">Reset View</button>
+                </div>
+                <div class="panel">
+                    <h3>Topological Properties</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <strong>Manifold</strong>
+                            <span id="metric-manifold">Quintic 3-fold</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>Dimensions</strong>
+                            <span id="metric-dims">6 (Real)</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>h¹¹ (Kähler Moduli)</strong>
+                            <span id="metric-h11">1</span>
+                        </div>
+                        <div class="metric-item">
+                            <strong>h²¹ (Complex Moduli)</strong>
+                            <span id="metric-h21">101</span>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.8em; margin-top: 15px;">The Hodge numbers (h¹¹, h²¹) determine the number of massless fields and thus the physics in 4D. For example, |h¹¹ - h²¹| / 2 can correspond to the number of particle generations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Requires THREE.js and OrbitControls.js
+    const SimApp = {
+        elements: {},
+        three: { scene: null, camera: null, renderer: null, controls: null, cyMesh: null, highlight: null },
+
+        init() {
+            this.cacheDOMElements();
+            this.initThreeJS();
+            this.setupUIListeners();
+            this.injectTextContent();
+            this.animate();
+        },
+
+        cacheDOMElements() {
+            this.elements = {
+                cyContainer: document.getElementById('cy-container'),
+                probeCyclesBtn: document.getElementById('probe-cycles-btn'),
+                probeModuliBtn: document.getElementById('probe-moduli-btn'),
+                resetBtn: document.getElementById('reset-view-btn'),
+            };
+        },
+
+        initThreeJS() {
+            const t = this.three;
+            t.scene = new THREE.Scene();
+            t.scene.background = new THREE.Color(0x000000);
+            t.camera = new THREE.PerspectiveCamera(60, this.elements.cyContainer.clientWidth / this.elements.cyContainer.clientHeight, 0.1, 1000);
+            t.renderer = new THREE.WebGLRenderer({ antialias: true });
+            t.renderer.setSize(this.elements.cyContainer.clientWidth, this.elements.cyContainer.clientHeight);
+            this.elements.cyContainer.appendChild(t.renderer.domElement);
+
+            t.controls = new THREE.OrbitControls(t.camera, t.renderer.domElement);
+            t.camera.position.set(0, 0, 5);
+            t.controls.update();
+
+            const geometry = new THREE.TorusKnotGeometry(1, 0.3, 200, 32, 2, 3); // Approximation
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xf78166,
+                metalness: 0.8,
+                roughness: 0.3,
+                wireframe: false,
+            });
+            t.cyMesh = new THREE.Mesh(geometry, material);
+            t.scene.add(t.cyMesh);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            t.scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(5, 5, 5);
+            t.scene.add(pointLight);
+
+            // Highlight object
+            const highlightGeo = new THREE.TorusGeometry(1.5, 0.05, 16, 100);
+            const highlightMat = new THREE.MeshBasicMaterial({ color: 0x89ddff, side: THREE.DoubleSide });
+            t.highlight = new THREE.Mesh(highlightGeo, highlightMat);
+            t.highlight.visible = false;
+            t.scene.add(t.highlight);
+        },
+
+        setupUIListeners() {
+            this.elements.probeCyclesBtn.addEventListener('click', () => this.probeFeature('cycles'));
+            this.elements.probeModuliBtn.addEventListener('click', () => this.probeFeature('moduli'));
+            this.elements.resetBtn.addEventListener('click', () => this.reset());
+        },
+
+        probeFeature(feature) {
+            this.three.highlight.visible = false;
+            if (feature === 'cycles') {
+                this.three.highlight.visible = true;
+            } else if (feature === 'moduli') {
+                // Animate the mesh to show deformation
+                let start = Date.now();
+                let animateModuli = () => {
+                    let elapsed = Date.now() - start;
+                    if (elapsed > 1000) return;
+                    this.three.cyMesh.scale.x = 1 + 0.1 * Math.sin(elapsed * 0.01);
+                    requestAnimationFrame(animateModuli);
+                };
+                animateModuli();
+            }
+        },
+
+        reset() {
+            this.three.highlight.visible = false;
+            this.three.cyMesh.scale.set(1,1,1);
+            this.three.controls.reset();
+        },
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            this.three.controls.update();
+            this.three.cyMesh.rotation.y += 0.001;
+            this.three.renderer.render(this.three.scene, this.three.camera);
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>The Shape of Inner Space: Compactification</h2>
+                <p>A staggering prediction of superstring theory is that our universe is not four-dimensional (3 space + 1 time), but ten-dimensional. So where are the six extra spatial dimensions? The theory provides a compelling answer: these extra dimensions are <strong>compactified</strong>—curled up into a tiny, incredibly complex geometric shape at every single point in our familiar 3D space. The scale of this shape is thought to be around the Planck length (10⁻³³ cm), far too small to be probed by any current or conceivable experiment. While we cannot see these dimensions directly, their precise geometry is not just a footnote; it is the very engine that determines the laws of physics we observe.</p>
+                <p>The leading candidates for the shape of these hidden dimensions are a class of shapes known as <strong>Calabi-Yau manifolds</strong>. These are complex, six-dimensional geometric objects whose properties are essential for the mathematical consistency of string theory. For the theory to produce a stable universe with the right properties (like a near-zero cosmological constant), the extra dimensions must be "Ricci-flat," a specific mathematical condition on their curvature. Calabi-Yau manifolds are the primary examples of such shapes.</p>
+
+                <h2>The Physics-Geometry Dictionary</h2>
+                <p>The profound and beautiful idea at the heart of string phenomenology is that physics is geometry. The fundamental constants, the types of particles, their masses, and their interactions are all dictated by the geometric and topological properties of the hidden Calabi-Yau manifold. This is the "physics-geometry dictionary":</p>
+                <ul>
+                    <li><strong>Number of Particle Generations:</strong> In the Standard Model, matter particles (quarks and leptons) come in three "generations" of increasing mass. In string theory, the number of generations is determined by the topology of the Calabi-Yau—specifically, by the number of "holes" of a certain dimension it has. The fact that many Calabi-Yau manifolds have a topology that naturally gives rise to three generations is one of the most tantalizing hints in favor of the theory. When you "Probe 2-Cycles," you are highlighting one of these "holes" responsible for a particle family.</li>
+                    <li><strong>Forces and Coupling Constants:</strong> The types of forces (like electromagnetism) that exist in our 4D world are related to the continuous symmetries of the manifold. Their strength (the coupling constants) is determined by the size and shape of these dimensions—the "moduli" of the manifold. When you "Probe Moduli," you are seeing how the shape can deform, which would correspond to a change in a fundamental constant like the fine-structure constant.</li>
+                    <li><strong>Particle Masses:</strong> The masses of particles are determined by the way the fundamental strings can wrap around the different "cycles" (holes) in the manifold. A string wrapped around a cycle has a certain amount of energy, which, from our 4D perspective, appears as mass according to E=mc².</li>
+                </ul>
+                <p>This simulation shows an interactive 3D cross-section of one such Calabi-Yau manifold. While a true 6D shape cannot be fully visualized, this representation allows you to explore its complexity and see how different features relate to physical concepts.</p>
+
+                <h2>The Landscape and the Multiverse</h2>
+                <p>While the idea of deriving physics from pure geometry is elegant, it comes with a monumental challenge: the <strong>String Theory Landscape</strong>. There is no known principle within string theory that selects one specific Calabi-Yau manifold as the correct one for our universe. In fact, mathematicians estimate there could be a colossal number—perhaps 10⁵⁰⁰ or more—of different, valid Calabi-Yau manifolds, each leading to a universe with different physical laws. This creates a "landscape" of possible universes, a multiverse of possibilities.</p>
+                <p>This is both a curse and a blessing. It's a curse because it seems to destroy the theory's predictive power; instead of predicting the one universe we see, it predicts a near-infinite number of possibilities. It's a blessing because it provides a natural framework for the <strong>anthropic principle</strong>. If there are countless universes with different laws, it's no longer surprising that we find ourselves in one of the rare ones whose laws are fine-tuned to allow for the existence of stars, planets, and observers to ask these questions. The landscape problem is one of the most active and controversial areas of research in modern theoretical physics.</p>
+
+                <h2>Q&A: Exploring the Manifold</h2>
+                <div class="qa-item">
+                    <strong>1. Who are Calabi and Yau?</strong>
+                    <p>Eugenio Calabi is an Italian-born American mathematician who, in the 1950s, conjectured the existence of a certain class of manifolds with specific properties (Kähler manifolds with a vanishing Ricci curvature). Shing-Tung Yau, a Chinese-born American mathematician, provided the proof of the Calabi conjecture in 1977, for which he was awarded the Fields Medal. Their combined work provided the mathematical foundation for the shapes that would later become essential to string theory.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. What does "compactified" actually mean?</strong>
+                    <p>It means that a dimension does not go on forever but is finite and curled up on itself. The simplest example is a 1D line versus a 1D circle. A line is non-compact; a circle is compact. If a dimension is compactified on a small enough scale, we would not be able to perceive it or move in it, effectively rendering our experienced world lower-dimensional.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>

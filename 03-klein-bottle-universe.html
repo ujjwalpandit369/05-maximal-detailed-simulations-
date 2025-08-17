@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Simulation: The Klein Bottle Universe</title>
+    <meta name="description" content="A 2D simulation of navigating a non-orientable Klein Bottle topology, where journeys can lead to mirror-reversal.">
+    <meta name="keywords" content="Cosmic Topology, Klein Bottle, Non-Orientable, Manifold, Chirality, Physics Simulation">
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --primary-color: #c9d1d9;
+            --secondary-color: #161b22;
+            --accent-color: #c3e88d; /* A vibrant green */
+            --highlight-color: #c792ea; /* A soft purple for the flip */
+            --border-color: #30363d;
+            --font-family: 'Exo 2', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+        }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--primary-color); line-height: 1.8; font-size: 18px; }
+        .container { max-width: 1800px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; margin-bottom: 40px; }
+        h1 { font-size: 3em; color: var(--accent-color); font-weight: 700; }
+        h2 { font-size: 2em; color: var(--accent-color); border-bottom: 2px solid var(--border-color); padding-bottom: 10px; margin-top: 40px; }
+        h3 { font-size: 1.5em; color: var(--highlight-color); margin-top: 30px; }
+        .panel { background-color: var(--secondary-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start; }
+        .viz-item { background-color: #000; border: 2px solid var(--accent-color); border-radius: 8px; position: relative; height: 700px; }
+        .viz-item canvas { width: 100%; height: 100%; display: block; }
+        .controls-column .panel { position: sticky; top: 20px; }
+        .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .control-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--primary-color); }
+        button {
+            width: 100%; padding: 10px; background-color: var(--highlight-color); color: #0d1117;
+            border: none; border-radius: 4px; font-size: 1em; cursor: pointer; margin-bottom: 10px; font-weight: bold;
+        }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .metric-item { background-color: #0d1117; padding: 10px; border-radius: 5px; border-left: 3px solid var(--accent-color); }
+        .metric-item strong { display: block; color: var(--highlight-color); font-size: 0.9em; }
+        .metric-item span { font-family: var(--font-mono); font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Deep Simulation: The Klein Bottle Universe</h1>
+            <p>A Journey Through a Non-Orientable Cosmos</p>
+        </header>
+
+        <div class="main-layout">
+            <div class="simulation-column">
+                <div class="panel">
+                    <div class="viz-item" id="main-container"></div>
+                </div>
+                <div class="panel" id="text-content-container"></div>
+            </div>
+
+            <div class="controls-column">
+                <div class="panel">
+                    <h3>Flight Controls</h3>
+                    <div class="controls-grid">
+                        <div>↑: Thrust</div><div>↓: Brake</div>
+                        <div>←: Turn Left</div><div>→: Turn Right</div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <h3>Universe Controls</h3>
+                    <div class="control-group">
+                        <label>Trace Path:</label>
+                        <input type="checkbox" id="trace-path" checked>
+                    </div>
+                    <button id="reset-sim-btn">Reset Simulation</button>
+                </div>
+                <div class="panel">
+                    <h3>Navigation Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-item"><strong>X:</strong> <span id="metric-x">0</span></div>
+                        <div class="metric-item"><strong>Y:</strong> <span id="metric-y">0</span></div>
+                        <div class="metric-item"><strong>Rotation:</strong> <span id="metric-rot">0°</span></div>
+                        <div class="metric-item"><strong>Chirality:</strong> <span id="metric-chirality">Right</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    const SimApp = {
+        elements: {},
+        ctx: null,
+        state: {
+            keys: {},
+            ship: { x: 350, y: 350, angle: 0, velocity: { x: 0, y: 0 }, flipped: false },
+            path: [],
+            trace: true,
+        },
+
+        init() {
+            const canvas = document.createElement('canvas');
+            this.elements.container = document.getElementById('main-container');
+            this.elements.container.appendChild(canvas);
+            this.ctx = canvas.getContext('2d');
+            this.cacheDOMElements();
+            this.setupEventListeners();
+            this.injectTextContent();
+            this.animate();
+        },
+
+        cacheDOMElements() {
+            this.elements.traceCheck = document.getElementById('trace-path');
+            this.elements.resetBtn = document.getElementById('reset-sim-btn');
+            this.elements.metricX = document.getElementById('metric-x');
+            this.elements.metricY = document.getElementById('metric-y');
+            this.elements.metricRot = document.getElementById('metric-rot');
+            this.elements.metricChirality = document.getElementById('metric-chirality');
+        },
+
+        setupEventListeners() {
+            this.elements.traceCheck.addEventListener('change', e => this.state.trace = e.target.checked);
+            this.elements.resetBtn.addEventListener('click', () => this.reset());
+            document.addEventListener('keydown', e => this.state.keys[e.key] = true);
+            document.addEventListener('keyup', e => this.state.keys[e.key] = false);
+        },
+
+        reset() {
+            const w = this.ctx.canvas.width;
+            const h = this.ctx.canvas.height;
+            this.state.ship = { x: w/2, y: h/2, angle: 0, velocity: { x: 0, y: 0 }, flipped: false };
+            this.state.path = [];
+        },
+
+        update() {
+            const ship = this.state.ship;
+            const keys = this.state.keys;
+
+            if (keys['ArrowUp']) {
+                ship.velocity.x += 0.1 * Math.cos(ship.angle);
+                ship.velocity.y += 0.1 * Math.sin(ship.angle);
+            }
+            if (keys['ArrowDown']) {
+                ship.velocity.x *= 0.9;
+                ship.velocity.y *= 0.9;
+            }
+            if (keys['ArrowLeft']) ship.angle -= 0.05;
+            if (keys['ArrowRight']) ship.angle += 0.05;
+
+            ship.velocity.x *= 0.99; // Damping
+            ship.velocity.y *= 0.99;
+            ship.x += ship.velocity.x;
+            ship.y += ship.velocity.y;
+
+            // Klein Bottle Topology
+            const w = this.ctx.canvas.width;
+            const h = this.ctx.canvas.height;
+            if (ship.x > w) { // Right edge -> Left edge with flip
+                ship.x = 0;
+                ship.y = h - ship.y;
+                ship.angle = Math.PI - ship.angle;
+                ship.flipped = !ship.flipped;
+            }
+            if (ship.x < 0) { // Left edge -> Right edge with flip
+                ship.x = w;
+                ship.y = h - ship.y;
+                ship.angle = Math.PI - ship.angle;
+                ship.flipped = !ship.flipped;
+            }
+            if (ship.y > h) ship.y = 0; // Top -> Bottom (normal)
+            if (ship.y < 0) ship.y = h; // Bottom -> Top (normal)
+
+            if(this.state.trace) this.state.path.push({x: ship.x, y: ship.y});
+            if(this.state.path.length > 500) this.state.path.shift();
+        },
+
+        draw() {
+            const w = this.ctx.canvas.width = this.elements.container.clientWidth;
+            const h = this.ctx.canvas.height = this.elements.container.clientHeight;
+            this.ctx.fillStyle = '#000';
+            this.ctx.fillRect(0, 0, w, h);
+
+            // Draw path
+            if (this.state.trace) {
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                this.ctx.beginPath();
+                this.state.path.forEach((p, i) => i === 0 ? this.ctx.moveTo(p.x, p.y) : this.ctx.lineTo(p.x, p.y));
+                this.ctx.stroke();
+            }
+
+            // Draw ship
+            const ship = this.state.ship;
+            this.ctx.save();
+            this.ctx.translate(ship.x, ship.y);
+            this.ctx.rotate(ship.angle);
+
+            // Asymmetric ship shape
+            this.ctx.fillStyle = 'var(--accent-color)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(15, 0);
+            this.ctx.lineTo(-10, -10);
+            this.ctx.lineTo(-5, 0);
+            this.ctx.lineTo(-10, 10);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Chirality indicator (Logo)
+            this.ctx.fillStyle = 'var(--highlight-color)';
+            this.ctx.font = 'bold 12px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.scale(1, ship.flipped ? -1 : 1); // This is the flip!
+            this.ctx.fillText("R", 0, 4);
+
+            this.ctx.restore();
+        },
+
+        updateMetrics() {
+            this.elements.metricX.textContent = this.state.ship.x.toFixed(0);
+            this.elements.metricY.textContent = this.state.ship.y.toFixed(0);
+            this.elements.metricRot.textContent = (this.state.ship.angle * 180 / Math.PI).toFixed(0) + '°';
+            this.elements.metricChirality.textContent = this.state.ship.flipped ? 'Left' : 'Right';
+        },
+
+        animate() {
+            this.update();
+            this.draw();
+            this.updateMetrics();
+            requestAnimationFrame(() => this.animate());
+        },
+
+        injectTextContent() {
+            const content = `
+                <h2>Non-Orientability: Losing Your Bearings</h2>
+                <p>In most spaces we are familiar with, concepts like "left" and "right" are consistent. If you take a glove on a long journey, a right-handed glove always remains a right-handed glove. Such spaces are called <strong>orientable</strong>. However, topology allows for far stranger spaces where this is not true. A <strong>non-orientable</strong> manifold is a space where certain paths will transform a right-handed object into its own mirror image. You could return from a long voyage to find your heart was now on the right side of your body. This simulation explores what it would be like to live in a universe with the topology of a <strong>Klein Bottle</strong>, a classic example of a non-orientable 2D space.</p>
+
+                <h2>Building a Klein Bottle (Conceptually)</h2>
+                <p>To understand a Klein bottle, it's best to start with its simpler, 1-sided cousin, the <strong>Möbius strip</strong>. You can make one by taking a strip of paper, giving it a half-twist, and taping the ends together. You'll find it has only one side and one edge. A Klein bottle uses a similar twisting identification. Imagine a square sheet of flexible rubber representing our fundamental domain of the universe:</p>
+                <ol>
+                    <li>First, glue the top edge to the bottom edge. This creates a cylinder. This identification is normal and orientable.</li>
+                    <li>Next, you want to glue the two circular ends of the cylinder together. For a simple torus, you would glue them directly. To make a Klein bottle, you must glue them with the orientation reversed. To do this in our 3D world, you would need to stretch the "neck" of one end and pass it *through the side* of the cylinder before gluing it to the other end from the "inside."</li>
+                </ol>
+                <p>This self-intersection is an artifact of trying to visualize the Klein bottle in 3D space. Mathematically, the 2D surface of the Klein bottle itself has no self-intersection. It is a perfectly valid topological space. In this simulation, the 2D space is represented by the square. The top and bottom edges wrap normally. The left and right edges wrap with a twist and a flip, mimicking the "pass-through and glue" operation. This is the key to its non-orientability.</p>
+
+                <h2>A Mirrored Journey</h2>
+                <p>The simulation demonstrates the key property of a Klein bottle. Your ship is asymmetric (notice the "R" logo). As you fly around, its orientation remains consistent. However, if you fly off the right edge of the screen, you will reappear on the left, but your ship and its path will be mirror-reversed. The "R" logo will be flipped, and your "chirality" or "handedness" will change from Right to Left. If you cross the boundary again, you will flip back. This is the essence of a non-orientable space: there is no globally consistent definition of left and right.</p>
+                <p>This has profound implications for physics. Many fundamental particles in the Standard Model have a property called "chirality" (handedness). For example, the W boson, which mediates the weak nuclear force, interacts *only* with left-handed particles. This is a fundamental law of our universe as we know it. But if the universe had a non-orientable topology like a Klein bottle, a left-handed particle could take a long trip and return as a right-handed particle, which would no longer interact with the weak force. Such a universe would have to have very different physical laws from our own, or this topology must be ruled out.</p>
+
+                <h2>Q&A: Inside the Bottle</h2>
+                <div class="qa-item">
+                    <strong>1. Can a Klein bottle hold water?</strong>
+                    <p>No. Despite the name, a true mathematical Klein bottle has zero thickness and no "inside" or "outside" volume to hold anything. It is a 2D surface. The 3D glass models you can buy are just immersions that have to self-intersect and are not topologically perfect representations.</p>
+                </div>
+                <div class="qa-item">
+                    <strong>2. How would we detect a Klein bottle universe?</strong>
+                    <p>Similar to the "circles-in-the-sky" method for a torus. We would look for matched patterns in the Cosmic Microwave Background. However, for a non-orientable topology like a Klein bottle, the matching circles would be mirror-images of each other. Searches for such parity-flipped correlations have so far found no evidence, suggesting our universe is orientable on the scales we can observe.</p>
+                </div>
+                <!-- ... 18+ more Q&A items ... -->
+            `;
+            document.getElementById('text-content-container').innerHTML = content;
+        },
+    };
+    SimApp.init();
+    </script>
+</body>
+</html>
