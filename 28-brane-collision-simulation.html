@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Brane Collision (Ekpyrotic Universe)</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Ekpyrotic Universe: A Brane Collision</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Bulk View</h2>
+                <canvas id="main-canvas"></canvas>
+                <div id="status-panel"></div>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <button id="start-btn">Play</button>
+                <button id="reset-btn">Reset</button>
+                <label>Animation Speed</label>
+                <input type="range" id="speed-slider" min="0.1" max="2" step="0.1" value="1">
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Brane Collision script.
+    // The final version will contain a "fake 3D" renderer and a
+    // scripted animation of the two branes colliding.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        startBtn: document.getElementById('start-btn'), resetBtn: document.getElementById('reset-btn'),
+        speedSlider: document.getElementById('speed-slider'), statusPanel: document.getElementById('status-panel'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { time: 0, isRunning: false, speed: 1 };
+
+    function drawBrane(ctx, y, perspective) {
+        const w = ctx.canvas.width;
+        const h = ctx.canvas.height;
+        ctx.strokeStyle = 'cyan';
+        ctx.beginPath();
+        ctx.moveTo(w * (0.1 * perspective), y);
+        ctx.lineTo(w * (1 - 0.1 * perspective), y);
+        ctx.stroke();
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const separation = Math.abs(state.time - 50);
+        const y1 = canvas.height / 2 - separation;
+        const y2 = canvas.height / 2 + separation;
+
+        drawBrane(ctx, y1, 1 - separation/100);
+        drawBrane(ctx, y2, 1 - separation/100);
+
+        if (separation < 2) { // Collision
+            DOM.statusPanel.textContent = "COLLISION!";
+            ctx.fillStyle = `rgba(255, 255, 0, ${1 - separation/2})`;
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, (2-separation)*50, 0, 2*Math.PI);
+            ctx.fill();
+        } else if (state.time > 50) {
+             DOM.statusPanel.textContent = "Receding";
+        } else {
+             DOM.statusPanel.textContent = "Approaching";
+        }
+    }
+
+    function update() {
+        if (state.isRunning) {
+            state.time += state.speed;
+            if (state.time > 100) state.time = 100;
+        }
+        draw();
+        requestAnimationFrame(update);
+    }
+
+    function setup() {
+        DOM.startBtn.onclick = () => { state.isRunning = !state.isRunning; };
+        DOM.resetBtn.onclick = () => { state.time = 0; state.isRunning = false; };
+        DOM.speedSlider.oninput = (e) => { state.speed = parseFloat(e.target.value); };
+
+        DOM.expositionContent.innerHTML = `<h1>The Big Bang as a Collision</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

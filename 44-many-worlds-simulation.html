@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Many-Worlds Interpretation</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Many-Worlds Tree in Hilbert Space</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Multiverse Evolution</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <button id="measure-btn">Trigger Measurement</button>
+                <button id="reset-btn">Reset (t=0)</button>
+                <div id="metrics"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Many-Worlds script.
+    // The final version will contain the logic for branching the universe's
+    // state vector upon a "measurement" event.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        measureBtn: document.getElementById('measure-btn'), resetBtn: document.getElementById('reset-btn'),
+        metrics: document.getElementById('metrics'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { worlds: [], paths: {} };
+
+    function reset() {
+        const initialWorld = { id: 0, x: 400, y: 480, vx: 0, vy: -2, parent: -1 };
+        state.worlds = [initialWorld];
+        state.paths = { 0: [{x:400, y:480}] };
+        draw();
+    }
+
+    function branch() {
+        const newWorlds = [];
+        const currentWorlds = state.worlds;
+        state.worlds = []; // Clear current worlds
+
+        currentWorlds.forEach(world => {
+            // Each world splits into two
+            const newVel1 = { vx: world.vx + (Math.random()-0.5), vy: world.vy };
+            const newVel2 = { vx: world.vx + (Math.random()-0.5), vy: world.vy };
+
+            const w1_id = Object.keys(state.paths).length;
+            const w1 = { id: w1_id, x: world.x, y: world.y, vx: newVel1.vx, vy: newVel1.vy, parent: world.id };
+            state.paths[w1_id] = [{x:world.x, y:world.y}];
+
+            const w2_id = Object.keys(state.paths).length;
+            const w2 = { id: w2_id, x: world.x, y: world.y, vx: newVel2.vx, vy: newVel2.vy, parent: world.id };
+            state.paths[w2_id] = [{x:world.x, y:world.y}];
+
+            newWorlds.push(w1, w2);
+        });
+        state.worlds.push(...newWorlds);
+    }
+
+    function update() {
+        state.worlds.forEach(w => {
+            w.x += w.vx; w.y += w.vy;
+            state.paths[w.id].push({x: w.x, y: w.y});
+            if (state.paths[w.id].length > 100) state.paths[w.id].shift();
+        });
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        // Draw paths
+        ctx.strokeStyle = 'rgba(0, 255, 170, 0.5)'; ctx.lineWidth = 1;
+        Object.values(state.paths).forEach(path => {
+            ctx.beginPath();
+            path.forEach((p,i) => {
+                if(i===0) ctx.moveTo(p.x, p.y);
+                else ctx.lineTo(p.x,p.y);
+            });
+            ctx.stroke();
+        });
+    }
+
+    function gameLoop() {
+        update();
+        draw();
+        DOM.metrics.innerHTML = `Worlds: ${state.worlds.length}`;
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 500;
+        DOM.measureBtn.onclick = branch;
+        DOM.resetBtn.onclick = reset;
+
+        DOM.expositionContent.innerHTML = `<h1>The Universal Wavefunction</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        reset();
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

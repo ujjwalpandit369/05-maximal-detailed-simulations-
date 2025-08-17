@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Spacetime Emergence from a Causal Set</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: crosshair; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Emergent Spacetime from a Causal Set</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Causal Set Growth</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <button id="start-btn">Start</button>
+                <button id="pause-btn">Pause</button>
+                <button id="reset-btn">Reset</button>
+                <div id="metrics"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Causal Set script.
+    // The final version will contain the "sprinkling" algorithm to
+    // grow the causal set and the logic for the causality inspector.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        startBtn: document.getElementById('start-btn'), pauseBtn: document.getElementById('pause-btn'), resetBtn: document.getElementById('reset-btn'),
+        metrics: document.getElementById('metrics'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { isRunning: false, events: [] };
+
+    function reset() {
+        state.isRunning = false;
+        state.events = [{id: 0, x: 400, y: 480, parents: []}]; // The origin event
+        draw();
+    }
+
+    function addEvent() {
+        if (!state.isRunning || state.events.length > 500) return;
+
+        // Pick one or two parents from the top layer of events
+        const parent1 = state.events[Math.floor(Math.random() * state.events.length)];
+        const newY = parent1.y - (10 + Math.random()*20);
+        const newX = parent1.x + (Math.random() - 0.5) * 50;
+
+        const newEvent = { id: state.events.length, x: newX, y: newY, parents: [parent1.id] };
+        state.events.push(newEvent);
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw links
+        ctx.strokeStyle = '#444';
+        state.events.forEach(event => {
+            event.parents.forEach(parentId => {
+                const parent = state.events[parentId];
+                ctx.beginPath();
+                ctx.moveTo(event.x, event.y);
+                ctx.lineTo(parent.x, parent.y);
+                ctx.stroke();
+            });
+        });
+
+        // Draw events
+        ctx.fillStyle = 'cyan';
+        state.events.forEach(event => {
+            ctx.beginPath();
+            ctx.arc(event.x, event.y, 3, 0, 2*Math.PI);
+            ctx.fill();
+        });
+    }
+
+    function gameLoop() {
+        if (state.isRunning) {
+            addEvent();
+        }
+        draw();
+        DOM.metrics.innerHTML = `Events: ${state.events.length}`;
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 500;
+        DOM.startBtn.onclick = () => { state.isRunning = true; };
+        DOM.pauseBtn.onclick = () => { state.isRunning = false; };
+        DOM.resetBtn.onclick = reset;
+
+        DOM.expositionContent.innerHTML = `<h1>The Universe from Pure Causality</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        reset();
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

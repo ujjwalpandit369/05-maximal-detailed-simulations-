@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Warped Spacetime (Randall-Sundrum Model)</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Warped Spacetime and the Weakness of Gravity</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Extra Dimension (y)</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label>Warp Factor (k): <span id="k-value">1.0</span></label>
+                <input type="range" id="k-slider" min="0.5" max="5.0" step="0.1" value="1.0">
+                <div id="metrics"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Warped Spacetime script.
+    // The final version will draw the warped grid and the graviton
+    // wavefunction, which changes based on the user-controlled warp factor.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        kSlider: document.getElementById('k-slider'), kValue: document.getElementById('k-value'),
+        metrics: document.getElementById('metrics'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { k: 1.0 };
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,w,h);
+
+        const gravityBraneX = 50;
+        const ourBraneX = w - 50;
+
+        // Draw branes
+        ctx.strokeStyle = '#ffaa00';
+        ctx.beginPath(); ctx.moveTo(gravityBraneX, 0); ctx.lineTo(gravityBraneX, h); ctx.stroke();
+        ctx.fillText("Gravity Brane", gravityBraneX-20, 20);
+        ctx.strokeStyle = 'cyan';
+        ctx.beginPath(); ctx.moveTo(ourBraneX, 0); ctx.lineTo(ourBraneX, h); ctx.stroke();
+        ctx.fillText("Our Brane", ourBraneX-20, 20);
+
+        // Draw graviton wavefunction probability |psi|^2
+        ctx.strokeStyle = 'red';
+        ctx.beginPath();
+        let prob_on_our_brane = 0;
+        for (let x = gravityBraneX; x <= ourBraneX; x++) {
+            const y = h - Math.exp(-state.k * (x - gravityBraneX) / 50) * (h-50);
+            if (x === gravityBraneX) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+            if (x === ourBraneX) prob_on_our_brane = (h-y)/(h-50);
+        }
+        ctx.stroke();
+
+        DOM.metrics.innerHTML = `<h3>Gravity Strength on Our Brane: ${prob_on_our_brane.toExponential(2)}</h3>`;
+    }
+
+    function setup() {
+        DOM.kSlider.addEventListener('input', e => {
+            state.k = parseFloat(e.target.value);
+            DOM.kValue.textContent = state.k.toFixed(2);
+            draw();
+        });
+
+        DOM.expositionContent.innerHTML = `<h1>The Randall-Sundrum Model</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

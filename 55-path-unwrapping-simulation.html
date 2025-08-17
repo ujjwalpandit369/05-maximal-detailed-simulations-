@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Path Unwrapping in Different Topologies</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr 350px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 4; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Path Unwrapping in Different Topologies</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Fundamental Domain</h2>
+                <canvas id="left-canvas"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>Covering Space (Unwrapped View)</h2>
+                <canvas id="right-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label for="topology-select">Topology</label>
+                <select id="topology-select">
+                    <option value="torus">Torus</option>
+                    <option value="klein">Klein Bottle</option>
+                </select>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Path Unwrapping script.
+    // The final version will contain the logic for tracing a path and
+    // applying the correct transformations for different topologies.
+
+    const DOM = {
+        leftCanvas: document.getElementById('left-canvas'), leftCtx: document.getElementById('left-canvas').getContext('2d'),
+        rightCanvas: document.getElementById('right-canvas'), rightCtx: document.getElementById('right-canvas').getContext('2d'),
+        topologySelect: document.getElementById('topology-select'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { topology: 'torus', path: [] };
+
+    function generatePath() {
+        state.path = [];
+        const centerX=250, centerY=250, R=100;
+        for(let t=0; t<=2*Math.PI; t+=0.1) {
+            state.path.push({x: centerX + R*Math.cos(t), y: centerY + R*Math.sin(t)});
+        }
+    }
+
+    function draw() {
+        const { leftCtx, leftCanvas, rightCtx, rightCanvas } = DOM;
+        leftCtx.fillStyle='black'; leftCtx.fillRect(0,0,leftCanvas.width, leftCanvas.height);
+        rightCtx.fillStyle='black'; rightCtx.fillRect(0,0,rightCanvas.width, rightCanvas.height);
+
+        // Draw path in fundamental domain
+        leftCtx.strokeStyle = 'cyan';
+        leftCtx.beginPath();
+        state.path.forEach((p,i) => i===0 ? leftCtx.moveTo(p.x,p.y) : leftCtx.lineTo(p.x,p.y));
+        leftCtx.stroke();
+
+        // Draw unwrapped path
+        // Placeholder logic
+        rightCtx.strokeStyle = 'yellow';
+        for(let i=-1; i<=1; i++) {
+            for(let j=-1; j<=1; j++) {
+                rightCtx.beginPath();
+                state.path.forEach((p,idx) => {
+                    const x = p.x + i*500;
+                    let y = p.y + j*500;
+                    if(state.topology === 'klein' && i % 2 !== 0) {
+                        // Flip for Klein bottle
+                        // This is a simplified representation
+                    }
+                    if(idx===0) rightCtx.moveTo(x,y);
+                    else rightCtx.lineTo(x,y);
+                });
+                rightCtx.stroke();
+            }
+        }
+    }
+
+    function setup() {
+        DOM.leftCanvas.width = 500; DOM.leftCanvas.height = 500;
+        DOM.rightCanvas.width = 500; DOM.rightCanvas.height = 500;
+
+        DOM.topologySelect.onchange = (e) => { state.topology = e.target.value; draw(); };
+
+        DOM.expositionContent.innerHTML = `<h1>The Shape of Space</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        generatePath();
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

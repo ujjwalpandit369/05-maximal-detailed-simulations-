@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Constructing a Lens Space</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Constructing a Lens Space L(p,q)</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>3-Sphere Boundary View</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label>Parameter p: <span id="p-value">5</span></label>
+                <input type="range" id="p-slider" min="2" max="10" step="1" value="5">
+                <label>Parameter q: <span id="q-value">2</span></label>
+                <input type="range" id="q-slider" min="1" max="4" step="1" value="2">
+                <p>Twist Angle: <span id="twist-angle">144.0°</span></p>
+                <button id="play-btn">Play Animation</button>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Lens Space script.
+    // The final version will contain a 3D sphere renderer and a
+    // step-by-step animation of the point identification process.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        pSlider: document.getElementById('p-slider'), pValue: document.getElementById('p-value'),
+        qSlider: document.getElementById('q-slider'), qValue: document.getElementById('q-value'),
+        twistAngle: document.getElementById('twist-angle'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { p: 5, q: 2, animTime: 0 };
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,w,h);
+
+        // Draw sphere
+        ctx.strokeStyle = '#444';
+        ctx.beginPath(); ctx.arc(w/2, h/2, 200, 0, 2*Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(w/2, h/2, 200, 50, 0, 0, 2*Math.PI); ctx.stroke();
+
+        // Animation placeholder
+        const northY = h/2 - 100;
+        const southY = h/2 + 100;
+        const twist = 2 * Math.PI * state.q / state.p;
+
+        ctx.fillStyle = 'cyan';
+        ctx.beginPath(); ctx.arc(w/2, northY, 10, 0, 2*Math.PI); ctx.fill();
+
+        const southX_final = w/2 + 100 * Math.cos(twist);
+        const southZ_effect = 100 * Math.sin(twist); // for perspective
+
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath(); ctx.arc(southX_final, southY, 10 + southZ_effect/10, 0, 2*Math.PI); ctx.fill();
+
+        ctx.strokeStyle = 'red';
+        ctx.beginPath(); ctx.moveTo(w/2, northY); ctx.lineTo(southX_final, southY); ctx.stroke();
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 500;
+
+        function updateParams() {
+            state.p = parseInt(DOM.pSlider.value);
+            // Ensure q < p
+            DOM.qSlider.max = state.p - 1;
+            state.q = Math.min(parseInt(DOM.qSlider.value), state.p - 1);
+            DOM.qSlider.value = state.q;
+
+            DOM.pValue.textContent = state.p;
+            DOM.qValue.textContent = state.q;
+            const angle = (360 * state.q / state.p).toFixed(1);
+            DOM.twistAngle.textContent = `${angle}°`;
+            draw();
+        }
+
+        DOM.pSlider.addEventListener('input', updateParams);
+        DOM.qSlider.addEventListener('input', updateParams);
+
+        DOM.expositionContent.innerHTML = `<h1>Gluing the Universe Together</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        updateParams();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

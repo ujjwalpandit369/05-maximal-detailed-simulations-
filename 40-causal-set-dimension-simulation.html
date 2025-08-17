@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Measuring Dimension in a Causal Set</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr 350px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: crosshair; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 4; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Measuring Spacetime Dimension from a Causal Set</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Causal Set</h2>
+                <p>Click a point to analyze.</p>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>log(N(k)) vs. log(k)</h2>
+                <div id="chart-container"></div>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label for="dim-select">Target Dimension</label>
+                <select id="dim-select"><option value="2">2D</option><option value="3">3D</option></select>
+                <button id="regen-btn">Generate New Causal Set</button>
+                <div id="metrics"></div>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Causal Set Dimension script.
+    // The final version will contain the graph traversal algorithms and
+    // linear regression to estimate the emergent dimension.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        chart: document.getElementById('chart-container'),
+        metrics: document.getElementById('metrics'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { events: [] };
+
+    function generateCausalSet(targetDim) {
+        // ... sprinkling algorithm modified to generate a set with a specific
+        // approximate dimensionality ...
+        state.events = Array.from({length: 500}, (_,i) => ({id: i, x: Math.random()*800, y: Math.random()*500, links: []}));
+    }
+
+    function analyze(startEventId) {
+        // 1. Breadth-first search from startEventId to find shells N(k)
+        // 2. Create log-log data of N(k) vs k
+        // 3. Perform linear regression on log-log data to find slope
+        // 4. Dimension d = slope + 1
+        const d = 1.9 + Math.random()*0.2; // Placeholder result
+
+        DOM.metrics.innerHTML = `<h3>Estimated Dimension: ${d.toFixed(2)}</h3>`;
+        // ... draw chart ...
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'cyan';
+        state.events.forEach(event => {
+            ctx.beginPath();
+            ctx.arc(event.x, event.y, 2, 0, 2*Math.PI);
+            ctx.fill();
+        });
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 500;
+
+        document.getElementById('regen-btn').addEventListener('click', () => {
+            const dim = document.getElementById('dim-select').value;
+            generateCausalSet(dim);
+            draw();
+        });
+
+        DOM.canvas.addEventListener('click', e => {
+            // Find nearest event and call analyze()
+        });
+
+        DOM.expositionContent.innerHTML = `<h1>Dimension is Not Fundamental</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        generateCausalSet(2);
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

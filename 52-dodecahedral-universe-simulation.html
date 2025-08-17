@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Living in a Dodecahedral Universe</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 600px; display: block; background: #000; border-radius: 4px; cursor: move; }
+        .exposition, .qa-section { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Living in Poincaré Dodecahedral Space</h1></header>
+        <div class="simulation-panel">
+            <h2>First-Person View</h2>
+            <p>Click and drag to look around.</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Dodecahedral Universe script.
+    // The final version will contain a recursive portal rendering engine
+    // to create the "hall of mirrors" effect.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { rotation: {x:0, y:0} };
+
+    function drawDodecahedron(ctx, level) {
+        if (level > 2) return; // Limit recursion depth
+
+        // Placeholder drawing
+        const size = 300 / (level + 1);
+        ctx.strokeStyle = `rgba(0, 255, 170, ${1 - level/3})`;
+        ctx.strokeRect(ctx.canvas.width/2 - size/2, ctx.canvas.height/2 - size/2, size, size);
+
+        // Recursive call for each face (simplified)
+        if (level < 2) {
+            ctx.save();
+            ctx.translate(150, 0);
+            drawDodecahedron(ctx, level + 1);
+            ctx.restore();
+        }
+    }
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(canvas.width/2, canvas.height/2);
+        ctx.rotate(state.rotation.y);
+        ctx.scale(1, Math.cos(state.rotation.x)); // Fake 3D tilt
+        ctx.translate(-canvas.width/2, -canvas.height/2);
+
+        drawDodecahedron(ctx, 0);
+
+        ctx.restore();
+    }
+
+    function gameLoop() {
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        // ... mouse drag listeners to update state.rotation ...
+
+        DOM.expositionContent.innerHTML = `<h1>The Shape of Space</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

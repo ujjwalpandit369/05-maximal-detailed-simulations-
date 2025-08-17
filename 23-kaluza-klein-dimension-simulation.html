@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Visualizing a Kaluza-Klein Dimension</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: zoom-in; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Visualizing a Kaluza-Klein Dimension</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Zoomable Spacetime</h2>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label>Zoom Level: <span id="zoom-value">1x</span></label>
+                <input type="range" id="zoom-slider" min="0" max="100" step="1" value="0">
+                <label>Extra Dimension Size: <span id="size-value">10</span></label>
+                <input type="range" id="size-slider" min="1" max="50" step="1" value="10">
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Kaluza-Klein visualization script.
+    // The final version will contain the logic for zooming from a flat grid
+    // to a view where each grid point resolves into a circle.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        zoomSlider: document.getElementById('zoom-slider'), zoomValue: document.getElementById('zoom-value'),
+        sizeSlider: document.getElementById('size-slider'), sizeValue: document.getElementById('size-value'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { zoom: 1, circleSize: 10 };
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const transitionZoom = 10;
+        const gridSpacing = 100;
+
+        if (state.zoom < transitionZoom) {
+            // Macroscopic view: A simple grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.globalAlpha = 1 - (state.zoom / transitionZoom);
+            for (let x = 0; x < canvas.width; x += gridSpacing) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSpacing) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+        }
+
+        if (state.zoom > 1) {
+            // Microscopic view: Circles at grid points
+             ctx.strokeStyle = '#00aaff';
+             ctx.globalAlpha = Math.min(1, (state.zoom - 1) / (transitionZoom - 1));
+             for (let x = gridSpacing/2; x < canvas.width; x += gridSpacing) {
+                for (let y = gridSpacing/2; y < canvas.height; y += gridSpacing) {
+                    ctx.beginPath();
+                    const radius = state.circleSize * (state.zoom / transitionZoom);
+                    ctx.arc(x, y, Math.min(gridSpacing/2 - 5, radius), 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+            }
+        }
+        ctx.globalAlpha = 1.0;
+    }
+
+    function setup() {
+        DOM.canvas.width = DOM.canvas.offsetWidth;
+        DOM.canvas.height = DOM.canvas.offsetHeight;
+
+        function update() {
+            state.zoom = Math.pow(10, parseFloat(DOM.zoomSlider.value) / 50);
+            state.circleSize = parseFloat(DOM.sizeSlider.value);
+            DOM.zoomValue.textContent = `${state.zoom.toFixed(1)}x`;
+            DOM.sizeValue.textContent = state.circleSize.toFixed(0);
+            draw();
+        }
+
+        DOM.zoomSlider.addEventListener('input', update);
+        DOM.sizeSlider.addEventListener('input', update);
+
+        DOM.expositionContent.innerHTML = `<h1>Curled-up Extra Dimensions</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

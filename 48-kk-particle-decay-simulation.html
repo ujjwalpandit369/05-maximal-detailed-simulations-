@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Kaluza-Klein Particle Decay</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 350px 1fr 1fr; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 4; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Kaluza-Klein Particle Decay</h1></header>
+        <div class="main-layout">
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <p>Click on an energy level (n>0) to excite the system.</p>
+                <label>Radius of Extra Dimension (R): <span id="radius-value">1.0</span></label>
+                <input type="range" id="radius-slider" min="0.1" max="2.0" step="0.05" value="1.0">
+            </div>
+            <div class="simulation-panel">
+                <h2>KK Mass Tower</h2>
+                <canvas id="energy-canvas"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>Particle Detector View</h2>
+                <canvas id="detector-canvas"></canvas>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full KK Decay script.
+    // The final version will allow users to click an energy level,
+    // which then triggers a decay animation in the detector view.
+
+    const DOM = {
+        energyCanvas: document.getElementById('energy-canvas'), energyCtx: document.getElementById('energy-canvas').getContext('2d'),
+        detectorCanvas: document.getElementById('detector-canvas'), detectorCtx: document.getElementById('detector-canvas').getContext('2d'),
+        radiusSlider: document.getElementById('radius-slider'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    let state = { R: 1.0, levels: [], excitedLevel: -1 };
+
+    function calculateLevels() {
+        state.levels = [];
+        for (let n = 0; n < 10; n++) {
+            const mass = Math.sqrt(0.5**2 + (n / state.R)**2);
+            state.levels.push({ n, mass });
+        }
+    }
+
+    function drawEnergyLevels() {
+        const { energyCtx, energyCanvas } = DOM;
+        energyCtx.fillStyle = 'black'; energyCtx.fillRect(0,0,energyCanvas.width, energyCanvas.height);
+
+        const maxMass = state.levels[state.levels.length-1].mass;
+        state.levels.forEach(level => {
+            const y = energyCanvas.height - 30 - (level.mass / maxMass) * (energyCanvas.height - 50);
+            energyCtx.strokeStyle = (level.n === state.excitedLevel) ? 'yellow' : 'cyan';
+            energyCtx.beginPath(); energyCtx.moveTo(50, y); energyCtx.lineTo(energyCanvas.width-50, y); energyCtx.stroke();
+        });
+    }
+
+    function triggerDecay(level_n) {
+        if (level_n === 0) return;
+        state.excitedLevel = level_n;
+        drawEnergyLevels();
+
+        // Simplified decay animation
+        setTimeout(() => {
+            state.excitedLevel = -1;
+            drawEnergyLevels();
+            const { detectorCtx, detectorCanvas } = DOM;
+            detectorCtx.fillStyle = 'black'; detectorCtx.fillRect(0,0,detectorCanvas.width, detectorCanvas.height);
+            detectorCtx.strokeStyle = 'red';
+            detectorCtx.beginPath(); detectorCtx.moveTo(250,250); detectorCtx.lineTo(50,50); detectorCtx.stroke();
+            detectorCtx.strokeStyle = 'blue';
+            detectorCtx.beginPath(); detectorCtx.moveTo(250,250); detectorCtx.lineTo(450,450); detectorCtx.stroke();
+        }, 1000); // 1-second lifetime
+    }
+
+    function setup() {
+        DOM.energyCanvas.height = 500;
+        DOM.detectorCanvas.height = 500;
+
+        DOM.radiusSlider.oninput = (e) => { state.R = parseFloat(e.target.value); calculateLevels(); drawEnergyLevels(); };
+        DOM.energyCanvas.onclick = (e) => {
+            // ... logic to find which level was clicked ...
+            const clickedLevel = 5; // Placeholder
+            triggerDecay(clickedLevel);
+        };
+
+        DOM.expositionContent.innerHTML = `<h1>Particle Decays from Extra Dimensions</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        calculateLevels();
+        drawEnergyLevels();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

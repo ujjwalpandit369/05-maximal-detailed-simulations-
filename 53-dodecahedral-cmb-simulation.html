@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Circles-in-the-Sky for Dodecahedral Space</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 4px; cursor: pointer; }
+        .controls-panel { text-align: center; background: var(--panel-bg); padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .exposition, .qa-section { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Circles-in-the-Sky: A Test for a Dodecahedral Universe</h1></header>
+        <div class="simulation-panel">
+            <h2>CMB Sky Map (Equirectangular Projection)</h2>
+            <p>Hover over a circle to find its matched pair.</p>
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div class="controls-panel">
+            <label><input type="checkbox" id="toggle-overlay" checked> Show Predicted Circles</label>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Dodecahedral CMB script.
+    // The final version will draw a procedural CMB map and the specific
+    // pattern of 6 pairs of matched circles predicted by the model.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        toggleOverlay: document.getElementById('toggle-overlay'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    // Pre-calculated positions for the 6 pairs of circles
+    const circles = [ { id: 0, pair: 1, x: 100, y: 100, r: 50}, { id: 1, pair: 0, x: 700, y: 300, r: 50}, /* ...10 more ... */ ];
+    let hoveredPair = -1;
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(0,0,canvas.width, canvas.height); // Placeholder for CMB texture
+
+        if (DOM.toggleOverlay.checked) {
+            circles.forEach(c => {
+                ctx.strokeStyle = (c.pair === hoveredPair) ? 'yellow' : 'cyan';
+                ctx.lineWidth = (c.pair === hoveredPair) ? 4 : 2;
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, c.r, 0, 2 * Math.PI);
+                ctx.stroke();
+            });
+        }
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 400;
+
+        DOM.canvas.addEventListener('mousemove', e => {
+            const rect = DOM.canvas.getBoundingClientRect();
+            const mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            let foundPair = -1;
+            circles.forEach(c => {
+                const dist = Math.sqrt((mousePos.x-c.x)**2 + (mousePos.y-c.y)**2);
+                if (dist < c.r) foundPair = c.pair;
+            });
+            if (foundPair !== hoveredPair) {
+                hoveredPair = foundPair;
+                draw();
+            }
+        });
+
+        DOM.toggleOverlay.onchange = draw;
+
+        DOM.expositionContent.innerHTML = `<h1>The Universe as a Soccer Ball</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

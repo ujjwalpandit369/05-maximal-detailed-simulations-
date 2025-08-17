@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: AdS/CFT Bulk/Boundary Duality</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: crosshair; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>AdS/CFT Duality: A Visual Analogy</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Bulk (AdS Space)</h2>
+                <canvas id="bulk-canvas"></canvas>
+                <p>Click and drag inside the cylinder.</p>
+            </div>
+            <div class="simulation-panel">
+                <h2>Boundary (CFT)</h2>
+                <canvas id="boundary-canvas"></canvas>
+                <p>The holographic dual of the event in the bulk.</p>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full AdS/CFT simulation script.
+    // The final version will contain a 3D renderer for the bulk and a
+    // dynamic texture generator for the boundary, linked in real-time.
+
+    const DOM = {
+        bulkCanvas: document.getElementById('bulk-canvas'), bulkCtx: document.getElementById('bulk-canvas').getContext('2d'),
+        boundaryCanvas: document.getElementById('boundary-canvas'), boundaryCtx: document.getElementById('boundary-canvas').getContext('2d'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = {
+        isDragging: false,
+        bulkPoint: { x: 250, y: 250, z: 0.5 } // x,y on canvas, z is depth (0-1)
+    };
+
+    function drawBulk() {
+        const { bulkCtx, bulkCanvas } = DOM;
+        const w = bulkCanvas.width, h = bulkCanvas.height;
+        bulkCtx.fillStyle = '#000';
+        bulkCtx.fillRect(0,0,w,h);
+
+        // Draw cylinder
+        bulkCtx.strokeStyle = '#444';
+        bulkCtx.ellipse(w/2, h*0.1, w*0.4, h*0.05, 0, 0, 2*Math.PI);
+        bulkCtx.stroke();
+        bulkCtx.ellipse(w/2, h*0.9, w*0.4, h*0.05, 0, 0, 2*Math.PI);
+        bulkCtx.stroke();
+        bulkCtx.strokeRect(w*0.1, h*0.1, w*0.8, h*0.8);
+
+        // Draw point
+        const y_pos = h*0.1 + (h*0.8) * state.bulkPoint.z;
+        bulkCtx.fillStyle = 'cyan';
+        bulkCtx.beginPath();
+        bulkCtx.arc(state.bulkPoint.x, y_pos, 10, 0, 2*Math.PI);
+        bulkCtx.fill();
+    }
+
+    function drawBoundary() {
+        const { boundaryCtx, boundaryCanvas } = DOM;
+        const w = boundaryCanvas.width, h = boundaryCanvas.height;
+        const imageData = boundaryCtx.createImageData(w,h);
+        const data = imageData.data;
+
+        const spread = (1 - state.bulkPoint.z) * 100 + 10; // Deeper = more spread out
+        const freq = state.bulkPoint.z * 5 + 1; // Deeper = lower frequency
+        const x_center = (state.bulkPoint.x / w) * 2 * Math.PI;
+
+        for(let x=0; x<w; x++) {
+            for(let y=0; y<h; y++) {
+                const angle = (x/w) * 2 * Math.PI;
+                const val = Math.exp(-((angle-x_center)**2) * spread) * Math.sin(y/20 * freq);
+                const c = (val + 1) * 128;
+                const i = (y*w+x)*4;
+                data[i] = c; data[i+1] = c/2; data[i+2] = 255-c; data[i+3] = 255;
+            }
+        }
+        boundaryCtx.putImageData(imageData, 0, 0);
+    }
+
+    function update() {
+        drawBulk();
+        drawBoundary();
+        requestAnimationFrame(update);
+    }
+
+    function setup() {
+        DOM.bulkCanvas.onmousedown = (e) => { state.isDragging = true; updatePoint(e); };
+        DOM.bulkCanvas.onmouseup = () => { state.isDragging = false; };
+        DOM.bulkCanvas.onmousemove = (e) => { if(state.isDragging) updatePoint(e); };
+
+        function updatePoint(e) {
+            const rect = DOM.bulkCanvas.getBoundingClientRect();
+            state.bulkPoint.x = e.clientX - rect.left;
+            state.bulkPoint.z = (e.clientY - rect.top) / rect.height;
+        }
+
+        DOM.expositionContent.innerHTML = `<h1>The AdS/CFT Correspondence</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

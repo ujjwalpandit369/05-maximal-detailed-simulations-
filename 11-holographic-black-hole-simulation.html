@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Holographic Principle & Black Holes</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --accent-color: #00ffaa; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        h1 { font-size: 2.5em; margin: 0; }
+        .main-layout { display: grid; grid-template-columns: 1fr 1fr 350px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; height: auto; display: block; background: #000; border-radius: 4px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 4; background: var(--panel-bg); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Holographic Principle</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>3D View (External Observer)</h2>
+                <canvas id="view-3d" width="500" height="500"></canvas>
+            </div>
+            <div class="simulation-panel">
+                <h2>2D Horizon View (Encoded Information)</h2>
+                <canvas id="view-2d" width="500" height="500"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <button id="drop-object">Drop Object</button>
+                <label>Black Hole Mass</label>
+                <input type="range" id="bh-mass" min="1" max="5" step="0.5" value="2">
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full holographic simulation script.
+    // The final version will contain a 3D renderer for the falling object
+    // and a 2D projection renderer for the horizon information.
+
+    const DOM = {
+        canvas3d: document.getElementById('view-3d'), ctx3d: document.getElementById('view-3d').getContext('2d'),
+        canvas2d: document.getElementById('view-2d'), ctx2d: document.getElementById('view-2d').getContext('2d'),
+        dropBtn: document.getElementById('drop-object'),
+        massSlider: document.getElementById('bh-mass'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = {
+        isFalling: false,
+        fallProgress: 0,
+        blackHoleRadius: 100,
+    };
+
+    function draw3DView() {
+        const { ctx3d, canvas3d } = DOM;
+        ctx3d.fillStyle = 'black';
+        ctx3d.fillRect(0,0,canvas3d.width, canvas3d.height);
+
+        // Draw black hole
+        ctx3d.fillStyle = '#111';
+        ctx3d.beginPath();
+        ctx3d.arc(canvas3d.width/2, canvas3d.height/2, state.blackHoleRadius, 0, 2*Math.PI);
+        ctx3d.fill();
+
+        if (state.isFalling) {
+            // Draw falling object
+            const y = 50 + state.fallProgress * (canvas3d.height/2 - 50 - state.blackHoleRadius);
+            const size = 30 * (1 - state.fallProgress);
+            ctx3d.strokeStyle = 'cyan';
+            ctx3d.strokeRect(canvas3d.width/2 - size/2, y, size, size);
+        }
+    }
+
+    function draw2DView() {
+        const { ctx2d, canvas2d } = DOM;
+        ctx2d.fillStyle = '#111';
+        ctx2d.fillRect(0,0,canvas2d.width, canvas2d.height);
+
+        if (state.isFalling) {
+            // Draw smeared information
+            ctx2d.globalAlpha = state.fallProgress;
+            ctx2d.strokeStyle = '#00ffaa';
+            ctx2d.lineWidth = 3;
+            ctx2d.strokeRect(50, 50, canvas2d.width-100, canvas2d.height-100);
+        } else {
+             ctx2d.globalAlpha = 0;
+        }
+    }
+
+    function update() {
+        if (state.isFalling) {
+            // Time dilation effect
+            const speed = (1 - state.fallProgress) * 0.01;
+            state.fallProgress += speed;
+            if (state.fallProgress > 1) {
+                state.fallProgress = 1;
+                state.isFalling = false;
+            }
+        }
+        draw3DView();
+        draw2DView();
+        requestAnimationFrame(update);
+    }
+
+    function setup() {
+        DOM.dropBtn.addEventListener('click', () => {
+            state.isFalling = true;
+            state.fallProgress = 0;
+        });
+        DOM.massSlider.oninput = () => { state.blackHoleRadius = 50 * parseFloat(DOM.massSlider.value); };
+
+        DOM.expositionContent.innerHTML = `<h1>The Holographic Principle</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

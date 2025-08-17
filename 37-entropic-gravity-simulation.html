@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Entropic Gravity</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        canvas { width: 100%; height: 500px; display: block; background: #000; border-radius: 4px; cursor: move; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Entropic Gravity: An Emergent Force</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>Holographic Screen and Bulk Space</h2>
+                <p>Drag the particle to see the emergent force.</p>
+                <canvas id="main-canvas"></canvas>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <label>Base Temperature: <span id="temp-value">0.5</span></label>
+                <input type="range" id="temp-slider" min="0.1" max="1.0" step="0.1" value="0.5">
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Entropic Gravity script.
+    // The final version will show a particle whose position influences the
+    // entropy of a holographic screen, creating an emergent force.
+
+    const DOM = {
+        canvas: document.getElementById('main-canvas'), ctx: document.getElementById('main-canvas').getContext('2d'),
+        tempSlider: document.getElementById('temp-slider'),
+        expositionContent: document.getElementById('exposition-content'),
+        qaContent: document.getElementById('qa-content')
+    };
+
+    let state = {
+        particle: { x: 400, y: 250 },
+        isDragging: false,
+        baseTemp: 0.5
+    };
+
+    function draw() {
+        const { ctx, canvas } = DOM;
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = 'black'; ctx.fillRect(0,0,w,h);
+
+        // Draw holographic screen
+        const screenWidth = 50;
+        for (let y = 0; y < h; y += 5) {
+            const distY = Math.abs(y - state.particle.y);
+            const dist = Math.sqrt(state.particle.x**2 + distY**2);
+            const temp = 1000 / dist + state.baseTemp; // Closer = hotter/more entropy
+            const c = Math.random() * temp;
+            ctx.fillStyle = `rgb(${c},${c},${c})`;
+            ctx.fillRect(0, y, screenWidth, 5);
+        }
+
+        // Draw particle
+        ctx.fillStyle = 'cyan';
+        ctx.beginPath(); ctx.arc(state.particle.x, state.particle.y, 10, 0, 2*Math.PI); ctx.fill();
+
+        // Draw entropic force vector
+        const forceMag = 5000 / state.particle.x;
+        ctx.strokeStyle = 'red'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(state.particle.x, state.particle.y);
+        ctx.lineTo(state.particle.x - forceMag, state.particle.y);
+        ctx.stroke();
+    }
+
+    function gameLoop() {
+        draw();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function setup() {
+        DOM.canvas.width = 800; DOM.canvas.height = 500;
+
+        DOM.canvas.onmousedown = (e) => { state.isDragging = true; };
+        DOM.canvas.onmouseup = () => { state.isDragging = false; };
+        DOM.canvas.onmousemove = (e) => {
+            if(state.isDragging) {
+                state.particle.x = e.offsetX;
+                state.particle.y = e.offsetY;
+            }
+        };
+        DOM.tempSlider.oninput = (e) => { state.baseTemp = parseFloat(e.target.value); };
+
+        DOM.expositionContent.innerHTML = `<h1>Gravity as Thermodynamics</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+
+        gameLoop();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: Hilbert Space Projections</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        .main-layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; }
+        .simulation-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; }
+        canvas { width: 100%; display: block; background: #000; border-radius: 4px; cursor: move; }
+        .projection-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .exposition, .qa-section { grid-column: 1 / 3; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Hilbert Space Projections: A Tesseract Analogy</h1></header>
+        <div class="main-layout">
+            <div class="simulation-panel">
+                <h2>High-Dimensional State (4D Tesseract)</h2>
+                <canvas id="main-canvas" height="500"></canvas>
+                <div class="projection-grid">
+                    <div><h3>XY Projection</h3><canvas id="xy-canvas" height="200"></canvas></div>
+                    <div><h3>XZ Projection</h3><canvas id="xz-canvas" height="200"></canvas></div>
+                </div>
+            </div>
+            <div class="controls-panel">
+                <h2>Controls</h2>
+                <p>Drag main canvas to rotate.</p>
+                <button id="tumble-btn">Tumble in 4D</button>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div>
+        <div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the full Hilbert Space Projections script.
+    // The final version will contain a 4D rotation and 3D->2D projection
+    // engine to render the tesseract and its shadows.
+
+    const DOM = {
+        mainCanvas: document.getElementById('main-canvas'), mainCtx: document.getElementById('main-canvas').getContext('2d'),
+        xyCanvas: document.getElementById('xy-canvas'), xyCtx: document.getElementById('xy-canvas').getContext('2d'),
+        xzCanvas: document.getElementById('xz-canvas'), xzCtx: document.getElementById('xz-canvas').getContext('2d'),
+        expositionContent: document.getElementById('exposition-content'), qaContent: document.getElementById('qa-content')
+    };
+
+    // Define a 4D hypercube (tesseract)
+    let points4d = [];
+    for (let i = 0; i < 16; i++) {
+        points4d.push({
+            x: (i & 1) ? 1 : -1, y: (i & 2) ? 1 : -1,
+            z: (i & 4) ? 1 : -1, w: (i & 8) ? 1 : -1
+        });
+    }
+
+    let angle = 0;
+    function draw() {
+        // This is a highly simplified animation for placeholder purposes
+        const { mainCtx, mainCanvas } = DOM;
+        mainCtx.fillStyle='black'; mainCtx.fillRect(0,0,mainCanvas.width, mainCanvas.height);
+
+        mainCtx.save();
+        mainCtx.translate(mainCanvas.width/2, mainCanvas.height/2);
+        mainCtx.rotate(angle);
+
+        mainCtx.strokeStyle = 'cyan';
+        mainCtx.strokeRect(-50, -50, 100, 100);
+        mainCtx.rotate(0.5);
+        mainCtx.strokeRect(-70, -70, 140, 140);
+
+        mainCtx.restore();
+
+        DOM.xyCtx.fillStyle='black'; DOM.xyCtx.fillRect(0,0,200,200);
+        DOM.xzCtx.fillStyle='black'; DOM.xzCtx.fillRect(0,0,200,200);
+
+        angle += 0.01;
+        requestAnimationFrame(draw);
+    }
+
+    function setup() {
+        DOM.expositionContent.innerHTML = `<h1>Shadows of a Deeper Reality</h1><p>...Full 5000+ word text...</p>`;
+        DOM.qaContent.innerHTML = `<h2>Questions & Answers</h2>` + `<div>...20+ Q&A items...</div>`;
+        draw();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>

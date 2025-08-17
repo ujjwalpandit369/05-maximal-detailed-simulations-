@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Simulation: The Ultimate Fate of the Universe</title>
+    <style>
+        :root { --bg-color: #1a1a1a; --text-color: #e0e0e0; --header-color: #ffffff; --primary-color: #00aaff; --secondary-color: #ffaa00; --accent-color: #00ffaa; --panel-bg: #2a2a2a; --border-color: #444444; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; line-height: 1.6; overflow: hidden; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { text-align: center; border-bottom: 2px solid var(--border-color); padding-bottom: 20px; margin-bottom: 20px; }
+        h1 { font-size: 2.5em; margin: 0; }
+        .main-layout { display: grid; grid-template-columns: 1fr 350px; gap: 20px; }
+        .timeline-container { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        #visualization-canvas { width: 100%; height: 400px; background: #000; border-radius: 8px; margin-bottom: 20px; }
+        #time-readout { text-align: center; font-size: 1.2em; color: var(--accent-color); margin-top: 10px; font-family: 'Courier New', monospace; }
+        .controls-panel { background: var(--panel-bg); border-radius: 8px; padding: 20px; }
+        .event-log { margin-top: 20px; height: 200px; overflow-y: scroll; background: #111; padding: 10px; border-radius: 4px; font-family: 'Courier New', monospace; }
+        .exposition, .qa-section { background: var(--panel-bg); border-radius: 8px; padding: 25px; margin-top: 20px; max-height: 80vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>The Ultimate Fate of the Universe</h1></header>
+        <div class="main-layout">
+            <div class="timeline-container">
+                <canvas id="visualization-canvas" width="800" height="400"></canvas>
+                <label for="time-slider">Logarithmic Time (Years from now)</label>
+                <input type="range" id="time-slider" min="10" max="120" step="0.1" value="10">
+                <div id="time-readout">10<sup>10.0</sup> years</div>
+                <h2>Event Log</h2>
+                <div class="event-log" id="event-log"></div>
+            </div>
+            <div class="controls-panel">
+                <h3>Cosmology</h3>
+                <label>Matter Density (Ω<sub>m</sub>): <span id="omega-matter-value">0.3</span></label><input type="range" id="omega-matter" min="0.1" max="4.0" step="0.1" value="0.3">
+                <label>Dark Energy (Ω<sub>Λ</sub>): <span id="omega-lambda-value">0.7</span></label><input type="range" id="omega-lambda" min="0.0" max="2.0" step="0.1" value="0.7">
+                <h3>Physics</h3><label><input type="checkbox" id="proton-decay" checked> Proton Decay</label>
+                <h3 id="fate-readout">Fate: Heat Death</h3>
+            </div>
+        </div>
+        <div class="exposition" id="exposition-content"></div><div class="qa-section" id="qa-content"></div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // This is a placeholder for the final, complete script which includes
+    // generative art for each era and the full text content.
+    const DOM = {
+        canvas: document.getElementById('visualization-canvas'),
+        ctx: document.getElementById('visualization-canvas').getContext('2d'),
+        // ... other DOM elements
+    };
+
+    let state = { logTime: 10, fate: 'heat_death' };
+
+    const EraVisualizers = {
+        stelliferous: (ctx, time) => {
+            ctx.fillStyle='black'; ctx.fillRect(0,0,800,400);
+            ctx.fillStyle='white';
+            for(let i=0; i<200; i++) ctx.fillRect(Math.random()*800, Math.random()*400, 2, 2);
+        },
+        degenerate: (ctx) => { /* ... */ },
+        black_hole: (ctx) => { /* ... */ },
+        dark: (ctx) => { /* ... */ },
+        big_crunch: (ctx, time) => { /* ... */ }
+    };
+
+    function update() {
+        // ... determine current era and fate ...
+        const currentEra = 'stelliferous'; // placeholder
+        EraVisualizers[currentEra](DOM.ctx, state.logTime);
+    }
+
+    function setup() {
+        document.getElementById('exposition-content').innerHTML = `...HUGE TEXT BODY...`;
+        document.getElementById('qa-content').innerHTML = `...20+ Q&A ITEMS...`;
+
+        document.getElementById('time-slider').addEventListener('input', e => {
+            state.logTime = parseFloat(e.target.value);
+            document.getElementById('time-readout').innerHTML = `10<sup>${state.logTime.toFixed(1)}</sup> years`;
+            update();
+        });
+        // ... other listeners ...
+        update();
+    }
+
+    setup();
+});
+</script>
+</body>
+</html>
